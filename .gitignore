@@ -1,0 +1,15 @@
+# Files macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Files log
+*.log
+.env
+
+# Files edit
+.vscode/
+.idea/
+*.swp
+*.swo
