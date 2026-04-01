@@ -1,26 +1,29 @@
-package logger
+// Copyright (c) 2026 Mikhail Dadaev
+// All rights reserved.
+//
+// This source code is licensed under the MIT License found in the
+// LICENSE file in the root directory of this source tree.
+
+package ulog
 
 import (
 	"bytes"
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Публичные константы
 const (
-	Author    = "MIKHAILDADAEV"
-	Copyright = "©"
-	DateStart = "2022"
-	Rights    = "Все права защищены"
-	Version   = "1.26.3"
+	Author  = "Mikhail Dadaev"
+	Version = "1.26.3"
 )
 const (
 	ErrorEOF          = "EOF"
@@ -96,9 +99,6 @@ func (loggerWriter *LoggerWriter) Write(p []byte) (n int, err error) {
 	switch {
 	case isTLSHandshakeError(msg):
 		return len(p), nil
-	case isNetworkTimeout(err):
-		loggerWriter.logger.Warn("Network timeout: " + msg)
-		return len(p), nil
 	default:
 		loggerWriter.logMessage(msg)
 		return len(p), nil
@@ -152,6 +152,18 @@ func (loggerStandard *LoggerStandard) SetTheme(theme string) {
 	default:
 		loggerStandard.scheme = getColorScheme()
 	}
+}
+
+// Публичные функции
+func GetAuthor() string {
+	return Author
+}
+func GetCopyright() string {
+	Copyright := fmt.Sprintf("Copyright © 2022-%d %s. All rights reserved.", time.Now().Year(), Author)
+	return Copyright
+}
+func GetVersion() string {
+	return Version
 }
 
 // Приватные методы
@@ -277,10 +289,6 @@ func getLogLevelFromEnv() int {
 		return LevelDebug
 	}
 	return LevelInfo
-}
-func isNetworkTimeout(err error) bool {
-	ne, ok := err.(net.Error)
-	return ok && ne.Timeout()
 }
 func isTLSHandshakeError(msg string) bool {
 	lowerMsg := strings.ToLower(msg)
