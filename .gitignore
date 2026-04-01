@@ -1,15 +1,45 @@
-# Files macOS
+# OS generated files
 .DS_Store
 .AppleDouble
 .LSOverride
 ._*
 
-# Files log
+# Binary files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Certificates and keys
+*.crt
+*.key
+*.pem
+*.p12
+
+# Archives and compressed files
+*.zip
+*.tar.gz
+*.tar
+*.gz
+*.bz2
+*.7z
+
+# Logs and environment
 *.log
 .env
 
-# Files edit
+# IDEs and editors
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Temporary files
+*.tmp
+*.bak
+
+# Go specific
+*.test
+coverage.out
+coverage.html
