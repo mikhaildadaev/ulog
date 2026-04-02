@@ -141,11 +141,11 @@ func (loggerStandard *LoggerStandard) Errorf(format string, args ...any) {
 }
 func (loggerStandard *LoggerStandard) Fatal(message string) {
 	loggerStandard.log(LevelError, "[FATAL] ", message)
-	os.Exit(1)
+	osExit(1)
 }
 func (loggerStandard *LoggerStandard) Fatalf(format string, args ...any) {
 	loggerStandard.logf(LevelError, "[FATAL] ", format, args...)
-	os.Exit(1)
+	osExit(1)
 }
 func (loggerStandard *LoggerStandard) SetLevel(level int) {
 	loggerStandard.mutex.Lock()
@@ -225,6 +225,7 @@ var (
 		message:     colorLightBlack,
 		reset:       colorReset,
 	}
+	osExit = os.Exit
 )
 
 // Приватные функции
