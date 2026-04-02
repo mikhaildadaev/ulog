@@ -1,8 +1,31 @@
-# OS generated files
+# OS Linux 
+.directory
+core.*
+*.pid
+*.socket
+*.part
+*.swap
+
+# OS Mac
+.fseventsd/
+.Spotlight-V100/
+.Trashes/
 .DS_Store
 .AppleDouble
 .LSOverride
+.AppleDB
 ._*
+
+# OS Windows
+$RECYCLE.BIN/
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Docker
+.docker/
+*.dockerignore
+Dockerfile.dev
 
 # Binary files
 *.exe
@@ -10,12 +33,6 @@
 *.dll
 *.so
 *.dylib
-
-# Certificates and keys
-*.crt
-*.key
-*.pem
-*.p12
 
 # Archives and compressed files
 *.zip
@@ -25,9 +42,11 @@
 *.bz2
 *.7z
 
-# Logs and environment
+# Logs and environment files
 *.log
 .env
+.env.local
+.env.*.local
 
 # IDEs and editors
 .vscode/
@@ -36,10 +55,33 @@
 *.swo
 
 # Temporary files
-*.tmp
 *.bak
+*.cache
+*.temp
+*.tmp
+*.orig
+*.rej
+
+# Safety and security
+.safety/
+.secure/
+*.crt
+*.key
+*.keyring
+*.password
+*.p8
+*.p12
+*.pem
+*.pwd
+*.secret
+*.secrets
+*.token
 
 # Go specific
 *.test
 coverage.out
 coverage.html
+go.work
+go.work.sum
+/bin/
+/dist/
