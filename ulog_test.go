@@ -14,6 +14,27 @@ import (
 )
 
 // Публичные функции
+func TestIsIgnoredError(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected bool
+	}{
+		{"EOF", []byte("read: EOF"), true},
+		{"TLS handshake", []byte("TLS handshake error"), true},
+		{"connection refused", []byte("dial: connection refused"), true},
+		{"timeout", []byte("i/o timeout"), true},
+		{"normal message", []byte("user logged in"), false},
+		{"empty", []byte{}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isIgnoredError(tt.data); got != tt.expected {
+				t.Errorf("isIgnoredError(%q) = %v, want %v", tt.data, got, tt.expected)
+			}
+		})
+	}
+}
 func TestColorScheme(t *testing.T) {
 	if lightScheme.colorRed != colorLightRed {
 		t.Error("Light scheme has wrong color")

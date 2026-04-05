@@ -32,12 +32,6 @@ const (
 	LevelFatal        // 4 - критические ошибки (с остановкой приложения)
 )
 
-// Публичные переменные
-var (
-	ErrorEOF          = []byte("EOF")
-	ErrorTLSHandshake = []byte("TLS handshake error")
-)
-
 // Публичные интерфейсы
 type Logger interface {
 	Debug(message string)
@@ -127,6 +121,17 @@ const (
 	colorLightPurple = "\033[35m"
 	colorLightCyan   = "\033[36m"
 )
+
+// Приватные переменные
+var ignoredErrors = [][]byte{
+	[]byte("EOF"),
+	[]byte("TLS handshake error"),
+	[]byte("connection refused"),
+	[]byte("timeout"),
+	[]byte("broken pipe"),
+	[]byte("i/o timeout"),
+	[]byte("no such host"),
+}
 
 // Приватные структуры
 type colorScheme struct {
@@ -267,8 +272,13 @@ func getLogerLevel() int {
 	}
 	return LevelInfo
 }
-func isError(data []byte) bool {
-	return bytes.Contains(data, ErrorEOF) && bytes.Contains(data, ErrorTLSHandshake)
+func isIgnoredError(data []byte) bool {
+	for _, err := range ignoredErrors {
+		if bytes.Contains(data, err) {
+			return true
+		}
+	}
+	return false
 }
 
 // Приватные методы

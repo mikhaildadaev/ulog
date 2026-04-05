@@ -71,7 +71,7 @@ func (loggerWriter *LoggerWriter) Write(p []byte) (n int, err error) {
 	if start >= end {
 		return len(p), nil
 	}
-	if isError(p[start:end]) {
+	if isIgnoredError(p[start:end]) {
 		return len(p), nil
 	}
 	message := string(p[start:end])
