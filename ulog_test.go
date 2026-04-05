@@ -19,7 +19,7 @@ func TestColorScheme(t *testing.T) {
 		t.Error("Light scheme has wrong color")
 	}
 	t.Setenv("TERM_THEME", "light")
-	scheme := getColorScheme()
+	scheme := getLogerScheme()
 	if scheme.colorRed != colorLightRed {
 		t.Error("Should detect light theme from TERM_THEME")
 	}

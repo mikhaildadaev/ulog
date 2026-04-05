@@ -70,7 +70,7 @@ func New() Logger {
 	return &LoggerStandard{
 		level:  getLogerLevel(),
 		Logger: log.New(os.Stderr, "", log.LstdFlags|log.Lmicroseconds),
-		scheme: getColorScheme(),
+		scheme: getLogerScheme(),
 	}
 }
 func NewErrorLog(logger Logger) *log.Logger {
@@ -149,18 +149,18 @@ func (loggerStandard *LoggerStandard) SetTheme(theme string) {
 	case "light":
 		loggerStandard.scheme = lightScheme
 	default:
-		loggerStandard.scheme = getColorScheme()
+		loggerStandard.scheme = getLogerScheme()
 	}
 }
 func (loggerWriter *LoggerWriter) Write(p []byte) (n int, err error) {
 	loggerWriter.mutex.Lock()
 	defer loggerWriter.mutex.Unlock()
-	msg := strings.TrimSpace(string(p))
+	message := strings.TrimSpace(string(p))
 	switch {
-	case isHandshakeError(msg):
+	case isHandshakeError(message):
 		return len(p), nil
 	default:
-		loggerWriter.setMessage(msg)
+		loggerWriter.setMessage(message)
 		return len(p), nil
 	}
 }
@@ -195,6 +195,7 @@ type colorScheme struct {
 	colorYellow string
 	fileLine    string
 	message     string
+	prefix      string
 	reset       string
 }
 
@@ -229,7 +230,65 @@ var (
 )
 
 // Приватные функции
-func getColorScheme() colorScheme {
+func formatMessage(buf *bytes.Buffer, format string, args []any) {
+	argIdx := 0
+	for i := 0; i < len(format); i++ {
+		ch := format[i]
+		if ch == '%' && i+1 < len(format) {
+			i++
+			switch format[i] {
+			case 's':
+				if argIdx < len(args) {
+					if s, ok := args[argIdx].(string); ok {
+						buf.WriteString(s)
+					} else {
+						fmt.Fprint(buf, args[argIdx])
+					}
+				}
+				argIdx++
+			case 'd':
+				if argIdx < len(args) {
+					switch v := args[argIdx].(type) {
+					case int:
+						buf.WriteString(strconv.Itoa(v))
+					case int64:
+						buf.WriteString(strconv.FormatInt(v, 10))
+					case uint:
+						buf.WriteString(strconv.FormatUint(uint64(v), 10))
+					default:
+						fmt.Fprint(buf, v)
+					}
+				}
+				argIdx++
+			case 'f':
+				if argIdx < len(args) {
+					switch v := args[argIdx].(type) {
+					case float64:
+						buf.WriteString(strconv.FormatFloat(v, 'f', -1, 64))
+					case float32:
+						buf.WriteString(strconv.FormatFloat(float64(v), 'f', -1, 32))
+					default:
+						fmt.Fprint(buf, v)
+					}
+				}
+				argIdx++
+			case 'v':
+				if argIdx < len(args) {
+					fmt.Fprint(buf, args[argIdx])
+				}
+				argIdx++
+			case '%':
+				buf.WriteByte('%')
+			default:
+				buf.WriteByte(ch)
+				buf.WriteByte(format[i])
+			}
+		} else {
+			buf.WriteByte(ch)
+		}
+	}
+}
+func getLogerScheme() colorScheme {
 	switch strings.ToLower(os.Getenv("TERM_THEME")) {
 	case "dark":
 		return darkScheme
@@ -309,15 +368,15 @@ func (loggerStandard *LoggerStandard) setLog(level int, prefix, message string) 
 	} else {
 		filename = filepath.Base(filename)
 	}
-	scheme := loggerStandard.getScheme()
-	colorPrefix := loggerStandard.getColor(level, scheme)
 	now := time.Now()
+	scheme := loggerStandard.getScheme()
+	scheme.prefix = loggerStandard.getColor(level, scheme)
 	buf := bufPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer bufPool.Put(buf)
 	buf.WriteString(now.Format("2006/01/02 15:04:05.000000"))
 	buf.WriteString(" ")
-	buf.WriteString(colorPrefix)
+	buf.WriteString(scheme.prefix)
 	buf.WriteString(prefix)
 	buf.WriteString(scheme.fileLine)
 	buf.WriteString(filename)
@@ -343,18 +402,28 @@ func (loggerStandard *LoggerStandard) setLogf(level int, prefix, format string, 
 	} else {
 		filename = filepath.Base(filename)
 	}
-	scheme := loggerStandard.getScheme()
 	now := time.Now()
-	colorPrefix := loggerStandard.getColor(level, scheme)
+	scheme := loggerStandard.getScheme()
+	scheme.prefix = loggerStandard.getColor(level, scheme)
 	buf := bufPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer bufPool.Put(buf)
-	fmt.Fprintf(buf, format, args...)
-	message := buf.String()
-	message = strings.ReplaceAll(message, "%", "%%")
+	buf.WriteString(now.Format("2006/01/02 15:04:05.000000"))
+	buf.WriteByte(' ')
+	buf.WriteString(scheme.prefix)
+	buf.WriteString(prefix)
+	buf.WriteString(scheme.fileLine)
+	buf.WriteString(filename)
+	buf.WriteByte('[')
+	buf.WriteString(strconv.Itoa(linenumber))
+	buf.WriteString("] ")
+	buf.WriteString(scheme.message)
+	formatMessage(buf, format, args)
+	buf.WriteString(scheme.reset)
+	buf.WriteByte('\n')
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
-	loggerStandard.Printf("%s%s%s%s[%d] %s%s%s", colorPrefix, prefix, scheme.fileLine, filename, linenumber, scheme.message, message, scheme.reset)
+	loggerStandard.Writer().Write(buf.Bytes())
 }
 func (loggerWriter *LoggerWriter) setMessage(msg string) {
 	switch loggerWriter.level {
