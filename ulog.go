@@ -25,8 +25,8 @@ const (
 	Version = "1.26.3"
 )
 const (
-	ErrorEOF          = "EOF"
-	ErrorTLSHandshake = "TLS handshake error"
+	ErrorEOF       = "EOF"
+	ErrorHandshake = "Handshake error"
 )
 const (
 	LevelDebug = iota // 0 - отладочная информация
@@ -55,14 +55,15 @@ type Logger interface {
 // Публичные структуры
 type LoggerStandard struct {
 	*log.Logger
-	mutex  sync.RWMutex
 	level  int
+	mutex  sync.RWMutex
 	scheme colorScheme
 }
 type LoggerWriter struct {
+	level  int
 	logger Logger
 	mutex  sync.Mutex
-	level  int
+	scheme colorScheme
 }
 
 // Публичные конструкторы
@@ -76,8 +77,9 @@ func New() Logger {
 func NewErrorLog(logger Logger) *log.Logger {
 	return log.New(
 		&LoggerWriter{
-			logger: logger,
 			level:  LevelError,
+			logger: logger,
+			scheme: getLogerScheme(),
 		},
 		"",
 		log.LstdFlags|log.Lmicroseconds,
@@ -87,6 +89,7 @@ func NewWithWriter(logger Logger, level int) io.Writer {
 	return &LoggerWriter{
 		level:  level,
 		logger: logger,
+		scheme: getLogerScheme(),
 	}
 }
 
@@ -327,15 +330,10 @@ func getLogerLevel() int {
 }
 func isHandshakeError(message string) bool {
 	lowerMessage := strings.ToLower(message)
-	return strings.Contains(lowerMessage, strings.ToLower(ErrorEOF)) && strings.Contains(lowerMessage, strings.ToLower(ErrorTLSHandshake))
+	return strings.Contains(lowerMessage, strings.ToLower(ErrorEOF)) && strings.Contains(lowerMessage, strings.ToLower(ErrorHandshake))
 }
 
 // Приватные методы
-func (loggerStandard *LoggerStandard) getLevel() int {
-	loggerStandard.mutex.RLock()
-	defer loggerStandard.mutex.RUnlock()
-	return loggerStandard.level
-}
 func (loggerStandard *LoggerStandard) getColor(level int, scheme colorScheme) string {
 	switch level {
 	case LevelDebug:
@@ -351,6 +349,11 @@ func (loggerStandard *LoggerStandard) getColor(level int, scheme colorScheme) st
 	default:
 		return scheme.colorGreen
 	}
+}
+func (loggerStandard *LoggerStandard) getLevel() int {
+	loggerStandard.mutex.RLock()
+	defer loggerStandard.mutex.RUnlock()
+	return loggerStandard.level
 }
 func (loggerStandard *LoggerStandard) getScheme() colorScheme {
 	loggerStandard.mutex.RLock()
@@ -425,19 +428,19 @@ func (loggerStandard *LoggerStandard) setLogf(level int, prefix, format string, 
 	defer loggerStandard.mutex.Unlock()
 	loggerStandard.Writer().Write(buf.Bytes())
 }
-func (loggerWriter *LoggerWriter) setMessage(msg string) {
+func (loggerWriter *LoggerWriter) setMessage(message string) {
 	switch loggerWriter.level {
 	case LevelDebug:
-		loggerWriter.logger.Debug(msg)
+		loggerWriter.logger.Debug(message)
 	case LevelInfo:
-		loggerWriter.logger.Info(msg)
+		loggerWriter.logger.Info(message)
 	case LevelWarn:
-		loggerWriter.logger.Warn(msg)
+		loggerWriter.logger.Warn(message)
 	case LevelError:
-		loggerWriter.logger.Error(msg)
+		loggerWriter.logger.Error(message)
 	case LevelFatal:
-		loggerWriter.logger.Fatal(msg)
+		loggerWriter.logger.Fatal(message)
 	default:
-		loggerWriter.logger.Info(msg)
+		loggerWriter.logger.Info(message)
 	}
 }
