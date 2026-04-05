@@ -40,14 +40,14 @@ const (
 type Logger interface {
 	Debug(message string)
 	Debugf(format string, args ...any)
-	Info(message string)
-	Infof(format string, args ...any)
-	Warn(message string)
-	Warnf(format string, args ...any)
 	Error(message string)
 	Errorf(format string, args ...any)
 	Fatal(message string)
 	Fatalf(format string, args ...any)
+	Info(message string)
+	Infof(format string, args ...any)
+	Warn(message string)
+	Warnf(format string, args ...any)
 	SetLevel(level int)
 	SetTheme(theme string)
 }
@@ -68,8 +68,8 @@ type LoggerWriter struct {
 // Публичные конструкторы
 func New() Logger {
 	return &LoggerStandard{
+		level:  getLogerLevel(),
 		Logger: log.New(os.Stderr, "", log.LstdFlags|log.Lmicroseconds),
-		level:  getLogLevelFromEnv(),
 		scheme: getColorScheme(),
 	}
 }
@@ -85,8 +85,8 @@ func NewErrorLog(logger Logger) *log.Logger {
 }
 func NewWithWriter(logger Logger, level int) io.Writer {
 	return &LoggerWriter{
-		logger: logger,
 		level:  level,
+		logger: logger,
 	}
 }
 
@@ -103,49 +103,37 @@ func GetVersion() string {
 }
 
 // Публичные методы
-func (loggerWriter *LoggerWriter) Write(p []byte) (n int, err error) {
-	loggerWriter.mutex.Lock()
-	defer loggerWriter.mutex.Unlock()
-	msg := strings.TrimSpace(string(p))
-	switch {
-	case isTLSHandshakeError(msg):
-		return len(p), nil
-	default:
-		loggerWriter.logMessage(msg)
-		return len(p), nil
-	}
-}
 func (loggerStandard *LoggerStandard) Debug(message string) {
-	loggerStandard.log(LevelDebug, "[DEBUG] ", message)
+	loggerStandard.setLog(LevelDebug, "[DEBUG] ", message)
 }
 func (loggerStandard *LoggerStandard) Debugf(format string, args ...any) {
-	loggerStandard.logf(LevelDebug, "[DEBUG] ", format, args...)
-}
-func (loggerStandard *LoggerStandard) Info(message string) {
-	loggerStandard.log(LevelInfo, "[INFO] ", message)
-}
-func (loggerStandard *LoggerStandard) Infof(format string, args ...any) {
-	loggerStandard.logf(LevelInfo, "[INFO] ", format, args...)
-}
-func (loggerStandard *LoggerStandard) Warn(message string) {
-	loggerStandard.log(LevelWarn, "[WARN] ", message)
-}
-func (loggerStandard *LoggerStandard) Warnf(format string, args ...any) {
-	loggerStandard.logf(LevelWarn, "[WARN] ", format, args...)
+	loggerStandard.setLogf(LevelDebug, "[DEBUG] ", format, args...)
 }
 func (loggerStandard *LoggerStandard) Error(message string) {
-	loggerStandard.log(LevelError, "[ERROR] ", message)
+	loggerStandard.setLog(LevelError, "[ERROR] ", message)
 }
 func (loggerStandard *LoggerStandard) Errorf(format string, args ...any) {
-	loggerStandard.logf(LevelError, "[ERROR] ", format, args...)
+	loggerStandard.setLogf(LevelError, "[ERROR] ", format, args...)
 }
 func (loggerStandard *LoggerStandard) Fatal(message string) {
-	loggerStandard.log(LevelError, "[FATAL] ", message)
+	loggerStandard.setLog(LevelError, "[FATAL] ", message)
 	osExit(1)
 }
 func (loggerStandard *LoggerStandard) Fatalf(format string, args ...any) {
-	loggerStandard.logf(LevelError, "[FATAL] ", format, args...)
+	loggerStandard.setLogf(LevelError, "[FATAL] ", format, args...)
 	osExit(1)
+}
+func (loggerStandard *LoggerStandard) Info(message string) {
+	loggerStandard.setLog(LevelInfo, "[INFO] ", message)
+}
+func (loggerStandard *LoggerStandard) Infof(format string, args ...any) {
+	loggerStandard.setLogf(LevelInfo, "[INFO] ", format, args...)
+}
+func (loggerStandard *LoggerStandard) Warn(message string) {
+	loggerStandard.setLog(LevelWarn, "[WARN] ", message)
+}
+func (loggerStandard *LoggerStandard) Warnf(format string, args ...any) {
+	loggerStandard.setLogf(LevelWarn, "[WARN] ", format, args...)
 }
 func (loggerStandard *LoggerStandard) SetLevel(level int) {
 	loggerStandard.mutex.Lock()
@@ -162,6 +150,18 @@ func (loggerStandard *LoggerStandard) SetTheme(theme string) {
 		loggerStandard.scheme = lightScheme
 	default:
 		loggerStandard.scheme = getColorScheme()
+	}
+}
+func (loggerWriter *LoggerWriter) Write(p []byte) (n int, err error) {
+	loggerWriter.mutex.Lock()
+	defer loggerWriter.mutex.Unlock()
+	msg := strings.TrimSpace(string(p))
+	switch {
+	case isHandshakeError(msg):
+		return len(p), nil
+	default:
+		loggerWriter.setMessage(msg)
+		return len(p), nil
 	}
 }
 
@@ -248,7 +248,7 @@ func getColorScheme() colorScheme {
 	}
 	return darkScheme
 }
-func getLogLevelFromEnv() int {
+func getLogerLevel() int {
 	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
 	case "debug":
 		return LevelDebug
@@ -266,9 +266,9 @@ func getLogLevelFromEnv() int {
 	}
 	return LevelInfo
 }
-func isTLSHandshakeError(msg string) bool {
-	lowerMsg := strings.ToLower(msg)
-	return strings.Contains(lowerMsg, strings.ToLower(ErrorEOF)) && strings.Contains(lowerMsg, strings.ToLower(ErrorTLSHandshake))
+func isHandshakeError(message string) bool {
+	lowerMessage := strings.ToLower(message)
+	return strings.Contains(lowerMessage, strings.ToLower(ErrorEOF)) && strings.Contains(lowerMessage, strings.ToLower(ErrorTLSHandshake))
 }
 
 // Приватные методы
@@ -277,18 +277,18 @@ func (loggerStandard *LoggerStandard) getLevel() int {
 	defer loggerStandard.mutex.RUnlock()
 	return loggerStandard.level
 }
-func (loggerStandard *LoggerStandard) getPrefixColor(level int, scheme colorScheme) string {
+func (loggerStandard *LoggerStandard) getColor(level int, scheme colorScheme) string {
 	switch level {
 	case LevelDebug:
 		return scheme.colorCyan
-	case LevelInfo:
-		return scheme.colorGreen
-	case LevelWarn:
-		return scheme.colorYellow
 	case LevelError:
 		return scheme.colorRed
 	case LevelFatal:
 		return scheme.colorPurple
+	case LevelInfo:
+		return scheme.colorGreen
+	case LevelWarn:
+		return scheme.colorYellow
 	default:
 		return scheme.colorGreen
 	}
@@ -298,49 +298,47 @@ func (loggerStandard *LoggerStandard) getScheme() colorScheme {
 	defer loggerStandard.mutex.RUnlock()
 	return loggerStandard.scheme
 }
-func (loggerStandard *LoggerStandard) log(level int, prefix, msg string) {
+func (loggerStandard *LoggerStandard) setLog(level int, prefix, message string) {
 	if loggerStandard.getLevel() > level {
 		return
 	}
-	_, file, line, ok := runtime.Caller(2)
+	_, filename, linenumber, ok := runtime.Caller(2)
 	if !ok {
-		file = "unknown"
-		line = 0
+		filename = "unknown"
+		linenumber = 0
 	} else {
-		file = filepath.Base(file)
+		filename = filepath.Base(filename)
 	}
 	scheme := loggerStandard.getScheme()
-	prefixColor := loggerStandard.getPrefixColor(level, scheme)
+	colorPrefix := loggerStandard.getColor(level, scheme)
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
-	loggerStandard.SetPrefix(prefixColor + prefix)
-	loggerStandard.Printf("%s%s[%d] %s%s%s", scheme.fileLine, file, line, scheme.message, msg, scheme.reset)
+	loggerStandard.Printf("%s%s%s%s[%d] %s%s%s", colorPrefix, prefix, scheme.fileLine, filename, linenumber, scheme.message, message, scheme.reset)
 }
-func (loggerStandard *LoggerStandard) logf(level int, prefix, format string, args ...any) {
+func (loggerStandard *LoggerStandard) setLogf(level int, prefix, format string, args ...any) {
 	if loggerStandard.getLevel() > level {
 		return
 	}
-	_, file, line, ok := runtime.Caller(2)
+	_, filename, linenumber, ok := runtime.Caller(2)
 	if !ok {
-		file = "unknown"
-		line = 0
+		filename = "unknown"
+		linenumber = 0
 	} else {
-		file = filepath.Base(file)
+		filename = filepath.Base(filename)
 	}
 	scheme := loggerStandard.getScheme()
-	prefixColor := loggerStandard.getPrefixColor(level, scheme)
+	colorPrefix := loggerStandard.getColor(level, scheme)
 	buf := bufPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer bufPool.Put(buf)
 	fmt.Fprintf(buf, format, args...)
-	msg := buf.String()
-	msg = strings.ReplaceAll(msg, "%", "%%")
+	message := buf.String()
+	message = strings.ReplaceAll(message, "%", "%%")
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
-	loggerStandard.SetPrefix(prefixColor + prefix)
-	loggerStandard.Printf("%s%s[%d] %s%s%s", scheme.fileLine, file, line, scheme.message, msg, scheme.reset)
+	loggerStandard.Printf("%s%s%s%s[%d] %s%s%s", colorPrefix, prefix, scheme.fileLine, filename, linenumber, scheme.message, message, scheme.reset)
 }
-func (loggerWriter *LoggerWriter) logMessage(msg string) {
+func (loggerWriter *LoggerWriter) setMessage(msg string) {
 	switch loggerWriter.level {
 	case LevelDebug:
 		loggerWriter.logger.Debug(msg)

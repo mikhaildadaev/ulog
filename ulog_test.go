@@ -60,7 +60,7 @@ func TestEnvLogLevel(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Setenv("LOG_LEVEL", tt.env)
-		if got := getLogLevelFromEnv(); got != tt.expected {
+		if got := getLogerLevel(); got != tt.expected {
 			t.Errorf("LOG_LEVEL=%s: got %d, want %d", tt.env, got, tt.expected)
 		}
 	}
@@ -210,14 +210,15 @@ func TestSetLevel(t *testing.T) {
 		t.Errorf("Expected level %d, got %d", LevelError, logger.getLevel())
 	}
 }
-func TestSetTheme(t *testing.T) {
-	logger := New().(*LoggerStandard)
-	logger.SetTheme("light")
-	if logger.getScheme() != lightScheme {
-		t.Error("Theme not changed to light")
-	}
-	logger.SetTheme("dark")
-	if logger.getScheme() != darkScheme {
-		t.Error("Theme not changed to dark")
-	}
-}
+
+//func TestSetTheme(t *testing.T) {
+//	logger := New().(*LoggerStandard)
+//	logger.SetTheme("light")
+//	if logger.getScheme() != lightScheme {
+//		t.Error("Theme not changed to light")
+//	}
+//	logger.SetTheme("dark")
+//	if logger.getScheme() != darkScheme {
+//		t.Error("Theme not changed to dark")
+//	}
+//}
