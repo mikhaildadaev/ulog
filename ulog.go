@@ -297,8 +297,11 @@ func formatData(dataBuf *bytes.Buffer, scheme colorScheme, message string) {
 	dataBuf.WriteString(scheme.reset)
 	dataBuf.WriteByte('\n')
 }
-func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, fields []Field) {
+func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, message string, fields []Field) {
 	for _, field := range fields {
+		dataBuf.WriteByte(' ')
+		dataBuf.WriteString(scheme.message)
+		dataBuf.WriteString(message)
 		dataBuf.WriteByte(' ')
 		dataBuf.WriteString(field.key)
 		dataBuf.WriteByte('=')
@@ -482,7 +485,7 @@ func (loggerStandard *LoggerStandard) setLogf(level int, message string, fields 
 	formatTime(dataBuf, time)
 	formatPrefix(dataBuf, scheme, level)
 	formatCaller(dataBuf, scheme, caller)
-	formatDataf(dataBuf, scheme, fields)
+	formatDataf(dataBuf, scheme, message, fields)
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
 	loggerStandard.Writer().Write(dataBuf.Bytes())
