@@ -374,7 +374,7 @@ func (loggerStandard *LoggerStandard) getScheme() colorScheme {
 	defer loggerStandard.mutex.RUnlock()
 	return loggerStandard.scheme
 }
-func (loggerStandard *LoggerStandard) setLog(level int, prefix, message string) {
+func (loggerStandard *LoggerStandard) setLog(level int, message string) {
 	if loggerStandard.getLevel() > level {
 		return
 	}
