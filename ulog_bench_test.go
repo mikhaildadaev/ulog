@@ -8,7 +8,7 @@ import (
 // Бенчмарки компонентов
 func BenchmarkDebug(b *testing.B) {
 	b.Run("Simple", func(b *testing.B) {
-		logger := New()
+		logger := Text()
 		logger.Debug("test debug simple message")
 		logger.SetOutput(io.Discard)
 		defer logger.Sync()
@@ -18,7 +18,7 @@ func BenchmarkDebug(b *testing.B) {
 		}
 	})
 	b.Run("Format", func(b *testing.B) {
-		logger := New()
+		logger := Text()
 		logger.Debug("test debug format message",
 			Int("user_id", 12345),
 			String("path", "/api/v1/test"),
@@ -36,7 +36,7 @@ func BenchmarkDebug(b *testing.B) {
 }
 func BenchmarkError(b *testing.B) {
 	b.Run("Simple", func(b *testing.B) {
-		logger := New()
+		logger := Text()
 		logger.Error("test error simple message")
 		logger.SetOutput(io.Discard)
 		defer logger.Sync()
@@ -46,7 +46,7 @@ func BenchmarkError(b *testing.B) {
 		}
 	})
 	b.Run("Format", func(b *testing.B) {
-		logger := New()
+		logger := Text()
 		logger.Error("test error format message",
 			Int("user_id", 12345),
 			String("path", "/api/v1/test"),
@@ -64,7 +64,7 @@ func BenchmarkError(b *testing.B) {
 }
 func BenchmarkInfo(b *testing.B) {
 	b.Run("Simple", func(b *testing.B) {
-		logger := New()
+		logger := Text()
 		logger.Info("test info simple message")
 		logger.SetOutput(io.Discard)
 		defer logger.Sync()
@@ -74,7 +74,7 @@ func BenchmarkInfo(b *testing.B) {
 		}
 	})
 	b.Run("Format", func(b *testing.B) {
-		logger := New()
+		logger := Text()
 		logger.Info("test info format message",
 			Int("user_id", 12345),
 			String("path", "/api/v1/test"),
@@ -92,7 +92,7 @@ func BenchmarkInfo(b *testing.B) {
 }
 func BenchmarkWarn(b *testing.B) {
 	b.Run("Simple", func(b *testing.B) {
-		logger := New()
+		logger := Text()
 		logger.Warn("test warn simple message")
 		logger.SetOutput(io.Discard)
 		defer logger.Sync()
@@ -102,7 +102,7 @@ func BenchmarkWarn(b *testing.B) {
 		}
 	})
 	b.Run("Format", func(b *testing.B) {
-		logger := New()
+		logger := Text()
 		logger.Warn("test warn format message",
 			Int("user_id", 12345),
 			String("path", "/api/v1/test"),
@@ -119,7 +119,7 @@ func BenchmarkWarn(b *testing.B) {
 	})
 }
 func BenchmarkLoggerWriter(b *testing.B) {
-	logger := New()
+	logger := Text()
 	logger.SetOutput(io.Discard)
 	defer logger.Sync()
 	writer := NewWithWriter(logger, LevelInfo)
@@ -127,15 +127,5 @@ func BenchmarkLoggerWriter(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		writer.Write(data)
-	}
-}
-func BenchmarkWithDisabledLevel(b *testing.B) {
-	logger := New()
-	//logger.SetOutput(io.Discard)
-	defer logger.Sync()
-	logger.SetLevel(LevelError)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		logger.Debug("this should be skipped")
 	}
 }

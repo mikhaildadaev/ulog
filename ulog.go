@@ -19,7 +19,9 @@ import (
 )
 
 // Публичные типы
-type FieldType uint8
+type TypeLevel int
+type TypeField int
+type TypeFormat int
 
 // Публичные константы
 const (
@@ -27,14 +29,14 @@ const (
 	Version = "1.26.5"
 )
 const (
-	LevelDebug = iota // 0 - отладочная информация
-	LevelInfo         // 1 - штатные операции
-	LevelWarn         // 2 - нештатные ситуации, но не ошибки
-	LevelError        // 3 - ошибки, требующие внимания
-	LevelFatal        // 4 - критические ошибки (с остановкой приложения)
+	LevelDebug TypeLevel = iota
+	LevelInfo
+	LevelWarn
+	LevelError
+	LevelFatal
 )
 const (
-	BoolType FieldType = iota
+	BoolType TypeField = iota
 	BoolsType
 	DurationType
 	DurationsType
@@ -47,6 +49,10 @@ const (
 	TimeType
 	TimesType
 )
+const (
+	JsonType TypeFormat = iota
+	TextType
+)
 
 // Публичные интерфейсы
 type Logger interface {
@@ -55,7 +61,7 @@ type Logger interface {
 	Fatal(message string, fields ...Field)
 	Info(message string, fields ...Field)
 	Warn(message string, fields ...Field)
-	SetLevel(level int)
+	SetLevel(level TypeLevel)
 	SetOutput(writer io.Writer)
 	SetTheme(theme string)
 	Sync() error
@@ -76,14 +82,15 @@ type Field struct {
 	valueStrings   []string
 	valueTime      time.Time
 	valueTimes     []time.Time
-	valueType      FieldType
+	valueType      TypeField
 }
 type LoggerStandard struct {
 	*log.Logger
 	asyncWriter *AsyncWriter
 	cache       sync.Map
 	caller      bool
-	level       int
+	format      TypeFormat
+	level       TypeLevel
 	mutex       sync.RWMutex
 	scheme      colorScheme
 }
@@ -94,7 +101,7 @@ type AsyncWriter struct {
 	writer io.Writer
 }
 type LoggerWriter struct {
-	level  int
+	level  TypeLevel
 	logger Logger
 	mutex  sync.Mutex
 	scheme colorScheme
@@ -214,11 +221,12 @@ func Times(keyName string, valueTimes []time.Time) Field {
 		valueTimes: valueTimes,
 	}
 }
-func New() Logger {
+func Text() Logger {
 	asyncWriter := NewAsyncWriter(os.Stderr, 10000)
 	return &LoggerStandard{
 		asyncWriter: asyncWriter,
 		caller:      true,
+		format:      TextType,
 		level:       getLoggerLevel(),
 		Logger:      log.New(asyncWriter, "", 0),
 		scheme:      getLoggerScheme(),
@@ -245,7 +253,7 @@ func NewAsyncWriter(writer io.Writer, bufferSize int) *AsyncWriter {
 	go asyncWriter.run()
 	return asyncWriter
 }
-func NewWithWriter(logger Logger, level int) io.Writer {
+func NewWithWriter(logger Logger, level TypeLevel) io.Writer {
 	return &LoggerWriter{
 		level:  level,
 		logger: logger,
@@ -432,7 +440,7 @@ func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, message string, fiel
 	dataBuf.WriteString(scheme.reset)
 	dataBuf.WriteByte('\n')
 }
-func formatPrefix(dataBuf *bytes.Buffer, scheme colorScheme, level int, caller string) {
+func formatPrefix(dataBuf *bytes.Buffer, scheme colorScheme, level TypeLevel, caller string) {
 	switch level {
 	case LevelDebug:
 		dataBuf.WriteString(scheme.colorCyan)
@@ -491,7 +499,7 @@ func getLoggerScheme() colorScheme {
 	}
 	return darkScheme
 }
-func getLoggerLevel() int {
+func getLoggerLevel() TypeLevel {
 	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
 	case "debug":
 		return LevelDebug
@@ -556,7 +564,7 @@ func (loggerStandard *LoggerStandard) getCaller() string {
 	loggerStandard.cache.Store(pc, caller)
 	return caller
 }
-func (loggerStandard *LoggerStandard) getLevel() int {
+func (loggerStandard *LoggerStandard) getLevel() TypeLevel {
 	loggerStandard.mutex.RLock()
 	defer loggerStandard.mutex.RUnlock()
 	return loggerStandard.level
@@ -566,7 +574,13 @@ func (loggerStandard *LoggerStandard) getScheme() colorScheme {
 	defer loggerStandard.mutex.RUnlock()
 	return loggerStandard.scheme
 }
-func (loggerStandard *LoggerStandard) setLog(level int, message string) {
+func (loggerStandard *LoggerStandard) writeJson(level TypeLevel, message string) {
+	if loggerStandard.getLevel() > level {
+		return
+	}
+	// Дописать
+}
+func (loggerStandard *LoggerStandard) writeText(level TypeLevel, message string) {
 	if loggerStandard.getLevel() > level {
 		return
 	}
@@ -583,7 +597,13 @@ func (loggerStandard *LoggerStandard) setLog(level int, message string) {
 	defer loggerStandard.mutex.Unlock()
 	loggerStandard.Writer().Write(dataBuf.Bytes())
 }
-func (loggerStandard *LoggerStandard) setLogf(level int, message string, fields []Field) {
+func (loggerStandard *LoggerStandard) writeJsonFields(level TypeLevel, message string, fields []Field) {
+	if loggerStandard.getLevel() > level {
+		return
+	}
+	// Дописать
+}
+func (loggerStandard *LoggerStandard) writeTextFields(level TypeLevel, message string, fields []Field) {
 	if loggerStandard.getLevel() > level {
 		return
 	}

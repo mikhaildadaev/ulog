@@ -8,42 +8,87 @@ import (
 
 // Публичные методы
 func (loggerStandard *LoggerStandard) Debug(message string, fields ...Field) {
-	if len(fields) == 0 {
-		loggerStandard.setLog(LevelDebug, message)
-	} else {
-		loggerStandard.setLogf(LevelDebug, message, fields)
+	switch loggerStandard.format {
+	case JsonType:
+		if len(fields) == 0 {
+			loggerStandard.writeJson(LevelDebug, message)
+		} else {
+			loggerStandard.writeJsonFields(LevelDebug, message, fields)
+		}
+	case TextType:
+		if len(fields) == 0 {
+			loggerStandard.writeText(LevelDebug, message)
+		} else {
+			loggerStandard.writeTextFields(LevelDebug, message, fields)
+		}
 	}
 }
 func (loggerStandard *LoggerStandard) Error(message string, fields ...Field) {
-	if len(fields) == 0 {
-		loggerStandard.setLog(LevelError, message)
-	} else {
-		loggerStandard.setLogf(LevelError, message, fields)
+	switch loggerStandard.format {
+	case JsonType:
+		if len(fields) == 0 {
+			loggerStandard.writeJson(LevelError, message)
+		} else {
+			loggerStandard.writeJsonFields(LevelError, message, fields)
+		}
+	case TextType:
+		if len(fields) == 0 {
+			loggerStandard.writeText(LevelError, message)
+		} else {
+			loggerStandard.writeTextFields(LevelError, message, fields)
+		}
 	}
 }
 func (loggerStandard *LoggerStandard) Fatal(message string, fields ...Field) {
-	if len(fields) == 0 {
-		loggerStandard.setLog(LevelFatal, message)
-	} else {
-		loggerStandard.setLogf(LevelFatal, message, fields)
+	switch loggerStandard.format {
+	case JsonType:
+		if len(fields) == 0 {
+			loggerStandard.writeJson(LevelFatal, message)
+		} else {
+			loggerStandard.writeJsonFields(LevelFatal, message, fields)
+		}
+	case TextType:
+		if len(fields) == 0 {
+			loggerStandard.writeText(LevelFatal, message)
+		} else {
+			loggerStandard.writeTextFields(LevelFatal, message, fields)
+		}
 	}
 	osExit(1)
 }
 func (loggerStandard *LoggerStandard) Info(message string, fields ...Field) {
-	if len(fields) == 0 {
-		loggerStandard.setLog(LevelInfo, message)
-	} else {
-		loggerStandard.setLogf(LevelInfo, message, fields)
+	switch loggerStandard.format {
+	case JsonType:
+		if len(fields) == 0 {
+			loggerStandard.writeJson(LevelInfo, message)
+		} else {
+			loggerStandard.writeJsonFields(LevelInfo, message, fields)
+		}
+	case TextType:
+		if len(fields) == 0 {
+			loggerStandard.writeText(LevelInfo, message)
+		} else {
+			loggerStandard.writeTextFields(LevelInfo, message, fields)
+		}
 	}
 }
 func (loggerStandard *LoggerStandard) Warn(message string, fields ...Field) {
-	if len(fields) == 0 {
-		loggerStandard.setLog(LevelWarn, message)
-	} else {
-		loggerStandard.setLogf(LevelWarn, message, fields)
+	switch loggerStandard.format {
+	case JsonType:
+		if len(fields) == 0 {
+			loggerStandard.writeJson(LevelWarn, message)
+		} else {
+			loggerStandard.writeJsonFields(LevelWarn, message, fields)
+		}
+	case TextType:
+		if len(fields) == 0 {
+			loggerStandard.writeText(LevelWarn, message)
+		} else {
+			loggerStandard.writeTextFields(LevelWarn, message, fields)
+		}
 	}
 }
-func (loggerStandard *LoggerStandard) SetLevel(level int) {
+func (loggerStandard *LoggerStandard) SetLevel(level TypeLevel) {
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
 	loggerStandard.level = level
