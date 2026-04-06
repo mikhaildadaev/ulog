@@ -159,7 +159,7 @@ func New() Logger {
 	asyncWriter := NewAsyncWriter(os.Stderr, 10000)
 	return &LoggerStandard{
 		asyncWriter: asyncWriter,
-		caller:      true,
+		caller:      false,
 		level:       getLoggerLevel(),
 		Logger:      log.New(asyncWriter, "", 0),
 		scheme:      getLoggerScheme(),
@@ -325,7 +325,7 @@ func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, message string, fiel
 	dataBuf.WriteString(scheme.reset)
 	dataBuf.WriteByte('\n')
 }
-func formatPrefix(dataBuf *bytes.Buffer, scheme colorScheme, level int) {
+func formatPrefix(dataBuf *bytes.Buffer, scheme colorScheme, level int, caller string) {
 	switch level {
 	case LevelDebug:
 		dataBuf.WriteString(scheme.colorCyan)
@@ -344,6 +344,11 @@ func formatPrefix(dataBuf *bytes.Buffer, scheme colorScheme, level int) {
 		dataBuf.WriteString("[WARN]")
 	}
 	dataBuf.WriteByte(' ')
+	if caller != "" {
+		dataBuf.WriteString(scheme.caller)
+		dataBuf.WriteString(caller)
+		dataBuf.WriteByte(' ')
+	}
 }
 func formatTime(dataBuf *bytes.Buffer, time time.Time) {
 	timeBuf := timePool.Get().([]byte)
@@ -434,7 +439,7 @@ func (loggerStandard *LoggerStandard) Close() error {
 }
 func (loggerStandard *LoggerStandard) getCaller() string {
 	if !loggerStandard.caller {
-		return "disabled:0"
+		return ""
 	}
 	pc, file, line, _ := runtime.Caller(2)
 	if val, ok := loggerStandard.cache.Load(pc); ok {
@@ -465,8 +470,7 @@ func (loggerStandard *LoggerStandard) setLog(level int, message string) {
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
 	formatTime(dataBuf, time)
-	formatPrefix(dataBuf, scheme, level)
-	formatCaller(dataBuf, scheme, caller)
+	formatPrefix(dataBuf, scheme, level, caller)
 	formatData(dataBuf, scheme, message)
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
@@ -483,8 +487,7 @@ func (loggerStandard *LoggerStandard) setLogf(level int, message string, fields 
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
 	formatTime(dataBuf, time)
-	formatPrefix(dataBuf, scheme, level)
-	formatCaller(dataBuf, scheme, caller)
+	formatPrefix(dataBuf, scheme, level, caller)
 	formatDataf(dataBuf, scheme, message, fields)
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
