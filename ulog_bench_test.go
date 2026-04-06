@@ -19,7 +19,11 @@ func BenchmarkDebug(b *testing.B) {
 	})
 	b.Run("Format", func(b *testing.B) {
 		logger := New()
-		logger.Debug("test debug message")
+		logger.Debug("test debug message",
+			String("code", "ERR_001"),
+			Int("user_id", 12345),
+			String("path", "/api/v1/test"),
+		)
 		logger.SetOutput(io.Discard)
 		defer logger.Sync()
 		b.ResetTimer()
@@ -45,7 +49,11 @@ func BenchmarkError(b *testing.B) {
 	})
 	b.Run("Format", func(b *testing.B) {
 		logger := New()
-		logger.Error("test error message")
+		logger.Error("test error message",
+			String("code", "ERR_001"),
+			Int("user_id", 12345),
+			String("path", "/api/v1/test"),
+		)
 		logger.SetOutput(io.Discard)
 		defer logger.Sync()
 		b.ResetTimer()
@@ -71,7 +79,11 @@ func BenchmarkInfo(b *testing.B) {
 	})
 	b.Run("Format", func(b *testing.B) {
 		logger := New()
-		logger.Info("test info message")
+		logger.Info("test info message",
+			String("code", "ERR_001"),
+			Int("user_id", 12345),
+			String("path", "/api/v1/test"),
+		)
 		logger.SetOutput(io.Discard)
 		defer logger.Sync()
 		b.ResetTimer()
@@ -97,7 +109,11 @@ func BenchmarkWarn(b *testing.B) {
 	})
 	b.Run("Format", func(b *testing.B) {
 		logger := New()
-		logger.Warn("test warn message")
+		logger.Warn("test warn message",
+			String("code", "ERR_001"),
+			Int("user_id", 12345),
+			String("path", "/api/v1/test"),
+		)
 		logger.SetOutput(io.Discard)
 		defer logger.Sync()
 		b.ResetTimer()
