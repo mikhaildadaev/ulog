@@ -35,11 +35,17 @@ const (
 )
 const (
 	BoolType FieldType = iota
+	BoolsType
 	DurationType
+	DurationsType
 	FloatType
+	FloatsType
 	IntType
+	IntsType
 	StringType
+	StringsType
 	TimeType
+	TimesType
 )
 
 // Публичные интерфейсы
@@ -357,16 +363,70 @@ func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, message string, fiel
 		switch field.valueType {
 		case BoolType:
 			dataBuf.WriteString(strconv.FormatBool(field.valueBool))
+		case BoolsType:
+			dataBuf.WriteByte('[')
+			for i, value := range field.valueBools {
+				if i > 0 {
+					dataBuf.WriteByte(' ')
+				}
+				dataBuf.WriteString(strconv.FormatBool(value))
+			}
+			dataBuf.WriteByte(']')
 		case DurationType:
 			dataBuf.WriteString(field.valueDuration.String())
+		case DurationsType:
+			dataBuf.WriteByte('[')
+			for i, value := range field.valueDurations {
+				if i > 0 {
+					dataBuf.WriteByte(' ')
+				}
+				dataBuf.WriteString(value.String())
+			}
+			dataBuf.WriteByte(']')
 		case FloatType:
 			dataBuf.WriteString(strconv.FormatFloat(field.valueFloat, 'f', -1, 64))
+		case FloatsType:
+			dataBuf.WriteByte('[')
+			for i, value := range field.valueFloats {
+				if i > 0 {
+					dataBuf.WriteByte(' ')
+				}
+				dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
+			}
+			dataBuf.WriteByte(']')
 		case IntType:
 			dataBuf.WriteString(strconv.FormatInt(field.valueInt, 10))
+		case IntsType:
+			dataBuf.WriteByte('[')
+			for i, value := range field.valueInts {
+				if i > 0 {
+					dataBuf.WriteByte(' ')
+				}
+				dataBuf.WriteString(strconv.FormatInt(value, 10))
+			}
+			dataBuf.WriteByte(']')
 		case StringType:
 			dataBuf.WriteString(field.valueString)
+		case StringsType:
+			dataBuf.WriteByte('[')
+			for i, value := range field.valueStrings {
+				if i > 0 {
+					dataBuf.WriteByte(' ')
+				}
+				dataBuf.WriteString(value)
+			}
+			dataBuf.WriteByte(']')
 		case TimeType:
 			dataBuf.Write(field.valueTime.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
+		case TimesType:
+			dataBuf.WriteByte('[')
+			for i, value := range field.valueTimes {
+				if i > 0 {
+					dataBuf.WriteByte(' ')
+				}
+				dataBuf.Write(value.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
+			}
+			dataBuf.WriteByte(']')
 		}
 	}
 	dataBuf.WriteString(scheme.reset)
