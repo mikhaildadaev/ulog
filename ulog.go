@@ -218,7 +218,7 @@ func New() Logger {
 	asyncWriter := NewAsyncWriter(os.Stderr, 10000)
 	return &LoggerStandard{
 		asyncWriter: asyncWriter,
-		caller:      false,
+		caller:      true,
 		level:       getLoggerLevel(),
 		Logger:      log.New(asyncWriter, "", 0),
 		scheme:      getLoggerScheme(),
