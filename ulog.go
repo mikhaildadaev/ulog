@@ -66,7 +66,7 @@ type LoggerWriter struct {
 // Публичные конструкторы
 func New() Logger {
 	return &LoggerStandard{
-		caller: true,
+		caller: false,
 		level:  getLoggerLevel(),
 		Logger: log.New(os.Stderr, "", log.LstdFlags|log.Lmicroseconds),
 		scheme: getLoggerScheme(),
@@ -144,7 +144,6 @@ type colorScheme struct {
 	colorYellow string
 	caller      string
 	message     string
-	prefix      string
 	reset       string
 }
 
@@ -255,9 +254,24 @@ func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, format string, args 
 	dataBuf.WriteString(scheme.reset)
 	dataBuf.WriteByte('\n')
 }
-func formatPrefix(dataBuf *bytes.Buffer, scheme colorScheme, prefix string) {
-	dataBuf.WriteString(scheme.prefix)
-	dataBuf.WriteString(prefix)
+func formatPrefix(dataBuf *bytes.Buffer, scheme colorScheme, level int) {
+	switch level {
+	case LevelDebug:
+		dataBuf.WriteString(scheme.colorCyan)
+		dataBuf.WriteString("[DEBUG]")
+	case LevelError:
+		dataBuf.WriteString(scheme.colorRed)
+		dataBuf.WriteString("[ERROR]")
+	case LevelFatal:
+		dataBuf.WriteString(scheme.colorPurple)
+		dataBuf.WriteString("[FATAL]")
+	case LevelInfo:
+		dataBuf.WriteString(scheme.colorGreen)
+		dataBuf.WriteString("[INFO]")
+	case LevelWarn:
+		dataBuf.WriteString(scheme.colorYellow)
+		dataBuf.WriteString("[WARN]")
+	}
 	dataBuf.WriteByte(' ')
 }
 func formatTime(dataBuf *bytes.Buffer, time time.Time) {
@@ -366,32 +380,30 @@ func (loggerStandard *LoggerStandard) setLog(level int, prefix, message string) 
 	}
 	caller := loggerStandard.getCaller()
 	scheme := loggerStandard.getScheme()
-	scheme.prefix = loggerStandard.getColor(level, scheme)
 	time := time.Now()
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
 	formatTime(dataBuf, time)
-	formatPrefix(dataBuf, scheme, prefix)
+	formatPrefix(dataBuf, scheme, level)
 	formatCaller(dataBuf, scheme, caller)
 	formatData(dataBuf, scheme, message)
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
 	loggerStandard.Writer().Write(dataBuf.Bytes())
 }
-func (loggerStandard *LoggerStandard) setLogf(level int, prefix, format string, args ...any) {
+func (loggerStandard *LoggerStandard) setLogf(level int, format string, args ...any) {
 	if loggerStandard.getLevel() > level {
 		return
 	}
 	caller := loggerStandard.getCaller()
 	scheme := loggerStandard.getScheme()
-	scheme.prefix = loggerStandard.getColor(level, scheme)
 	time := time.Now()
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
 	formatTime(dataBuf, time)
-	formatPrefix(dataBuf, scheme, prefix)
+	formatPrefix(dataBuf, scheme, level)
 	formatCaller(dataBuf, scheme, caller)
 	formatDataf(dataBuf, scheme, format, args)
 	loggerStandard.mutex.Lock()

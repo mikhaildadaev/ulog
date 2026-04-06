@@ -4,36 +4,36 @@ import "strings"
 
 // Публичные методы
 func (loggerStandard *LoggerStandard) Debug(message string) {
-	loggerStandard.setLog(LevelDebug, "[DEBUG] ", message)
+	loggerStandard.setLog(LevelDebug, "[DEBUG]", message)
 }
 func (loggerStandard *LoggerStandard) Debugf(format string, args ...any) {
-	loggerStandard.setLogf(LevelDebug, "[DEBUG] ", format, args...)
+	loggerStandard.setLogf(LevelDebug, format, args...)
 }
 func (loggerStandard *LoggerStandard) Error(message string) {
-	loggerStandard.setLog(LevelError, "[ERROR] ", message)
+	loggerStandard.setLog(LevelError, "[ERROR]", message)
 }
 func (loggerStandard *LoggerStandard) Errorf(format string, args ...any) {
-	loggerStandard.setLogf(LevelError, "[ERROR] ", format, args...)
+	loggerStandard.setLogf(LevelError, format, args...)
 }
 func (loggerStandard *LoggerStandard) Fatal(message string) {
-	loggerStandard.setLog(LevelError, "[FATAL] ", message)
+	loggerStandard.setLog(LevelError, "[FATAL]", message)
 	osExit(1)
 }
 func (loggerStandard *LoggerStandard) Fatalf(format string, args ...any) {
-	loggerStandard.setLogf(LevelError, "[FATAL] ", format, args...)
+	loggerStandard.setLogf(LevelError, format, args...)
 	osExit(1)
 }
 func (loggerStandard *LoggerStandard) Info(message string) {
-	loggerStandard.setLog(LevelInfo, "[INFO] ", message)
+	loggerStandard.setLog(LevelInfo, "[INFO]", message)
 }
 func (loggerStandard *LoggerStandard) Infof(format string, args ...any) {
-	loggerStandard.setLogf(LevelInfo, "[INFO] ", format, args...)
+	loggerStandard.setLogf(LevelInfo, format, args...)
 }
 func (loggerStandard *LoggerStandard) Warn(message string) {
-	loggerStandard.setLog(LevelWarn, "[WARN] ", message)
+	loggerStandard.setLog(LevelWarn, "[WARN]", message)
 }
 func (loggerStandard *LoggerStandard) Warnf(format string, args ...any) {
-	loggerStandard.setLogf(LevelWarn, "[WARN] ", format, args...)
+	loggerStandard.setLogf(LevelWarn, format, args...)
 }
 func (loggerStandard *LoggerStandard) SetLevel(level int) {
 	loggerStandard.mutex.Lock()
