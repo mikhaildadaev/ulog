@@ -99,6 +99,20 @@ func Duration(key string, value time.Duration) Field {
 		value: value,
 	}
 }
+func Err(err error) Field {
+	if err == nil {
+		return Field{
+			typ:   StringType,
+			key:   "error",
+			value: "nil",
+		}
+	}
+	return Field{
+		typ:   StringType,
+		key:   "error",
+		value: err.Error(),
+	}
+}
 func Float64(key string, value float64) Field {
 	return Field{
 		typ:   Float64Type,
