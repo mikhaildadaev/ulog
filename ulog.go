@@ -277,25 +277,25 @@ func formatData(dataBuf *bytes.Buffer, scheme colorScheme, message string) {
 	dataBuf.WriteByte('\n')
 }
 func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, fields []Field) {
-	for _, f := range fields {
+	for _, field := range fields {
 		dataBuf.WriteByte(' ')
-		dataBuf.WriteString(f.key)
+		dataBuf.WriteString(field.key)
 		dataBuf.WriteByte('=')
-		switch f.typ {
+		switch field.typ {
 		case BoolType:
-			dataBuf.WriteString(strconv.FormatBool(f.value.(bool)))
+			dataBuf.WriteString(strconv.FormatBool(field.value.(bool)))
 		case DurationType:
-			dataBuf.WriteString(f.value.(time.Duration).String())
+			dataBuf.WriteString(field.value.(time.Duration).String())
 		case Float64Type:
-			dataBuf.WriteString(strconv.FormatFloat(f.value.(float64), 'f', -1, 64))
+			dataBuf.WriteString(strconv.FormatFloat(field.value.(float64), 'f', -1, 64))
 		case IntType:
-			dataBuf.WriteString(strconv.Itoa(f.value.(int)))
+			dataBuf.WriteString(strconv.Itoa(field.value.(int)))
 		case Int64Type:
-			dataBuf.WriteString(strconv.FormatInt(f.value.(int64), 10))
+			dataBuf.WriteString(strconv.FormatInt(field.value.(int64), 10))
 		case StringType:
-			dataBuf.WriteString(f.value.(string))
+			dataBuf.WriteString(field.value.(string))
 		case TimeType:
-			dataBuf.Write(f.value.(time.Time).AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
+			dataBuf.Write(field.value.(time.Time).AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
 		}
 	}
 	dataBuf.WriteString(scheme.reset)
