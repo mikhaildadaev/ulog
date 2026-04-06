@@ -221,7 +221,7 @@ func Times(keyName string, valueTimes []time.Time) Field {
 		valueTimes: valueTimes,
 	}
 }
-func Text() Logger {
+func NewLogger() Logger {
 	asyncWriter := NewAsyncWriter(os.Stderr, 10000)
 	return &LoggerStandard{
 		asyncWriter: asyncWriter,

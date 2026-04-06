@@ -41,7 +41,7 @@ func TestColorScheme(t *testing.T) {
 	}
 }
 func TestConcurrency(t *testing.T) {
-	logger := Text()
+	logger := NewLogger()
 	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
@@ -221,14 +221,14 @@ func TestLoggerWriter(t *testing.T) {
 	}
 }
 func TestSetLevel(t *testing.T) {
-	logger := Text().(*LoggerStandard)
+	logger := NewLogger().(*LoggerStandard)
 	logger.SetLevel(LevelError)
 	if logger.getLevel() != LevelError {
 		t.Errorf("Expected level %d, got %d", LevelError, logger.getLevel())
 	}
 }
 func TestSetTheme(t *testing.T) {
-	logger := Text().(*LoggerStandard)
+	logger := NewLogger().(*LoggerStandard)
 	logger.SetTheme("light")
 	if logger.getScheme() != lightScheme {
 		t.Error("Theme not changed to light")
