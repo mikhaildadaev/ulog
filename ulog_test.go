@@ -125,7 +125,7 @@ func TestNewWithWriter(t *testing.T) {
 	}
 }
 func TestLevel(t *testing.T) {
-	t.Run("Fatal", func(t *testing.T) {
+	t.Run("Fatal level", func(t *testing.T) {
 		var exited bool
 		oldExit := osExit
 		defer func() { osExit = oldExit }()
@@ -140,11 +140,11 @@ func TestLevel(t *testing.T) {
 		if !exited {
 			t.Error("Fatal should call os.Exit")
 		}
-		if !strings.Contains(buf.String(), colorDarkRed+"[FATAL]") {
+		if !strings.Contains(buf.String(), colorDarkPurple+"[FATAL]") {
 			t.Errorf("Fatal message not logged: %s", buf.String())
 		}
 	})
-	t.Run("Standard levels", func(t *testing.T) {
+	t.Run("Standard level", func(t *testing.T) {
 		var buf bytes.Buffer
 		logger := &LoggerStandard{
 			Logger: log.New(&buf, "", 0),
@@ -227,15 +227,14 @@ func TestSetLevel(t *testing.T) {
 		t.Errorf("Expected level %d, got %d", LevelError, logger.getLevel())
 	}
 }
-
-//func TestSetTheme(t *testing.T) {
-//	logger := New().(*LoggerStandard)
-//	logger.SetTheme("light")
-//	if logger.getScheme() != lightScheme {
-//		t.Error("Theme not changed to light")
-//	}
-//	logger.SetTheme("dark")
-//	if logger.getScheme() != darkScheme {
-//		t.Error("Theme not changed to dark")
-//	}
-//}
+func TestSetTheme(t *testing.T) {
+	logger := New().(*LoggerStandard)
+	logger.SetTheme("light")
+	if logger.getScheme() != lightScheme {
+		t.Error("Theme not changed to light")
+	}
+	logger.SetTheme("dark")
+	if logger.getScheme() != darkScheme {
+		t.Error("Theme not changed to dark")
+	}
+}
