@@ -1,6 +1,10 @@
 package ulog
 
-import "strings"
+import (
+	"io"
+	"log"
+	"strings"
+)
 
 // Публичные методы
 func (loggerStandard *LoggerStandard) Debug(message string) {
@@ -39,6 +43,19 @@ func (loggerStandard *LoggerStandard) SetLevel(level int) {
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
 	loggerStandard.level = level
+}
+func (loggerStandard *LoggerStandard) SetOutput(writer io.Writer) {
+	loggerStandard.mutex.Lock()
+	defer loggerStandard.mutex.Unlock()
+	if loggerStandard.asyncWriter != nil {
+		loggerStandard.asyncWriter.Close()
+	}
+	bufferSize := 10000
+	if loggerStandard.asyncWriter != nil {
+		bufferSize = loggerStandard.asyncWriter.limit
+	}
+	loggerStandard.asyncWriter = NewAsyncWriter(writer, bufferSize)
+	loggerStandard.Logger = log.New(loggerStandard.asyncWriter, "", 0)
 }
 func (loggerStandard *LoggerStandard) SetTheme(theme string) {
 	loggerStandard.mutex.Lock()

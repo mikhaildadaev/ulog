@@ -44,6 +44,7 @@ type Logger interface {
 	Warn(message string)
 	Warnf(format string, args ...any)
 	SetLevel(level int)
+	SetOutput(writer io.Writer)
 	SetTheme(theme string)
 	Sync() error
 }
@@ -78,7 +79,7 @@ func New() Logger {
 		asyncWriter: asyncWriter,
 		caller:      false,
 		level:       getLoggerLevel(),
-		Logger:      log.New(os.Stderr, "", log.LstdFlags|log.Lmicroseconds),
+		Logger:      log.New(asyncWriter, "", 0),
 		scheme:      getLoggerScheme(),
 	}
 }

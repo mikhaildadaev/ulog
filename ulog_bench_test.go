@@ -1,12 +1,15 @@
 package ulog
 
 import (
+	"io"
 	"testing"
 )
 
 // Бенчмарки компонентов
 func BenchmarkDebug(b *testing.B) {
 	logger := New()
+	logger.SetOutput(io.Discard)
+	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		logger.Debug("message debug")
@@ -14,6 +17,8 @@ func BenchmarkDebug(b *testing.B) {
 }
 func BenchmarkDebugf(b *testing.B) {
 	logger := New()
+	logger.SetOutput(io.Discard)
+	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		logger.Debugf("message debug #%d", i)
@@ -21,6 +26,8 @@ func BenchmarkDebugf(b *testing.B) {
 }
 func BenchmarkError(b *testing.B) {
 	logger := New()
+	logger.SetOutput(io.Discard)
+	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		logger.Error("message error")
@@ -28,6 +35,8 @@ func BenchmarkError(b *testing.B) {
 }
 func BenchmarkErrorf(b *testing.B) {
 	logger := New()
+	logger.SetOutput(io.Discard)
+	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		logger.Errorf("message error #%d", i)
@@ -35,6 +44,8 @@ func BenchmarkErrorf(b *testing.B) {
 }
 func BenchmarkInfo(b *testing.B) {
 	logger := New()
+	logger.SetOutput(io.Discard)
+	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		logger.Info("message info")
@@ -42,6 +53,8 @@ func BenchmarkInfo(b *testing.B) {
 }
 func BenchmarkInfof(b *testing.B) {
 	logger := New()
+	logger.SetOutput(io.Discard)
+	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		logger.Infof("message info #%d", i)
@@ -49,6 +62,8 @@ func BenchmarkInfof(b *testing.B) {
 }
 func BenchmarkWarn(b *testing.B) {
 	logger := New()
+	logger.SetOutput(io.Discard)
+	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		logger.Warn("message warning")
@@ -56,6 +71,8 @@ func BenchmarkWarn(b *testing.B) {
 }
 func BenchmarkWarnf(b *testing.B) {
 	logger := New()
+	logger.SetOutput(io.Discard)
+	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		logger.Warnf("message warning #%d", i)
@@ -63,6 +80,8 @@ func BenchmarkWarnf(b *testing.B) {
 }
 func BenchmarkLoggerWriter(b *testing.B) {
 	logger := New()
+	logger.SetOutput(io.Discard)
+	defer logger.Sync()
 	writer := NewWithWriter(logger, LevelInfo)
 	data := []byte("test message")
 	b.ResetTimer()
@@ -72,6 +91,8 @@ func BenchmarkLoggerWriter(b *testing.B) {
 }
 func BenchmarkWithDisabledLevel(b *testing.B) {
 	logger := New()
+
+	defer logger.Sync()
 	logger.SetLevel(LevelError)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
