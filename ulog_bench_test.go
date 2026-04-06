@@ -8,6 +8,7 @@ import (
 // Бенчмарки компонентов
 func BenchmarkDebug(b *testing.B) {
 	logger := New()
+	logger.Debug("test debug message")
 	logger.SetOutput(io.Discard)
 	defer logger.Sync()
 	b.ResetTimer()
@@ -17,6 +18,7 @@ func BenchmarkDebug(b *testing.B) {
 }
 func BenchmarkError(b *testing.B) {
 	logger := New()
+	logger.Error("test error message")
 	logger.SetOutput(io.Discard)
 	defer logger.Sync()
 	b.ResetTimer()
@@ -26,6 +28,7 @@ func BenchmarkError(b *testing.B) {
 }
 func BenchmarkInfo(b *testing.B) {
 	logger := New()
+	logger.Info("test info message")
 	logger.SetOutput(io.Discard)
 	defer logger.Sync()
 	b.ResetTimer()
@@ -35,6 +38,7 @@ func BenchmarkInfo(b *testing.B) {
 }
 func BenchmarkWarn(b *testing.B) {
 	logger := New()
+	logger.Warn("test warn message")
 	logger.SetOutput(io.Discard)
 	defer logger.Sync()
 	b.ResetTimer()
@@ -55,7 +59,7 @@ func BenchmarkLoggerWriter(b *testing.B) {
 }
 func BenchmarkWithDisabledLevel(b *testing.B) {
 	logger := New()
-
+	//logger.SetOutput(io.Discard)
 	defer logger.Sync()
 	logger.SetLevel(LevelError)
 	b.ResetTimer()
