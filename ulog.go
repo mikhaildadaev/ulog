@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -51,6 +50,8 @@ type Logger interface {
 // Публичные структуры
 type LoggerStandard struct {
 	*log.Logger
+	cache  sync.Map
+	caller bool
 	level  int
 	mutex  sync.RWMutex
 	scheme colorScheme
@@ -65,6 +66,7 @@ type LoggerWriter struct {
 // Публичные конструкторы
 func New() Logger {
 	return &LoggerStandard{
+		caller: true,
 		level:  getLogerLevel(),
 		Logger: log.New(os.Stderr, "", log.LstdFlags|log.Lmicroseconds),
 		scheme: getLogerScheme(),
@@ -148,7 +150,7 @@ type colorScheme struct {
 
 // Приватные переменные
 var (
-	bufPool = sync.Pool{
+	dataPool = sync.Pool{
 		New: func() any {
 			return new(bytes.Buffer)
 		},
@@ -173,10 +175,21 @@ var (
 		message:     colorLightBlack,
 		reset:       colorReset,
 	}
-	osExit = os.Exit
+	osExit   = os.Exit
+	timePool = sync.Pool{
+		New: func() any {
+			return make([]byte, 0, 26)
+		},
+	}
 )
 
 // Приватные функции
+func formatTime(buf *bytes.Buffer, t time.Time) {
+	timeBuf := timePool.Get().([]byte)
+	timeBuf = t.AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
+	buf.Write(timeBuf)
+	timePool.Put(timeBuf)
+}
 func formatMessage(buf *bytes.Buffer, format string, args []any) {
 	argIdx := 0
 	for i := 0; i < len(format); i++ {
@@ -282,6 +295,20 @@ func isIgnoredError(data []byte) bool {
 }
 
 // Приватные методы
+func (loggerStandard *LoggerStandard) getCaller() (string, string) {
+	if !loggerStandard.caller {
+		return "disable", "0"
+	}
+	pc, file, line, ok := runtime.Caller(2)
+	if !ok {
+		return "unknown", "0"
+	}
+	if val, ok := loggerStandard.cache.Load(pc); ok {
+		return val.(string), strconv.Itoa(line)
+	}
+	loggerStandard.cache.Store(pc, file)
+	return file, strconv.Itoa(line)
+}
 func (loggerStandard *LoggerStandard) getColor(level int, scheme colorScheme) string {
 	switch level {
 	case LevelDebug:
@@ -312,69 +339,61 @@ func (loggerStandard *LoggerStandard) setLog(level int, prefix, message string) 
 	if loggerStandard.getLevel() > level {
 		return
 	}
-	_, filename, linenumber, ok := runtime.Caller(2)
-	if !ok {
-		filename = "unknown"
-		linenumber = 0
-	} else {
-		filename = filepath.Base(filename)
-	}
-	now := time.Now()
+	filename, linenumber := loggerStandard.getCaller()
 	scheme := loggerStandard.getScheme()
 	scheme.prefix = loggerStandard.getColor(level, scheme)
-	buf := bufPool.Get().(*bytes.Buffer)
-	buf.Reset()
-	defer bufPool.Put(buf)
-	buf.WriteString(now.Format("2006/01/02 15:04:05.000000"))
-	buf.WriteString(" ")
-	buf.WriteString(scheme.prefix)
-	buf.WriteString(prefix)
-	buf.WriteString(scheme.fileLine)
-	buf.WriteString(filename)
-	buf.WriteString("[")
-	buf.WriteString(strconv.Itoa(linenumber))
-	buf.WriteString("] ")
-	buf.WriteString(scheme.message)
-	buf.WriteString(message)
-	buf.WriteString(scheme.reset)
-	buf.WriteByte('\n')
+	dataBuf := dataPool.Get().(*bytes.Buffer)
+	dataBuf.Reset()
+	defer dataPool.Put(dataBuf)
+	timeBuf := timePool.Get().([]byte)
+	timeBuf = time.Now().AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
+	dataBuf.Write(timeBuf)
+	timePool.Put(timeBuf)
+	dataBuf.WriteString(" ")
+	dataBuf.WriteString(scheme.prefix)
+	dataBuf.WriteString(prefix)
+	dataBuf.WriteString(scheme.fileLine)
+	dataBuf.WriteString(filename)
+	dataBuf.WriteString("[")
+	dataBuf.WriteString(linenumber)
+	dataBuf.WriteString("] ")
+	dataBuf.WriteString(scheme.message)
+	dataBuf.WriteString(message)
+	dataBuf.WriteString(scheme.reset)
+	dataBuf.WriteByte('\n')
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
-	loggerStandard.Writer().Write(buf.Bytes())
+	loggerStandard.Writer().Write(dataBuf.Bytes())
 }
 func (loggerStandard *LoggerStandard) setLogf(level int, prefix, format string, args ...any) {
 	if loggerStandard.getLevel() > level {
 		return
 	}
-	_, filename, linenumber, ok := runtime.Caller(2)
-	if !ok {
-		filename = "unknown"
-		linenumber = 0
-	} else {
-		filename = filepath.Base(filename)
-	}
-	now := time.Now()
+	filename, linenumber := loggerStandard.getCaller()
 	scheme := loggerStandard.getScheme()
 	scheme.prefix = loggerStandard.getColor(level, scheme)
-	buf := bufPool.Get().(*bytes.Buffer)
-	buf.Reset()
-	defer bufPool.Put(buf)
-	buf.WriteString(now.Format("2006/01/02 15:04:05.000000"))
-	buf.WriteByte(' ')
-	buf.WriteString(scheme.prefix)
-	buf.WriteString(prefix)
-	buf.WriteString(scheme.fileLine)
-	buf.WriteString(filename)
-	buf.WriteByte('[')
-	buf.WriteString(strconv.Itoa(linenumber))
-	buf.WriteString("] ")
-	buf.WriteString(scheme.message)
-	formatMessage(buf, format, args)
-	buf.WriteString(scheme.reset)
-	buf.WriteByte('\n')
+	dataBuf := dataPool.Get().(*bytes.Buffer)
+	dataBuf.Reset()
+	defer dataPool.Put(dataBuf)
+	timeBuf := timePool.Get().([]byte)
+	timeBuf = time.Now().AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
+	dataBuf.Write(timeBuf)
+	timePool.Put(timeBuf)
+	dataBuf.WriteByte(' ')
+	dataBuf.WriteString(scheme.prefix)
+	dataBuf.WriteString(prefix)
+	dataBuf.WriteString(scheme.fileLine)
+	dataBuf.WriteString(filename)
+	dataBuf.WriteByte('[')
+	dataBuf.WriteString(linenumber)
+	dataBuf.WriteString("] ")
+	dataBuf.WriteString(scheme.message)
+	formatMessage(dataBuf, format, args)
+	dataBuf.WriteString(scheme.reset)
+	dataBuf.WriteByte('\n')
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
-	loggerStandard.Writer().Write(buf.Bytes())
+	loggerStandard.Writer().Write(dataBuf.Bytes())
 }
 func (loggerWriter *LoggerWriter) setMessage(message string) {
 	switch loggerWriter.level {
