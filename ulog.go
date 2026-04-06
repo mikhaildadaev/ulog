@@ -34,12 +34,11 @@ const (
 	LevelFatal        // 4 - критические ошибки (с остановкой приложения)
 )
 const (
-	StringType FieldType = iota
-	IntType
-	Int64Type
-	BoolType
-	Float64Type
+	BoolType FieldType = iota
 	DurationType
+	FloatType
+	IntType
+	StringType
 	TimeType
 )
 
@@ -58,9 +57,20 @@ type Logger interface {
 
 // Публичные структуры
 type Field struct {
-	typ   FieldType
-	key   string
-	value any
+	keyName        string
+	valueBool      bool
+	valueBools     []bool
+	valueDuration  time.Duration
+	valueDurations []time.Duration
+	valueInt       int64
+	valueInts      []int64
+	valueFloat     float64
+	valueFloats    []float64
+	valueString    string
+	valueStrings   []string
+	valueTime      time.Time
+	valueTimes     []time.Time
+	valueType      FieldType
 }
 type LoggerStandard struct {
 	*log.Logger
@@ -85,74 +95,117 @@ type LoggerWriter struct {
 }
 
 // Публичные конструкторы
-func Any(key string, value any) Field {
+func Bool(keyName string, valueBool bool) Field {
 	return Field{
-		typ: StringType,
-		key: key,
-		//value: fmt.Sprintf("%v", value),
+		valueType: BoolType,
+		keyName:   keyName,
+		valueBool: valueBool,
 	}
 }
-func Bool(key string, value bool) Field {
+func Bools(keyName string, valueBools []bool) Field {
 	return Field{
-		typ:   BoolType,
-		key:   key,
-		value: value,
+		valueType:  BoolType,
+		keyName:    keyName,
+		valueBools: valueBools,
 	}
 }
-func Duration(key string, value time.Duration) Field {
+func Duration(keyName string, valueDuration time.Duration) Field {
 	return Field{
-		typ:   DurationType,
-		key:   key,
-		value: value,
+		valueType:     DurationType,
+		keyName:       keyName,
+		valueDuration: valueDuration,
+	}
+}
+func Durations(keyName string, valueDurations []time.Duration) Field {
+	return Field{
+		valueType:      DurationType,
+		keyName:        keyName,
+		valueDurations: valueDurations,
 	}
 }
 func Err(err error) Field {
 	if err == nil {
 		return Field{
-			typ:   StringType,
-			key:   "error",
-			value: "nil",
+			valueType:   StringType,
+			keyName:     "error",
+			valueString: "nil",
 		}
 	}
 	return Field{
-		typ:   StringType,
-		key:   "error",
-		value: err.Error(),
+		valueType:   StringType,
+		keyName:     "error",
+		valueString: err.Error(),
 	}
 }
-func Float64(key string, value float64) Field {
+func Errs(errs []error) Field {
+	values := make([]string, len(errs))
+	for i, err := range errs {
+		if err == nil {
+			values[i] = "nil"
+		} else {
+			values[i] = err.Error()
+		}
+	}
 	return Field{
-		typ:   Float64Type,
-		key:   key,
-		value: value,
+		valueType:    StringType,
+		keyName:      "errors",
+		valueStrings: values,
 	}
 }
-func Int(key string, value int) Field {
+func Float(keyName string, valueFloat float64) Field {
 	return Field{
-		typ:   IntType,
-		key:   key,
-		value: value,
+		valueType:  FloatType,
+		keyName:    keyName,
+		valueFloat: valueFloat,
 	}
 }
-func Int64(key string, value int64) Field {
+func Floats(keyName string, valueFloats []float64) Field {
 	return Field{
-		typ:   Int64Type,
-		key:   key,
-		value: value,
+		valueType:   FloatType,
+		keyName:     keyName,
+		valueFloats: valueFloats,
 	}
 }
-func String(key, value string) Field {
+func Int(keyName string, valueInt int64) Field {
 	return Field{
-		typ:   StringType,
-		key:   key,
-		value: value,
+		valueType: IntType,
+		keyName:   keyName,
+		valueInt:  valueInt,
 	}
 }
-func Time(key string, value time.Time) Field {
+func Ints(keyName string, valueInts []int64) Field {
 	return Field{
-		typ:   TimeType,
-		key:   key,
-		value: value,
+		valueType: IntType,
+		keyName:   keyName,
+		valueInts: valueInts,
+	}
+}
+func String(keyName string, valueString string) Field {
+	return Field{
+		valueType:   StringType,
+		keyName:     keyName,
+		valueString: valueString,
+	}
+}
+func Strings(keyName string, valueStrings []string) Field {
+	return Field{
+		valueType:    StringType,
+		keyName:      keyName,
+		valueStrings: valueStrings,
+	}
+}
+func Time(keyName string, valueTime time.Time) Field {
+	return Field{
+		valueType: TimeType,
+		keyName:   keyName,
+		valueTime: valueTime,
+	}
+}
+func Times(keyName string, valueTimes []time.Time) Field {
+	return Field{
+		valueType:  TimeType,
+		keyName:    keyName,
+		valueTimes: valueTimes,
 	}
 }
 func New() Logger {
@@ -286,11 +339,6 @@ var (
 )
 
 // Приватные функции
-func formatCaller(dataBuf *bytes.Buffer, scheme colorScheme, caller string) {
-	dataBuf.WriteString(scheme.caller)
-	dataBuf.WriteString(caller)
-	dataBuf.WriteByte(' ')
-}
 func formatData(dataBuf *bytes.Buffer, scheme colorScheme, message string) {
 	dataBuf.WriteString(scheme.message)
 	dataBuf.WriteString(message)
@@ -298,28 +346,27 @@ func formatData(dataBuf *bytes.Buffer, scheme colorScheme, message string) {
 	dataBuf.WriteByte('\n')
 }
 func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, message string, fields []Field) {
+	dataBuf.WriteByte(' ')
+	dataBuf.WriteString(scheme.message)
+	dataBuf.WriteString(message)
+	dataBuf.WriteByte(':')
 	for _, field := range fields {
 		dataBuf.WriteByte(' ')
-		dataBuf.WriteString(scheme.message)
-		dataBuf.WriteString(message)
-		dataBuf.WriteByte(' ')
-		dataBuf.WriteString(field.key)
+		dataBuf.WriteString(field.keyName)
 		dataBuf.WriteByte('=')
-		switch field.typ {
+		switch field.valueType {
 		case BoolType:
-			dataBuf.WriteString(strconv.FormatBool(field.value.(bool)))
+			dataBuf.WriteString(strconv.FormatBool(field.valueBool))
 		case DurationType:
-			dataBuf.WriteString(field.value.(time.Duration).String())
-		case Float64Type:
-			dataBuf.WriteString(strconv.FormatFloat(field.value.(float64), 'f', -1, 64))
+			dataBuf.WriteString(field.valueDuration.String())
+		case FloatType:
+			dataBuf.WriteString(strconv.FormatFloat(field.valueFloat, 'f', -1, 64))
 		case IntType:
-			dataBuf.WriteString(strconv.Itoa(field.value.(int)))
-		case Int64Type:
-			dataBuf.WriteString(strconv.FormatInt(field.value.(int64), 10))
+			dataBuf.WriteString(strconv.FormatInt(field.valueInt, 10))
 		case StringType:
-			dataBuf.WriteString(field.value.(string))
+			dataBuf.WriteString(field.valueString)
 		case TimeType:
-			dataBuf.Write(field.value.(time.Time).AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
+			dataBuf.Write(field.valueTime.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
 		}
 	}
 	dataBuf.WriteString(scheme.reset)
