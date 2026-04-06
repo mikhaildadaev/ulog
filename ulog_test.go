@@ -40,7 +40,7 @@ func TestColorScheme(t *testing.T) {
 		t.Error("Light scheme has wrong color")
 	}
 	t.Setenv("TERM_THEME", "light")
-	scheme := getLogerScheme()
+	scheme := getLoggerScheme()
 	if scheme.colorRed != colorLightRed {
 		t.Error("Should detect light theme from TERM_THEME")
 	}
@@ -81,7 +81,7 @@ func TestEnvLogLevel(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Setenv("LOG_LEVEL", tt.env)
-		if got := getLogerLevel(); got != tt.expected {
+		if got := getLoggerLevel(); got != tt.expected {
 			t.Errorf("LOG_LEVEL=%s: got %d, want %d", tt.env, got, tt.expected)
 		}
 	}

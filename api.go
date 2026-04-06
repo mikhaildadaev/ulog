@@ -54,7 +54,7 @@ func (loggerStandard *LoggerStandard) SetTheme(theme string) {
 	case "light":
 		loggerStandard.scheme = lightScheme
 	default:
-		loggerStandard.scheme = getLogerScheme()
+		loggerStandard.scheme = getLoggerScheme()
 	}
 }
 func (loggerWriter *LoggerWriter) Write(p []byte) (n int, err error) {
