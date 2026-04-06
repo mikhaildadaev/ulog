@@ -45,16 +45,24 @@ type Logger interface {
 	Warnf(format string, args ...any)
 	SetLevel(level int)
 	SetTheme(theme string)
+	Sync() error
 }
 
 // Публичные структуры
 type LoggerStandard struct {
 	*log.Logger
-	cache  sync.Map
-	caller bool
-	level  int
-	mutex  sync.RWMutex
-	scheme colorScheme
+	asyncWriter *AsyncWriter
+	cache       sync.Map
+	caller      bool
+	level       int
+	mutex       sync.RWMutex
+	scheme      colorScheme
+}
+type AsyncWriter struct {
+	ch     chan []byte
+	limit  int
+	wg     sync.WaitGroup
+	writer io.Writer
 }
 type LoggerWriter struct {
 	level  int
@@ -65,11 +73,13 @@ type LoggerWriter struct {
 
 // Публичные конструкторы
 func New() Logger {
+	asyncWriter := NewAsyncWriter(os.Stderr, 10000)
 	return &LoggerStandard{
-		caller: false,
-		level:  getLoggerLevel(),
-		Logger: log.New(os.Stderr, "", log.LstdFlags|log.Lmicroseconds),
-		scheme: getLoggerScheme(),
+		asyncWriter: asyncWriter,
+		caller:      false,
+		level:       getLoggerLevel(),
+		Logger:      log.New(os.Stderr, "", log.LstdFlags|log.Lmicroseconds),
+		scheme:      getLoggerScheme(),
 	}
 }
 func NewErrorLog(logger Logger) *log.Logger {
@@ -82,6 +92,16 @@ func NewErrorLog(logger Logger) *log.Logger {
 		"",
 		log.LstdFlags|log.Lmicroseconds,
 	)
+}
+func NewAsyncWriter(writer io.Writer, bufferSize int) *AsyncWriter {
+	asyncWriter := &AsyncWriter{
+		ch:     make(chan []byte, bufferSize),
+		limit:  bufferSize,
+		writer: writer,
+	}
+	asyncWriter.wg.Add(1)
+	go asyncWriter.run()
+	return asyncWriter
 }
 func NewWithWriter(logger Logger, level int) io.Writer {
 	return &LoggerWriter{
@@ -336,6 +356,31 @@ func isIgnoredError(data []byte) bool {
 }
 
 // Приватные методы
+func (asyncWriter *AsyncWriter) run() {
+	defer asyncWriter.wg.Done()
+	for buf := range asyncWriter.ch {
+		asyncWriter.writer.Write(buf)
+	}
+}
+func (asyncWriter *AsyncWriter) Write(p []byte) (n int, err error) {
+	buf := make([]byte, len(p))
+	copy(buf, p)
+	select {
+	case asyncWriter.ch <- buf:
+		return len(p), nil
+	default:
+		asyncWriter.ch <- buf
+		return len(p), nil
+	}
+}
+func (asyncWriter *AsyncWriter) Close() error {
+	close(asyncWriter.ch)
+	asyncWriter.wg.Wait()
+	return nil
+}
+func (loggerStandard *LoggerStandard) Close() error {
+	return loggerStandard.asyncWriter.Close()
+}
 func (loggerStandard *LoggerStandard) getCaller() string {
 	if !loggerStandard.caller {
 		return "disabled:0"
@@ -347,22 +392,6 @@ func (loggerStandard *LoggerStandard) getCaller() string {
 	caller := getLoggerCaller(file) + ":" + strconv.Itoa(line)
 	loggerStandard.cache.Store(pc, caller)
 	return caller
-}
-func (loggerStandard *LoggerStandard) getColor(level int, scheme colorScheme) string {
-	switch level {
-	case LevelDebug:
-		return scheme.colorCyan
-	case LevelError:
-		return scheme.colorRed
-	case LevelFatal:
-		return scheme.colorPurple
-	case LevelInfo:
-		return scheme.colorGreen
-	case LevelWarn:
-		return scheme.colorYellow
-	default:
-		return scheme.colorGreen
-	}
 }
 func (loggerStandard *LoggerStandard) getLevel() int {
 	loggerStandard.mutex.RLock()

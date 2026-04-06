@@ -52,6 +52,9 @@ func (loggerStandard *LoggerStandard) SetTheme(theme string) {
 		loggerStandard.scheme = getLoggerScheme()
 	}
 }
+func (loggerStandard *LoggerStandard) Sync() error {
+	return loggerStandard.asyncWriter.Close()
+}
 func (loggerWriter *LoggerWriter) Write(p []byte) (n int, err error) {
 	loggerWriter.mutex.Lock()
 	defer loggerWriter.mutex.Unlock()
