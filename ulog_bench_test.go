@@ -12,16 +12,7 @@ func BenchmarkDebug(b *testing.B) {
 	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Debug("message debug")
-	}
-}
-func BenchmarkDebugf(b *testing.B) {
-	logger := New()
-	logger.SetOutput(io.Discard)
-	defer logger.Sync()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		logger.Debugf("message debug #%d", i)
+		logger.Debug("test debug message")
 	}
 }
 func BenchmarkError(b *testing.B) {
@@ -30,16 +21,7 @@ func BenchmarkError(b *testing.B) {
 	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Error("message error")
-	}
-}
-func BenchmarkErrorf(b *testing.B) {
-	logger := New()
-	logger.SetOutput(io.Discard)
-	defer logger.Sync()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		logger.Errorf("message error #%d", i)
+		logger.Error("test error message")
 	}
 }
 func BenchmarkInfo(b *testing.B) {
@@ -48,16 +30,7 @@ func BenchmarkInfo(b *testing.B) {
 	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Info("message info")
-	}
-}
-func BenchmarkInfof(b *testing.B) {
-	logger := New()
-	logger.SetOutput(io.Discard)
-	defer logger.Sync()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		logger.Infof("message info #%d", i)
+		logger.Info("test info message")
 	}
 }
 func BenchmarkWarn(b *testing.B) {
@@ -66,16 +39,7 @@ func BenchmarkWarn(b *testing.B) {
 	defer logger.Sync()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Warn("message warning")
-	}
-}
-func BenchmarkWarnf(b *testing.B) {
-	logger := New()
-	logger.SetOutput(io.Discard)
-	defer logger.Sync()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		logger.Warnf("message warning #%d", i)
+		logger.Warn("test warn message")
 	}
 }
 func BenchmarkLoggerWriter(b *testing.B) {

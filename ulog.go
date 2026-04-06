@@ -18,6 +18,9 @@ import (
 	"time"
 )
 
+// Публичные типы
+type FieldType uint8
+
 // Публичные константы
 const (
 	Author  = "Mikhail Dadaev"
@@ -30,19 +33,23 @@ const (
 	LevelError        // 3 - ошибки, требующие внимания
 	LevelFatal        // 4 - критические ошибки (с остановкой приложения)
 )
+const (
+	StringType FieldType = iota
+	IntType
+	Int64Type
+	BoolType
+	Float64Type
+	DurationType
+	TimeType
+)
 
 // Публичные интерфейсы
 type Logger interface {
-	Debug(message string)
-	Debugf(format string, args ...any)
-	Error(message string)
-	Errorf(format string, args ...any)
-	Fatal(message string)
-	Fatalf(format string, args ...any)
-	Info(message string)
-	Infof(format string, args ...any)
-	Warn(message string)
-	Warnf(format string, args ...any)
+	Debug(message string, fields ...Field)
+	Error(message string, fields ...Field)
+	Fatal(message string, fields ...Field)
+	Info(message string, fields ...Field)
+	Warn(message string, fields ...Field)
 	SetLevel(level int)
 	SetOutput(writer io.Writer)
 	SetTheme(theme string)
@@ -50,6 +57,11 @@ type Logger interface {
 }
 
 // Публичные структуры
+type Field struct {
+	typ   FieldType
+	key   string
+	value any
+}
 type LoggerStandard struct {
 	*log.Logger
 	asyncWriter *AsyncWriter
@@ -73,6 +85,55 @@ type LoggerWriter struct {
 }
 
 // Публичные конструкторы
+func Bool(key string, value bool) Field {
+	return Field{
+		typ:   BoolType,
+		key:   key,
+		value: value,
+	}
+}
+func Duration(key string, value time.Duration) Field {
+	return Field{
+		typ:   DurationType,
+		key:   key,
+		value: value,
+	}
+}
+func Float64(key string, value float64) Field {
+	return Field{
+		typ:   Float64Type,
+		key:   key,
+		value: value,
+	}
+}
+func Int(key string, value int) Field {
+	return Field{
+		typ:   IntType,
+		key:   key,
+		value: value,
+	}
+}
+func Int64(key string, value int64) Field {
+	return Field{
+		typ:   Int64Type,
+		key:   key,
+		value: value,
+	}
+}
+func String(key, value string) Field {
+	return Field{
+		typ:   StringType,
+		key:   key,
+		value: value,
+	}
+}
+func Time(key string, value time.Time) Field {
+	return Field{
+		typ:   TimeType,
+		key:   key,
+		value: value,
+	}
+}
 func New() Logger {
 	asyncWriter := NewAsyncWriter(os.Stderr, 10000)
 	return &LoggerStandard{
@@ -215,61 +276,26 @@ func formatData(dataBuf *bytes.Buffer, scheme colorScheme, message string) {
 	dataBuf.WriteString(scheme.reset)
 	dataBuf.WriteByte('\n')
 }
-func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, format string, args []any) {
-	argIdx := 0
-	for i := 0; i < len(format); i++ {
-		ch := format[i]
-		if ch == '%' && i+1 < len(format) {
-			i++
-			switch format[i] {
-			case 's':
-				if argIdx < len(args) {
-					if s, ok := args[argIdx].(string); ok {
-						dataBuf.WriteString(s)
-					} else {
-						fmt.Fprint(dataBuf, args[argIdx])
-					}
-				}
-				argIdx++
-			case 'd':
-				if argIdx < len(args) {
-					switch v := args[argIdx].(type) {
-					case int:
-						dataBuf.WriteString(strconv.Itoa(v))
-					case int64:
-						dataBuf.WriteString(strconv.FormatInt(v, 10))
-					case uint:
-						dataBuf.WriteString(strconv.FormatUint(uint64(v), 10))
-					default:
-						fmt.Fprint(dataBuf, v)
-					}
-				}
-				argIdx++
-			case 'f':
-				if argIdx < len(args) {
-					switch v := args[argIdx].(type) {
-					case float64:
-						dataBuf.WriteString(strconv.FormatFloat(v, 'f', -1, 64))
-					case float32:
-						dataBuf.WriteString(strconv.FormatFloat(float64(v), 'f', -1, 32))
-					default:
-						fmt.Fprint(dataBuf, v)
-					}
-				}
-				argIdx++
-			case 'v':
-				if argIdx < len(args) {
-					fmt.Fprint(dataBuf, args[argIdx])
-				}
-				argIdx++
-			case '%':
-				dataBuf.WriteByte('%')
-			default:
-				dataBuf.WriteByte(ch)
-				dataBuf.WriteByte(format[i])
-			}
-		} else {
-			dataBuf.WriteByte(ch)
+func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, fields []Field) {
+	for _, f := range fields {
+		dataBuf.WriteByte(' ')
+		dataBuf.WriteString(f.key)
+		dataBuf.WriteByte('=')
+		switch f.typ {
+		case BoolType:
+			dataBuf.WriteString(strconv.FormatBool(f.value.(bool)))
+		case DurationType:
+			dataBuf.WriteString(f.value.(time.Duration).String())
+		case Float64Type:
+			dataBuf.WriteString(strconv.FormatFloat(f.value.(float64), 'f', -1, 64))
+		case IntType:
+			dataBuf.WriteString(strconv.Itoa(f.value.(int)))
+		case Int64Type:
+			dataBuf.WriteString(strconv.FormatInt(f.value.(int64), 10))
+		case StringType:
+			dataBuf.WriteString(f.value.(string))
+		case TimeType:
+			dataBuf.Write(f.value.(time.Time).AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
 		}
 	}
 	dataBuf.WriteString(scheme.reset)
@@ -422,7 +448,7 @@ func (loggerStandard *LoggerStandard) setLog(level int, message string) {
 	defer loggerStandard.mutex.Unlock()
 	loggerStandard.Writer().Write(dataBuf.Bytes())
 }
-func (loggerStandard *LoggerStandard) setLogf(level int, format string, args ...any) {
+func (loggerStandard *LoggerStandard) setLogf(level int, message string, fields []Field) {
 	if loggerStandard.getLevel() > level {
 		return
 	}
@@ -435,7 +461,7 @@ func (loggerStandard *LoggerStandard) setLogf(level int, format string, args ...
 	formatTime(dataBuf, time)
 	formatPrefix(dataBuf, scheme, level)
 	formatCaller(dataBuf, scheme, caller)
-	formatDataf(dataBuf, scheme, format, args)
+	formatDataf(dataBuf, scheme, fields)
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
 	loggerStandard.Writer().Write(dataBuf.Bytes())

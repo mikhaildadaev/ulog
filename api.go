@@ -7,37 +7,41 @@ import (
 )
 
 // Публичные методы
-func (loggerStandard *LoggerStandard) Debug(message string) {
-	loggerStandard.setLog(LevelDebug, message)
+func (loggerStandard *LoggerStandard) Debug(message string, fields ...Field) {
+	if len(fields) == 0 {
+		loggerStandard.setLog(LevelDebug, message)
+	} else {
+		loggerStandard.setLogf(LevelDebug, message, fields)
+	}
 }
-func (loggerStandard *LoggerStandard) Debugf(format string, args ...any) {
-	loggerStandard.setLogf(LevelDebug, format, args...)
+func (loggerStandard *LoggerStandard) Error(message string, fields ...Field) {
+	if len(fields) == 0 {
+		loggerStandard.setLog(LevelError, message)
+	} else {
+		loggerStandard.setLogf(LevelError, message, fields)
+	}
 }
-func (loggerStandard *LoggerStandard) Error(message string) {
-	loggerStandard.setLog(LevelError, message)
-}
-func (loggerStandard *LoggerStandard) Errorf(format string, args ...any) {
-	loggerStandard.setLogf(LevelError, format, args...)
-}
-func (loggerStandard *LoggerStandard) Fatal(message string) {
-	loggerStandard.setLog(LevelError, message)
+func (loggerStandard *LoggerStandard) Fatal(message string, fields ...Field) {
+	if len(fields) == 0 {
+		loggerStandard.setLog(LevelFatal, message)
+	} else {
+		loggerStandard.setLogf(LevelFatal, message, fields)
+	}
 	osExit(1)
 }
-func (loggerStandard *LoggerStandard) Fatalf(format string, args ...any) {
-	loggerStandard.setLogf(LevelError, format, args...)
-	osExit(1)
+func (loggerStandard *LoggerStandard) Info(message string, fields ...Field) {
+	if len(fields) == 0 {
+		loggerStandard.setLog(LevelInfo, message)
+	} else {
+		loggerStandard.setLogf(LevelInfo, message, fields)
+	}
 }
-func (loggerStandard *LoggerStandard) Info(message string) {
-	loggerStandard.setLog(LevelInfo, message)
-}
-func (loggerStandard *LoggerStandard) Infof(format string, args ...any) {
-	loggerStandard.setLogf(LevelInfo, format, args...)
-}
-func (loggerStandard *LoggerStandard) Warn(message string) {
-	loggerStandard.setLog(LevelWarn, message)
-}
-func (loggerStandard *LoggerStandard) Warnf(format string, args ...any) {
-	loggerStandard.setLogf(LevelWarn, format, args...)
+func (loggerStandard *LoggerStandard) Warn(message string, fields ...Field) {
+	if len(fields) == 0 {
+		loggerStandard.setLog(LevelWarn, message)
+	} else {
+		loggerStandard.setLogf(LevelWarn, message, fields)
+	}
 }
 func (loggerStandard *LoggerStandard) SetLevel(level int) {
 	loggerStandard.mutex.Lock()
