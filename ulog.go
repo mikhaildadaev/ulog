@@ -87,9 +87,9 @@ type LoggerWriter struct {
 // Публичные конструкторы
 func Any(key string, value any) Field {
 	return Field{
-		typ:   StringType,
-		key:   key,
-		value: fmt.Sprintf("%v", value),
+		typ: StringType,
+		key: key,
+		//value: fmt.Sprintf("%v", value),
 	}
 }
 func Bool(key string, value bool) Field {
