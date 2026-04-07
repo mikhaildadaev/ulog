@@ -2,7 +2,6 @@ package ulog
 
 import (
 	"bytes"
-	"log"
 	"strings"
 	"sync"
 	"testing"
@@ -97,7 +96,6 @@ func TestEnvLogLevel(t *testing.T) {
 func TestNewErrorLog(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &LoggerStandard{
-		Logger: log.New(&buf, "", 0),
 		level:  LevelDebug,
 		scheme: darkScheme,
 	}
@@ -110,7 +108,6 @@ func TestNewErrorLog(t *testing.T) {
 func TestNewWithWriter(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &LoggerStandard{
-		Logger: log.New(&buf, "", 0),
 		level:  LevelDebug,
 		scheme: darkScheme,
 	}
@@ -132,7 +129,6 @@ func TestLevel(t *testing.T) {
 		osExit = func(int) { exited = true }
 		var buf bytes.Buffer
 		logger := &LoggerStandard{
-			Logger: log.New(&buf, "", 0),
 			level:  LevelError,
 			scheme: darkScheme,
 		}
@@ -147,7 +143,6 @@ func TestLevel(t *testing.T) {
 	t.Run("Standard level", func(t *testing.T) {
 		var buf bytes.Buffer
 		logger := &LoggerStandard{
-			Logger: log.New(&buf, "", 0),
 			level:  LevelDebug,
 			scheme: darkScheme,
 		}
@@ -175,7 +170,6 @@ func TestLevelFiltering(t *testing.T) {
 	for _, level := range levels {
 		var buf bytes.Buffer
 		logger := &LoggerStandard{
-			Logger: log.New(&buf, "", 0),
 			level:  level,
 			scheme: darkScheme,
 		}
@@ -203,13 +197,12 @@ func TestLevelFiltering(t *testing.T) {
 func TestLoggerWriter(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &LoggerStandard{
-		Logger: log.New(&buf, "", 0),
 		level:  LevelDebug,
 		scheme: darkScheme,
 	}
 	writer := &LoggerWriter{
-		logger: logger,
 		level:  LevelWarn,
+		logger: logger,
 	}
 	writer.Write([]byte("test message"))
 	output := buf.String()

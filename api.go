@@ -2,7 +2,6 @@ package ulog
 
 import (
 	"io"
-	"log"
 	"strings"
 )
 
@@ -93,18 +92,17 @@ func (loggerStandard *LoggerStandard) SetLevel(level TypeLevel) {
 	defer loggerStandard.mutex.Unlock()
 	loggerStandard.level = level
 }
-func (loggerStandard *LoggerStandard) SetOutput(writer io.Writer) {
+func (loggerStandard *LoggerStandard) SetOutput(w io.Writer) {
 	loggerStandard.mutex.Lock()
 	defer loggerStandard.mutex.Unlock()
-	if loggerStandard.asyncWriter != nil {
-		loggerStandard.asyncWriter.Close()
+	if loggerStandard.async {
+		if asyncWriter, ok := loggerStandard.writer.(*AsyncWriter); ok {
+			go asyncWriter.Close()
+		}
+		loggerStandard.writer = NewAsyncWriter(w, 10000)
+	} else {
+		loggerStandard.writer = w
 	}
-	bufferSize := 10000
-	if loggerStandard.asyncWriter != nil {
-		bufferSize = loggerStandard.asyncWriter.limit
-	}
-	loggerStandard.asyncWriter = NewAsyncWriter(writer, bufferSize)
-	loggerStandard.Logger = log.New(loggerStandard.asyncWriter, "", 0)
 }
 func (loggerStandard *LoggerStandard) SetTheme(theme string) {
 	loggerStandard.mutex.Lock()
@@ -119,7 +117,22 @@ func (loggerStandard *LoggerStandard) SetTheme(theme string) {
 	}
 }
 func (loggerStandard *LoggerStandard) Sync() error {
-	return loggerStandard.asyncWriter.Close()
+	if !loggerStandard.async {
+		return nil
+	}
+	loggerStandard.mutex.RLock()
+	currentWriter := loggerStandard.writer
+	loggerStandard.mutex.RUnlock()
+	if asyncWriter, ok := currentWriter.(*AsyncWriter); ok {
+		return asyncWriter.Close()
+	}
+	return nil
+}
+func (loggerStandard *LoggerStandard) Write(p []byte) (n int, err error) {
+	loggerStandard.mutex.RLock()
+	writer := loggerStandard.writer
+	loggerStandard.mutex.RUnlock()
+	return writer.Write(p)
 }
 func (loggerWriter *LoggerWriter) Write(p []byte) (n int, err error) {
 	loggerWriter.mutex.Lock()

@@ -85,14 +85,14 @@ type Field struct {
 	valueType      TypeField
 }
 type LoggerStandard struct {
-	*log.Logger
-	asyncWriter *AsyncWriter
-	cache       sync.Map
-	caller      bool
-	format      TypeFormat
-	level       TypeLevel
-	mutex       sync.RWMutex
-	scheme      colorScheme
+	async  bool
+	cache  sync.Map
+	caller bool
+	format TypeFormat
+	level  TypeLevel
+	mutex  sync.RWMutex
+	scheme colorScheme
+	writer io.Writer
 }
 type AsyncWriter struct {
 	ch     chan []byte
@@ -101,6 +101,7 @@ type AsyncWriter struct {
 	writer io.Writer
 }
 type LoggerWriter struct {
+	flags  int
 	level  TypeLevel
 	logger Logger
 	mutex  sync.Mutex
@@ -222,25 +223,35 @@ func Times(keyName string, valueTimes []time.Time) Field {
 	}
 }
 func NewLogger() Logger {
-	asyncWriter := NewAsyncWriter(os.Stderr, 10000)
 	return &LoggerStandard{
-		asyncWriter: asyncWriter,
-		caller:      true,
-		format:      TextType,
-		level:       getLoggerLevel(),
-		Logger:      log.New(asyncWriter, "", 0),
-		scheme:      getLoggerScheme(),
+		async:  false,
+		caller: true,
+		format: TextType,
+		level:  getLoggerLevel(),
+		scheme: getLoggerScheme(),
+		writer: os.Stderr,
+	}
+}
+func NewLoggerAsync() Logger {
+	return &LoggerStandard{
+		async:  true,
+		writer: NewAsyncWriter(os.Stderr, 10000),
+		caller: true,
+		format: TextType,
+		level:  getLoggerLevel(),
+		scheme: getLoggerScheme(),
 	}
 }
 func NewErrorLog(logger Logger) *log.Logger {
 	return log.New(
 		&LoggerWriter{
+			flags:  log.LstdFlags | log.Lmicroseconds,
 			level:  LevelError,
 			logger: logger,
 			scheme: getLoggerScheme(),
 		},
 		"",
-		log.LstdFlags|log.Lmicroseconds,
+		0,
 	)
 }
 func NewAsyncWriter(writer io.Writer, bufferSize int) *AsyncWriter {
@@ -549,9 +560,6 @@ func (asyncWriter *AsyncWriter) Close() error {
 	asyncWriter.wg.Wait()
 	return nil
 }
-func (loggerStandard *LoggerStandard) Close() error {
-	return loggerStandard.asyncWriter.Close()
-}
 func (loggerStandard *LoggerStandard) getCaller() string {
 	if !loggerStandard.caller {
 		return ""
@@ -594,8 +602,8 @@ func (loggerStandard *LoggerStandard) writeText(level TypeLevel, message string)
 	formatPrefix(dataBuf, scheme, level, caller)
 	formatData(dataBuf, scheme, message)
 	loggerStandard.mutex.Lock()
-	defer loggerStandard.mutex.Unlock()
-	loggerStandard.Writer().Write(dataBuf.Bytes())
+	loggerStandard.writer.Write(dataBuf.Bytes())
+	loggerStandard.mutex.Unlock()
 }
 func (loggerStandard *LoggerStandard) writeJsonFields(level TypeLevel, message string, fields []Field) {
 	if loggerStandard.getLevel() > level {
@@ -617,8 +625,8 @@ func (loggerStandard *LoggerStandard) writeTextFields(level TypeLevel, message s
 	formatPrefix(dataBuf, scheme, level, caller)
 	formatDataf(dataBuf, scheme, message, fields)
 	loggerStandard.mutex.Lock()
-	defer loggerStandard.mutex.Unlock()
-	loggerStandard.Writer().Write(dataBuf.Bytes())
+	loggerStandard.writer.Write(dataBuf.Bytes())
+	loggerStandard.mutex.Unlock()
 }
 func (loggerWriter *LoggerWriter) setMessage(message string) {
 	switch loggerWriter.level {
