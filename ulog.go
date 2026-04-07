@@ -167,7 +167,7 @@ func Float(keyName string, valueFloat float64) Field {
 		valueFloat: valueFloat,
 	}
 }
-func Floats(keyName string, valueFloats []float64) Field {
+func Floats64(keyName string, valueFloats []float64) Field {
 	return Field{
 		valueType:   TypeFloat,
 		keyName:     keyName,
