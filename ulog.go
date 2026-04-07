@@ -531,14 +531,18 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 		}
 		dataBuf.WriteByte(']')
 	case TypeString:
+		dataBuf.WriteByte('"')
 		dataBuf.WriteString(field.valueString)
+		dataBuf.WriteByte('"')
 	case TypeStrings:
 		dataBuf.WriteByte('[')
 		for i, value := range field.valueStrings {
 			if i > 0 {
 				dataBuf.WriteByte(',')
 			}
+			dataBuf.WriteByte('"')
 			dataBuf.WriteString(value)
+			dataBuf.WriteByte('"')
 		}
 		dataBuf.WriteByte(']')
 	case TypeTime:
