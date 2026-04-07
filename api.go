@@ -41,42 +41,42 @@ func (standardLogger *StandardLogger) Write(p []byte) (n int, err error) {
 }
 func (universalLogger *UniversalLogger) Debug(message string, fields ...Field) {
 	switch universalLogger.format {
-	case JsonType:
+	case TypeJson:
 		universalLogger.writeJson(LevelDebug, message, fields)
-	case TextType:
+	case TypeText:
 		universalLogger.writeText(LevelDebug, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) Error(message string, fields ...Field) {
 	switch universalLogger.format {
-	case JsonType:
+	case TypeJson:
 		universalLogger.writeJson(LevelError, message, fields)
-	case TextType:
+	case TypeText:
 		universalLogger.writeText(LevelError, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) Fatal(message string, fields ...Field) {
 	switch universalLogger.format {
-	case JsonType:
+	case TypeJson:
 		universalLogger.writeJson(LevelFatal, message, fields)
-	case TextType:
+	case TypeText:
 		universalLogger.writeText(LevelFatal, message, fields)
 	}
 	osExit(1)
 }
 func (universalLogger *UniversalLogger) Info(message string, fields ...Field) {
 	switch universalLogger.format {
-	case JsonType:
+	case TypeJson:
 		universalLogger.writeJson(LevelInfo, message, fields)
-	case TextType:
+	case TypeText:
 		universalLogger.writeText(LevelInfo, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) Warn(message string, fields ...Field) {
 	switch universalLogger.format {
-	case JsonType:
+	case TypeJson:
 		universalLogger.writeJson(LevelWarn, message, fields)
-	case TextType:
+	case TypeText:
 		universalLogger.writeText(LevelWarn, message, fields)
 	}
 }

@@ -23,6 +23,7 @@ import (
 type TypeLevel int
 type TypeField int
 type TypeFormat int
+type TypeSymbol int
 
 // Публичные константы
 const (
@@ -37,22 +38,31 @@ const (
 	LevelFatal
 )
 const (
-	BoolType TypeField = iota
-	BoolsType
-	DurationType
-	DurationsType
-	FloatType
-	FloatsType
-	IntType
-	IntsType
-	StringType
-	StringsType
-	TimeType
-	TimesType
+	TypeBool TypeField = iota
+	TypeBools
+	TypeDuration
+	TypeDurations
+	TypeFloat
+	TypeFloats
+	TypeInt
+	TypeInts
+	TypeString
+	TypeStrings
+	TypeTime
+	TypeTimes
 )
 const (
-	JsonType TypeFormat = iota
-	TextType
+	TypeJson TypeFormat = iota
+	TypeText
+)
+const (
+	SymbolСolon TypeSymbol = iota
+	SymbolBracketSquareL
+	SymbolBracketSquareR
+	SymbolBracketCurlyL
+	SymbolBracketCurlyR
+	SymbolEqual
+	SymbolSpace
 )
 
 // Публичные интерфейсы
@@ -105,28 +115,28 @@ type UniversalLogger struct {
 // Публичные конструкторы
 func Bool(keyName string, valueBool bool) Field {
 	return Field{
-		valueType: BoolType,
+		valueType: TypeBool,
 		keyName:   keyName,
 		valueBool: valueBool,
 	}
 }
 func Bools(keyName string, valueBools []bool) Field {
 	return Field{
-		valueType:  BoolType,
+		valueType:  TypeBool,
 		keyName:    keyName,
 		valueBools: valueBools,
 	}
 }
 func Duration(keyName string, valueDuration time.Duration) Field {
 	return Field{
-		valueType:     DurationType,
+		valueType:     TypeDuration,
 		keyName:       keyName,
 		valueDuration: valueDuration,
 	}
 }
 func Durations(keyName string, valueDurations []time.Duration) Field {
 	return Field{
-		valueType:      DurationType,
+		valueType:      TypeDuration,
 		keyName:        keyName,
 		valueDurations: valueDurations,
 	}
@@ -134,13 +144,13 @@ func Durations(keyName string, valueDurations []time.Duration) Field {
 func Err(err error) Field {
 	if err == nil {
 		return Field{
-			valueType:   StringType,
+			valueType:   TypeString,
 			keyName:     "error",
 			valueString: "nil",
 		}
 	}
 	return Field{
-		valueType:   StringType,
+		valueType:   TypeString,
 		keyName:     "error",
 		valueString: err.Error(),
 	}
@@ -155,63 +165,63 @@ func Errs(errs []error) Field {
 		}
 	}
 	return Field{
-		valueType:    StringType,
+		valueType:    TypeString,
 		keyName:      "errors",
 		valueStrings: values,
 	}
 }
 func Float(keyName string, valueFloat float64) Field {
 	return Field{
-		valueType:  FloatType,
+		valueType:  TypeFloat,
 		keyName:    keyName,
 		valueFloat: valueFloat,
 	}
 }
 func Floats(keyName string, valueFloats []float64) Field {
 	return Field{
-		valueType:   FloatType,
+		valueType:   TypeFloat,
 		keyName:     keyName,
 		valueFloats: valueFloats,
 	}
 }
 func Int(keyName string, valueInt int64) Field {
 	return Field{
-		valueType: IntType,
+		valueType: TypeInt,
 		keyName:   keyName,
 		valueInt:  valueInt,
 	}
 }
 func Ints(keyName string, valueInts []int64) Field {
 	return Field{
-		valueType: IntType,
+		valueType: TypeInt,
 		keyName:   keyName,
 		valueInts: valueInts,
 	}
 }
 func String(keyName string, valueString string) Field {
 	return Field{
-		valueType:   StringType,
+		valueType:   TypeString,
 		keyName:     keyName,
 		valueString: valueString,
 	}
 }
 func Strings(keyName string, valueStrings []string) Field {
 	return Field{
-		valueType:    StringType,
+		valueType:    TypeString,
 		keyName:      keyName,
 		valueStrings: valueStrings,
 	}
 }
 func Time(keyName string, valueTime time.Time) Field {
 	return Field{
-		valueType: TimeType,
+		valueType: TypeTime,
 		keyName:   keyName,
 		valueTime: valueTime,
 	}
 }
 func Times(keyName string, valueTimes []time.Time) Field {
 	return Field{
-		valueType:  TimeType,
+		valueType:  TypeTime,
 		keyName:    keyName,
 		valueTimes: valueTimes,
 	}
@@ -219,7 +229,7 @@ func Times(keyName string, valueTimes []time.Time) Field {
 func NewLogger() Logger {
 	universalLogger := &UniversalLogger{
 		async:  false,
-		format: TextType,
+		format: TypeText,
 		scheme: getLoggerScheme(),
 		writer: os.Stderr,
 	}
@@ -229,7 +239,7 @@ func NewLogger() Logger {
 func NewLoggerAsync() Logger {
 	universalLogger := &UniversalLogger{
 		async:  true,
-		format: TextType,
+		format: TypeText,
 		scheme: getLoggerScheme(),
 		writer: newAsyncWriter(os.Stderr, 10000),
 	}
@@ -394,81 +404,81 @@ func formatDataText(dataBuf *bytes.Buffer, scheme colorScheme, message string, f
 		dataBuf.WriteString(scheme.message)
 		dataBuf.WriteString(message)
 	} else {
-		dataBuf.WriteByte(' ')
+		formatSymbol(dataBuf, SymbolSpace)
 		dataBuf.WriteString(scheme.message)
 		dataBuf.WriteString(message)
-		dataBuf.WriteByte(':')
+		formatSymbol(dataBuf, SymbolСolon)
 		for _, field := range fields {
-			dataBuf.WriteByte(' ')
+			formatSymbol(dataBuf, SymbolSpace)
 			dataBuf.WriteString(field.keyName)
-			dataBuf.WriteByte('=')
+			formatSymbol(dataBuf, SymbolEqual)
 			switch field.valueType {
-			case BoolType:
+			case TypeBool:
 				dataBuf.WriteString(strconv.FormatBool(field.valueBool))
-			case BoolsType:
-				dataBuf.WriteByte('[')
+			case TypeBools:
+				formatSymbol(dataBuf, SymbolBracketSquareL)
 				for i, value := range field.valueBools {
 					if i > 0 {
-						dataBuf.WriteByte(' ')
+						formatSymbol(dataBuf, SymbolSpace)
 					}
 					dataBuf.WriteString(strconv.FormatBool(value))
 				}
-				dataBuf.WriteByte(']')
-			case DurationType:
+				formatSymbol(dataBuf, SymbolBracketSquareR)
+			case TypeDuration:
 				dataBuf.WriteString(field.valueDuration.String())
-			case DurationsType:
-				dataBuf.WriteByte('[')
+			case TypeDurations:
+				formatSymbol(dataBuf, SymbolBracketSquareL)
 				for i, value := range field.valueDurations {
 					if i > 0 {
-						dataBuf.WriteByte(' ')
+						formatSymbol(dataBuf, SymbolSpace)
 					}
 					dataBuf.WriteString(value.String())
 				}
-				dataBuf.WriteByte(']')
-			case FloatType:
+				formatSymbol(dataBuf, SymbolBracketSquareR)
+			case TypeFloat:
 				dataBuf.WriteString(strconv.FormatFloat(field.valueFloat, 'f', -1, 64))
-			case FloatsType:
-				dataBuf.WriteByte('[')
+			case TypeFloats:
+				formatSymbol(dataBuf, SymbolBracketSquareL)
 				for i, value := range field.valueFloats {
 					if i > 0 {
-						dataBuf.WriteByte(' ')
+						formatSymbol(dataBuf, SymbolSpace)
 					}
 					dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
 				}
-				dataBuf.WriteByte(']')
-			case IntType:
+				formatSymbol(dataBuf, SymbolBracketSquareR)
+			case TypeInt:
 				dataBuf.WriteString(strconv.FormatInt(field.valueInt, 10))
-			case IntsType:
-				dataBuf.WriteByte('[')
+			case TypeInts:
+				formatSymbol(dataBuf, SymbolBracketSquareL)
 				for i, value := range field.valueInts {
 					if i > 0 {
-						dataBuf.WriteByte(' ')
+						formatSymbol(dataBuf, SymbolSpace)
 					}
 					dataBuf.WriteString(strconv.FormatInt(value, 10))
 				}
-				dataBuf.WriteByte(']')
-			case StringType:
+				formatSymbol(dataBuf, SymbolBracketSquareR)
+			case TypeString:
 				dataBuf.WriteString(field.valueString)
-			case StringsType:
-				dataBuf.WriteByte('[')
+			case TypeStrings:
+				formatSymbol(dataBuf, SymbolBracketSquareL)
 				for i, value := range field.valueStrings {
 					if i > 0 {
-						dataBuf.WriteByte(' ')
+						formatSymbol(dataBuf, SymbolSpace)
 					}
 					dataBuf.WriteString(value)
 				}
-				dataBuf.WriteByte(']')
-			case TimeType:
+				formatSymbol(dataBuf, SymbolBracketSquareR)
+			case TypeTime:
 				dataBuf.Write(field.valueTime.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
-			case TimesType:
-				dataBuf.WriteByte('[')
+			case TypeTimes:
+				formatSymbol(dataBuf, SymbolBracketSquareL)
 				for i, value := range field.valueTimes {
 					if i > 0 {
-						dataBuf.WriteByte(' ')
+						formatSymbol(dataBuf, SymbolSpace)
 					}
 					dataBuf.Write(value.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
 				}
-				dataBuf.WriteByte(']')
+				formatSymbol(dataBuf, SymbolBracketSquareR)
 			}
 		}
 	}
@@ -495,10 +505,28 @@ func formatPrefixText(dataBuf *bytes.Buffer, scheme colorScheme, level TypeLevel
 		dataBuf.WriteString(scheme.colorYellow)
 		dataBuf.WriteString("[WARN]")
 	}
-	dataBuf.WriteByte(' ')
+	formatSymbol(dataBuf, SymbolSpace)
 	if caller != "" {
 		dataBuf.WriteString(scheme.caller)
 		dataBuf.WriteString(caller)
+		formatSymbol(dataBuf, SymbolSpace)
+	}
+}
+func formatSymbol(dataBuf *bytes.Buffer, group TypeSymbol) {
+	switch group {
+	case SymbolСolon:
+		dataBuf.WriteByte(':')
+	case SymbolBracketCurlyL:
+		dataBuf.WriteByte('{')
+	case SymbolBracketCurlyR:
+		dataBuf.WriteByte('}')
+	case SymbolBracketSquareL:
+		dataBuf.WriteByte('[')
+	case SymbolBracketSquareR:
+		dataBuf.WriteByte(']')
+	case SymbolEqual:
+		dataBuf.WriteByte('=')
+	case SymbolSpace:
 		dataBuf.WriteByte(' ')
 	}
 }
@@ -507,14 +535,13 @@ func formatTimeJson(dataBuf *bytes.Buffer, time time.Time) {
 	timeBuf = time.AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
 	dataBuf.Write(timeBuf)
 	timePool.Put(timeBuf)
-	dataBuf.WriteByte(' ')
 }
 func formatTimeText(dataBuf *bytes.Buffer, time time.Time) {
 	timeBuf := timePool.Get().([]byte)
 	timeBuf = time.AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
 	dataBuf.Write(timeBuf)
 	timePool.Put(timeBuf)
-	dataBuf.WriteByte(' ')
+	formatSymbol(dataBuf, SymbolSpace)
 }
 func getLoggerCaller(path string) string {
 	for i := len(path) - 1; i >= 0; i-- {
@@ -606,9 +633,11 @@ func (universalLogger *UniversalLogger) writeJson(level TypeLevel, message strin
 	defer dataPool.Put(dataBuf)
 	caller := universalLogger.getCaller(level)
 	time := time.Now()
+	formatSymbol(dataBuf, SymbolBracketCurlyL)
 	formatTimeJson(dataBuf, time)
 	formatPrefixJson(dataBuf, level, caller)
 	formatDataJson(dataBuf, message, fields)
+	formatSymbol(dataBuf, SymbolBracketCurlyR)
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
