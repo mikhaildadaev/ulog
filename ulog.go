@@ -236,7 +236,7 @@ func NewLoggerAsync() Logger {
 		writer: newAsyncWriter(os.Stderr, 10000),
 	}
 }
-func NewErrorLog(logger Logger) *log.Logger {
+func NewLoggerError(logger Logger) *log.Logger {
 	return log.New(
 		&StandartLogger{
 			flags:  log.LstdFlags | log.Lmicroseconds,
@@ -248,7 +248,7 @@ func NewErrorLog(logger Logger) *log.Logger {
 		0,
 	)
 }
-func NewWithWriter(logger Logger, level TypeLevel) io.Writer {
+func NewWithWriter(level TypeLevel, logger Logger) io.Writer {
 	return &StandartLogger{
 		level:  level,
 		logger: logger,

@@ -137,7 +137,7 @@ func BenchmarkWarn(b *testing.B) {
 func BenchmarkLoggerWriter(b *testing.B) {
 	logger := NewLogger()
 	logger.SetOutput(io.Discard)
-	writer := NewWithWriter(logger, LevelInfo)
+	writer := NewWithWriter(LevelInfo, logger)
 	data := []byte("test message")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

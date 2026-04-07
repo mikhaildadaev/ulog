@@ -93,25 +93,25 @@ func TestEnvLogLevel(t *testing.T) {
 //			t.Errorf("Formatted message not correct: %s", buf.String())
 //		}
 //	}
-func TestNewErrorLog(t *testing.T) {
+func TestLoggerError(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &UniversalLogger{
 		level:  LevelDebug,
 		scheme: darkScheme,
 	}
-	stdLogger := NewErrorLog(logger)
+	stdLogger := NewLoggerError(logger)
 	stdLogger.Println("")
 	if !strings.Contains(buf.String(), colorDarkRed+"[ERROR]") {
 		t.Errorf("Expected ERROR level, got %s", buf.String())
 	}
 }
-func TestNewWithWriter(t *testing.T) {
+func TestWithWriter(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &UniversalLogger{
 		level:  LevelDebug,
 		scheme: darkScheme,
 	}
-	writer := NewWithWriter(logger, LevelWarn)
+	writer := NewWithWriter(LevelWarn, logger)
 	writer.Write([]byte("test message"))
 	output := buf.String()
 	checks := []string{"[WARN]", "test message"}
