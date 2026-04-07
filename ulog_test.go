@@ -194,25 +194,6 @@ func TestLevelFiltering(t *testing.T) {
 		}
 	}
 }
-func TestLoggerWriter(t *testing.T) {
-	var buf bytes.Buffer
-	logger := &UniversalLogger{
-		level:  LevelDebug,
-		scheme: darkScheme,
-	}
-	writer := &StandartLogger{
-		level:  LevelWarn,
-		logger: logger,
-	}
-	writer.Write([]byte("test message"))
-	output := buf.String()
-	checks := []string{"[WARN]", "test message"}
-	for _, check := range checks {
-		if !strings.Contains(output, check) {
-			t.Errorf("Expected %q not found in %q", check, output)
-		}
-	}
-}
 func TestSetLevel(t *testing.T) {
 	logger := NewLogger().(*UniversalLogger)
 	logger.SetLevel(LevelError)

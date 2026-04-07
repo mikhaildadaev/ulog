@@ -84,7 +84,7 @@ type Field struct {
 	valueTimes     []time.Time
 	valueType      TypeField
 }
-type StandartLogger struct {
+type StandardLogger struct {
 	flags  int
 	level  TypeLevel
 	logger Logger
@@ -238,7 +238,7 @@ func NewLoggerAsync() Logger {
 }
 func NewLoggerError(logger Logger) *log.Logger {
 	return log.New(
-		&StandartLogger{
+		&StandardLogger{
 			flags:  log.LstdFlags | log.Lmicroseconds,
 			level:  LevelError,
 			logger: logger,
@@ -249,7 +249,7 @@ func NewLoggerError(logger Logger) *log.Logger {
 	)
 }
 func NewWithWriter(level TypeLevel, logger Logger) io.Writer {
-	return &StandartLogger{
+	return &StandardLogger{
 		level:  level,
 		logger: logger,
 		scheme: getLoggerScheme(),
@@ -281,8 +281,7 @@ func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 	case asyncWriter.ch <- buf:
 		return len(p), nil
 	default:
-		asyncWriter.ch <- buf
-		return len(p), nil
+		return asyncWriter.writer.Write(p)
 	}
 }
 
@@ -607,9 +606,10 @@ func (universalLogger *UniversalLogger) writeText(level TypeLevel, message strin
 	formatTime(dataBuf, time)
 	formatPrefix(dataBuf, scheme, level, caller)
 	formatData(dataBuf, scheme, message)
-	universalLogger.mutex.Lock()
-	universalLogger.writer.Write(dataBuf.Bytes())
-	universalLogger.mutex.Unlock()
+	universalLogger.mutex.RLock()
+	writer := universalLogger.writer
+	universalLogger.mutex.RUnlock()
+	writer.Write(dataBuf.Bytes())
 }
 func (universalLogger *UniversalLogger) writeJsonFields(level TypeLevel, message string, fields []Field) {
 	if universalLogger.getLevel() > level {
@@ -630,7 +630,8 @@ func (universalLogger *UniversalLogger) writeTextFields(level TypeLevel, message
 	formatTime(dataBuf, time)
 	formatPrefix(dataBuf, scheme, level, caller)
 	formatDataf(dataBuf, scheme, message, fields)
-	universalLogger.mutex.Lock()
-	universalLogger.writer.Write(dataBuf.Bytes())
-	universalLogger.mutex.Unlock()
+	universalLogger.mutex.RLock()
+	writer := universalLogger.writer
+	universalLogger.mutex.RUnlock()
+	writer.Write(dataBuf.Bytes())
 }
