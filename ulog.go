@@ -423,18 +423,27 @@ func escapeJSON(buf *bytes.Buffer, s string) {
 	}
 }
 func formatDataJson(dataBuf *bytes.Buffer, message string, fields []Field) {
-	if len(fields) == 0 {
-	} else {
+	dataBuf.WriteString(`"message":"`)
+	escapeJSON(dataBuf, message)
+	dataBuf.WriteByte('"')
+	if len(fields) != 0 {
+		dataBuf.WriteString(`,"fields":{`)
+		for i, field := range fields {
+			if i > 0 {
+				dataBuf.WriteByte(',')
+			}
+			dataBuf.WriteByte('"')
+			escapeJSON(dataBuf, field.keyName)
+			dataBuf.WriteString(`":`)
+			formatFieldValue(dataBuf, field)
+		}
+		dataBuf.WriteByte('}')
 	}
 }
 func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, scheme colorScheme) {
-	if len(fields) == 0 {
-		dataBuf.WriteString(scheme.message)
-		dataBuf.WriteString(message)
-	} else {
-		dataBuf.WriteByte(' ')
-		dataBuf.WriteString(scheme.message)
-		dataBuf.WriteString(message)
+	dataBuf.WriteString(scheme.message)
+	dataBuf.WriteString(message)
+	if len(fields) != 0 {
 		dataBuf.WriteByte(':')
 		for _, field := range fields {
 			dataBuf.WriteByte(' ')
@@ -556,7 +565,15 @@ func formatPrefixText(dataBuf *bytes.Buffer, level TypeLevel, caller string, sch
 		dataBuf.WriteString(caller)
 	}
 }
-func formatTime(dataBuf *bytes.Buffer, time time.Time) {
+func formatTimeJson(dataBuf *bytes.Buffer, time time.Time) {
+	dataBuf.WriteString(`"time":"`)
+	timeBuf := timePool.Get().([]byte)
+	timeBuf = time.AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
+	dataBuf.Write(timeBuf)
+	timePool.Put(timeBuf)
+	dataBuf.WriteByte('"')
+}
+func formatTimeText(dataBuf *bytes.Buffer, time time.Time) {
 	timeBuf := timePool.Get().([]byte)
 	timeBuf = time.AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
 	dataBuf.Write(timeBuf)
@@ -653,7 +670,7 @@ func (universalLogger *UniversalLogger) writeJson(level TypeLevel, message strin
 	caller := universalLogger.getCaller(level)
 	time := time.Now()
 	dataBuf.WriteByte('{')
-	formatTime(dataBuf, time)
+	formatTimeJson(dataBuf, time)
 	dataBuf.WriteByte(',')
 	formatPrefixJson(dataBuf, level, caller)
 	dataBuf.WriteByte(',')
@@ -674,7 +691,7 @@ func (universalLogger *UniversalLogger) writeText(level TypeLevel, message strin
 	caller := universalLogger.getCaller(level)
 	scheme := universalLogger.getScheme()
 	time := time.Now()
-	formatTime(dataBuf, time)
+	formatTimeText(dataBuf, time)
 	dataBuf.WriteByte(' ')
 	formatPrefixText(dataBuf, level, caller, scheme)
 	dataBuf.WriteByte(' ')
