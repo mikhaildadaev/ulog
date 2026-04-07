@@ -30,12 +30,12 @@ func TestIsIgnoredError(t *testing.T) {
 	}
 }
 func TestColorScheme(t *testing.T) {
-	if lightScheme.colorRed != colorLightRed {
+	if lightScheme.prefixError != colorLightRed {
 		t.Error("Light scheme has wrong color")
 	}
 	t.Setenv("TERM_THEME", "light")
 	scheme := getLoggerScheme()
-	if scheme.colorRed != colorLightRed {
+	if scheme.prefixError != colorLightRed {
 		t.Error("Should detect light theme from TERM_THEME")
 	}
 }

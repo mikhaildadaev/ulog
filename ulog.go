@@ -318,13 +318,13 @@ var ignoredErrors = [][]byte{
 
 // Приватные структуры
 type colorScheme struct {
-	colorCyan   string
-	colorGreen  string
-	colorPurple string
-	colorRed    string
-	colorYellow string
 	caller      string
 	message     string
+	prefixDebug string
+	prefixError string
+	prefixFatal string
+	prefixInfo  string
+	prefixWarn  string
 	reset       string
 }
 
@@ -336,23 +336,23 @@ var (
 		},
 	}
 	darkScheme = colorScheme{
-		colorRed:    colorDarkRed,
-		colorGreen:  colorDarkGreen,
-		colorYellow: colorDarkYellow,
-		colorPurple: colorDarkPurple,
-		colorCyan:   colorDarkCyan,
 		caller:      colorDarkBlue,
 		message:     colorDarkWhite,
+		prefixDebug: colorDarkCyan + "[DEBUG]",
+		prefixError: colorDarkRed + "[ERROR]",
+		prefixFatal: colorDarkPurple + "[FATAL]",
+		prefixInfo:  colorDarkGreen + "[INFO]",
+		prefixWarn:  colorDarkYellow + "[WARN]",
 		reset:       colorReset,
 	}
 	lightScheme = colorScheme{
-		colorRed:    colorLightRed,
-		colorGreen:  colorLightGreen,
-		colorYellow: colorLightYellow,
-		colorPurple: colorLightPurple,
-		colorCyan:   colorLightCyan,
 		caller:      colorLightBlue,
 		message:     colorLightBlack,
+		prefixDebug: colorLightCyan + "[DEBUG]",
+		prefixError: colorLightRed + "[ERROR]",
+		prefixFatal: colorLightPurple + "[FATAL]",
+		prefixInfo:  colorLightGreen + "[INFO]",
+		prefixWarn:  colorLightYellow + "[WARN]",
 		reset:       colorReset,
 	}
 	osExit   = os.Exit
@@ -389,7 +389,7 @@ func formatDataJson(dataBuf *bytes.Buffer, message string, fields []Field) {
 	} else {
 	}
 }
-func formatDataText(dataBuf *bytes.Buffer, scheme colorScheme, message string, fields []Field) {
+func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, scheme colorScheme) {
 	if len(fields) == 0 {
 		dataBuf.WriteString(scheme.message)
 		dataBuf.WriteString(message)
@@ -477,23 +477,18 @@ func formatDataText(dataBuf *bytes.Buffer, scheme colorScheme, message string, f
 }
 func formatPrefixJson(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
 }
-func formatPrefixText(dataBuf *bytes.Buffer, scheme colorScheme, level TypeLevel, caller string) {
+func formatPrefixText(dataBuf *bytes.Buffer, level TypeLevel, caller string, scheme colorScheme) {
 	switch level {
 	case LevelDebug:
-		dataBuf.WriteString(scheme.colorCyan)
-		dataBuf.WriteString("[DEBUG]")
+		dataBuf.WriteString(scheme.prefixDebug)
 	case LevelError:
-		dataBuf.WriteString(scheme.colorRed)
-		dataBuf.WriteString("[ERROR]")
+		dataBuf.WriteString(scheme.prefixError)
 	case LevelFatal:
-		dataBuf.WriteString(scheme.colorPurple)
-		dataBuf.WriteString("[FATAL]")
+		dataBuf.WriteString(scheme.prefixFatal)
 	case LevelInfo:
-		dataBuf.WriteString(scheme.colorGreen)
-		dataBuf.WriteString("[INFO]")
+		dataBuf.WriteString(scheme.prefixInfo)
 	case LevelWarn:
-		dataBuf.WriteString(scheme.colorYellow)
-		dataBuf.WriteString("[WARN]")
+		dataBuf.WriteString(scheme.prefixWarn)
 	}
 	dataBuf.WriteByte(' ')
 	if caller != "" {
@@ -626,8 +621,8 @@ func (universalLogger *UniversalLogger) writeText(level TypeLevel, message strin
 	scheme := universalLogger.getScheme()
 	time := time.Now()
 	formatTimeText(dataBuf, time)
-	formatPrefixText(dataBuf, scheme, level, caller)
-	formatDataText(dataBuf, scheme, message, fields)
+	formatPrefixText(dataBuf, level, caller, scheme)
+	formatDataText(dataBuf, message, fields, scheme)
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
