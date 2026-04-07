@@ -95,7 +95,7 @@ func TestEnvLogLevel(t *testing.T) {
 //	}
 func TestNewErrorLog(t *testing.T) {
 	var buf bytes.Buffer
-	logger := &LoggerStandard{
+	logger := &UniversalLogger{
 		level:  LevelDebug,
 		scheme: darkScheme,
 	}
@@ -107,7 +107,7 @@ func TestNewErrorLog(t *testing.T) {
 }
 func TestNewWithWriter(t *testing.T) {
 	var buf bytes.Buffer
-	logger := &LoggerStandard{
+	logger := &UniversalLogger{
 		level:  LevelDebug,
 		scheme: darkScheme,
 	}
@@ -128,7 +128,7 @@ func TestLevel(t *testing.T) {
 		defer func() { osExit = oldExit }()
 		osExit = func(int) { exited = true }
 		var buf bytes.Buffer
-		logger := &LoggerStandard{
+		logger := &UniversalLogger{
 			level:  LevelError,
 			scheme: darkScheme,
 		}
@@ -142,7 +142,7 @@ func TestLevel(t *testing.T) {
 	})
 	t.Run("Standard level", func(t *testing.T) {
 		var buf bytes.Buffer
-		logger := &LoggerStandard{
+		logger := &UniversalLogger{
 			level:  LevelDebug,
 			scheme: darkScheme,
 		}
@@ -169,7 +169,7 @@ func TestLevelFiltering(t *testing.T) {
 	levels := []TypeLevel{LevelDebug, LevelInfo, LevelWarn, LevelError}
 	for _, level := range levels {
 		var buf bytes.Buffer
-		logger := &LoggerStandard{
+		logger := &UniversalLogger{
 			level:  level,
 			scheme: darkScheme,
 		}
@@ -196,11 +196,11 @@ func TestLevelFiltering(t *testing.T) {
 }
 func TestLoggerWriter(t *testing.T) {
 	var buf bytes.Buffer
-	logger := &LoggerStandard{
+	logger := &UniversalLogger{
 		level:  LevelDebug,
 		scheme: darkScheme,
 	}
-	writer := &LoggerWriter{
+	writer := &StandartLogger{
 		level:  LevelWarn,
 		logger: logger,
 	}
@@ -214,14 +214,14 @@ func TestLoggerWriter(t *testing.T) {
 	}
 }
 func TestSetLevel(t *testing.T) {
-	logger := NewLogger().(*LoggerStandard)
+	logger := NewLogger().(*UniversalLogger)
 	logger.SetLevel(LevelError)
 	if logger.getLevel() != LevelError {
 		t.Errorf("Expected level %d, got %d", LevelError, logger.getLevel())
 	}
 }
 func TestSetTheme(t *testing.T) {
-	logger := NewLogger().(*LoggerStandard)
+	logger := NewLogger().(*UniversalLogger)
 	logger.SetTheme("light")
 	if logger.getScheme() != lightScheme {
 		t.Error("Theme not changed to light")

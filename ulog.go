@@ -84,7 +84,20 @@ type Field struct {
 	valueTimes     []time.Time
 	valueType      TypeField
 }
-type LoggerStandard struct {
+type AsyncWriter struct {
+	ch     chan []byte
+	limit  int
+	wg     sync.WaitGroup
+	writer io.Writer
+}
+type StandartLogger struct {
+	flags  int
+	level  TypeLevel
+	logger Logger
+	mutex  sync.Mutex
+	scheme colorScheme
+}
+type UniversalLogger struct {
 	async  bool
 	cache  sync.Map
 	caller bool
@@ -93,19 +106,6 @@ type LoggerStandard struct {
 	mutex  sync.RWMutex
 	scheme colorScheme
 	writer io.Writer
-}
-type AsyncWriter struct {
-	ch     chan []byte
-	limit  int
-	wg     sync.WaitGroup
-	writer io.Writer
-}
-type LoggerWriter struct {
-	flags  int
-	level  TypeLevel
-	logger Logger
-	mutex  sync.Mutex
-	scheme colorScheme
 }
 
 // Публичные конструкторы
@@ -223,7 +223,7 @@ func Times(keyName string, valueTimes []time.Time) Field {
 	}
 }
 func NewLogger() Logger {
-	return &LoggerStandard{
+	return &UniversalLogger{
 		async:  false,
 		caller: true,
 		format: TextType,
@@ -233,7 +233,7 @@ func NewLogger() Logger {
 	}
 }
 func NewLoggerAsync() Logger {
-	return &LoggerStandard{
+	return &UniversalLogger{
 		async:  true,
 		writer: NewAsyncWriter(os.Stderr, 10000),
 		caller: true,
@@ -244,7 +244,7 @@ func NewLoggerAsync() Logger {
 }
 func NewErrorLog(logger Logger) *log.Logger {
 	return log.New(
-		&LoggerWriter{
+		&StandartLogger{
 			flags:  log.LstdFlags | log.Lmicroseconds,
 			level:  LevelError,
 			logger: logger,
@@ -265,7 +265,7 @@ func NewAsyncWriter(writer io.Writer, bufferSize int) *AsyncWriter {
 	return asyncWriter
 }
 func NewWithWriter(logger Logger, level TypeLevel) io.Writer {
-	return &LoggerWriter{
+	return &StandartLogger{
 		level:  level,
 		logger: logger,
 		scheme: getLoggerScheme(),
@@ -560,40 +560,40 @@ func (asyncWriter *AsyncWriter) Close() error {
 	asyncWriter.wg.Wait()
 	return nil
 }
-func (loggerStandard *LoggerStandard) getCaller() string {
-	if !loggerStandard.caller {
+func (universalLogger *UniversalLogger) getCaller() string {
+	if !universalLogger.caller {
 		return ""
 	}
 	pc, file, line, _ := runtime.Caller(2)
-	if val, ok := loggerStandard.cache.Load(pc); ok {
+	if val, ok := universalLogger.cache.Load(pc); ok {
 		return val.(string)
 	}
 	caller := getLoggerCaller(file) + ":" + strconv.Itoa(line)
-	loggerStandard.cache.Store(pc, caller)
+	universalLogger.cache.Store(pc, caller)
 	return caller
 }
-func (loggerStandard *LoggerStandard) getLevel() TypeLevel {
-	loggerStandard.mutex.RLock()
-	defer loggerStandard.mutex.RUnlock()
-	return loggerStandard.level
+func (universalLogger *UniversalLogger) getLevel() TypeLevel {
+	universalLogger.mutex.RLock()
+	defer universalLogger.mutex.RUnlock()
+	return universalLogger.level
 }
-func (loggerStandard *LoggerStandard) getScheme() colorScheme {
-	loggerStandard.mutex.RLock()
-	defer loggerStandard.mutex.RUnlock()
-	return loggerStandard.scheme
+func (universalLogger *UniversalLogger) getScheme() colorScheme {
+	universalLogger.mutex.RLock()
+	defer universalLogger.mutex.RUnlock()
+	return universalLogger.scheme
 }
-func (loggerStandard *LoggerStandard) writeJson(level TypeLevel, message string) {
-	if loggerStandard.getLevel() > level {
+func (universalLogger *UniversalLogger) writeJson(level TypeLevel, message string) {
+	if universalLogger.getLevel() > level {
 		return
 	}
 	// Дописать
 }
-func (loggerStandard *LoggerStandard) writeText(level TypeLevel, message string) {
-	if loggerStandard.getLevel() > level {
+func (universalLogger *UniversalLogger) writeText(level TypeLevel, message string) {
+	if universalLogger.getLevel() > level {
 		return
 	}
-	caller := loggerStandard.getCaller()
-	scheme := loggerStandard.getScheme()
+	caller := universalLogger.getCaller()
+	scheme := universalLogger.getScheme()
 	time := time.Now()
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
@@ -601,22 +601,22 @@ func (loggerStandard *LoggerStandard) writeText(level TypeLevel, message string)
 	formatTime(dataBuf, time)
 	formatPrefix(dataBuf, scheme, level, caller)
 	formatData(dataBuf, scheme, message)
-	loggerStandard.mutex.Lock()
-	loggerStandard.writer.Write(dataBuf.Bytes())
-	loggerStandard.mutex.Unlock()
+	universalLogger.mutex.Lock()
+	universalLogger.writer.Write(dataBuf.Bytes())
+	universalLogger.mutex.Unlock()
 }
-func (loggerStandard *LoggerStandard) writeJsonFields(level TypeLevel, message string, fields []Field) {
-	if loggerStandard.getLevel() > level {
+func (universalLogger *UniversalLogger) writeJsonFields(level TypeLevel, message string, fields []Field) {
+	if universalLogger.getLevel() > level {
 		return
 	}
 	// Дописать
 }
-func (loggerStandard *LoggerStandard) writeTextFields(level TypeLevel, message string, fields []Field) {
-	if loggerStandard.getLevel() > level {
+func (universalLogger *UniversalLogger) writeTextFields(level TypeLevel, message string, fields []Field) {
+	if universalLogger.getLevel() > level {
 		return
 	}
-	caller := loggerStandard.getCaller()
-	scheme := loggerStandard.getScheme()
+	caller := universalLogger.getCaller()
+	scheme := universalLogger.getScheme()
 	time := time.Now()
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
@@ -624,23 +624,23 @@ func (loggerStandard *LoggerStandard) writeTextFields(level TypeLevel, message s
 	formatTime(dataBuf, time)
 	formatPrefix(dataBuf, scheme, level, caller)
 	formatDataf(dataBuf, scheme, message, fields)
-	loggerStandard.mutex.Lock()
-	loggerStandard.writer.Write(dataBuf.Bytes())
-	loggerStandard.mutex.Unlock()
+	universalLogger.mutex.Lock()
+	universalLogger.writer.Write(dataBuf.Bytes())
+	universalLogger.mutex.Unlock()
 }
-func (loggerWriter *LoggerWriter) setMessage(message string) {
-	switch loggerWriter.level {
+func (standartLogger *StandartLogger) setMessage(message string) {
+	switch standartLogger.level {
 	case LevelDebug:
-		loggerWriter.logger.Debug(message)
+		standartLogger.logger.Debug(message)
 	case LevelInfo:
-		loggerWriter.logger.Info(message)
+		standartLogger.logger.Info(message)
 	case LevelWarn:
-		loggerWriter.logger.Warn(message)
+		standartLogger.logger.Warn(message)
 	case LevelError:
-		loggerWriter.logger.Error(message)
+		standartLogger.logger.Error(message)
 	case LevelFatal:
-		loggerWriter.logger.Fatal(message)
+		standartLogger.logger.Fatal(message)
 	default:
-		loggerWriter.logger.Info(message)
+		standartLogger.logger.Info(message)
 	}
 }

@@ -6,137 +6,137 @@ import (
 )
 
 // Публичные методы
-func (loggerStandard *LoggerStandard) Debug(message string, fields ...Field) {
-	switch loggerStandard.format {
+func (universalLogger *UniversalLogger) Debug(message string, fields ...Field) {
+	switch universalLogger.format {
 	case JsonType:
 		if len(fields) == 0 {
-			loggerStandard.writeJson(LevelDebug, message)
+			universalLogger.writeJson(LevelDebug, message)
 		} else {
-			loggerStandard.writeJsonFields(LevelDebug, message, fields)
+			universalLogger.writeJsonFields(LevelDebug, message, fields)
 		}
 	case TextType:
 		if len(fields) == 0 {
-			loggerStandard.writeText(LevelDebug, message)
+			universalLogger.writeText(LevelDebug, message)
 		} else {
-			loggerStandard.writeTextFields(LevelDebug, message, fields)
+			universalLogger.writeTextFields(LevelDebug, message, fields)
 		}
 	}
 }
-func (loggerStandard *LoggerStandard) Error(message string, fields ...Field) {
-	switch loggerStandard.format {
+func (universalLogger *UniversalLogger) Error(message string, fields ...Field) {
+	switch universalLogger.format {
 	case JsonType:
 		if len(fields) == 0 {
-			loggerStandard.writeJson(LevelError, message)
+			universalLogger.writeJson(LevelError, message)
 		} else {
-			loggerStandard.writeJsonFields(LevelError, message, fields)
+			universalLogger.writeJsonFields(LevelError, message, fields)
 		}
 	case TextType:
 		if len(fields) == 0 {
-			loggerStandard.writeText(LevelError, message)
+			universalLogger.writeText(LevelError, message)
 		} else {
-			loggerStandard.writeTextFields(LevelError, message, fields)
+			universalLogger.writeTextFields(LevelError, message, fields)
 		}
 	}
 }
-func (loggerStandard *LoggerStandard) Fatal(message string, fields ...Field) {
-	switch loggerStandard.format {
+func (universalLogger *UniversalLogger) Fatal(message string, fields ...Field) {
+	switch universalLogger.format {
 	case JsonType:
 		if len(fields) == 0 {
-			loggerStandard.writeJson(LevelFatal, message)
+			universalLogger.writeJson(LevelFatal, message)
 		} else {
-			loggerStandard.writeJsonFields(LevelFatal, message, fields)
+			universalLogger.writeJsonFields(LevelFatal, message, fields)
 		}
 	case TextType:
 		if len(fields) == 0 {
-			loggerStandard.writeText(LevelFatal, message)
+			universalLogger.writeText(LevelFatal, message)
 		} else {
-			loggerStandard.writeTextFields(LevelFatal, message, fields)
+			universalLogger.writeTextFields(LevelFatal, message, fields)
 		}
 	}
 	osExit(1)
 }
-func (loggerStandard *LoggerStandard) Info(message string, fields ...Field) {
-	switch loggerStandard.format {
+func (universalLogger *UniversalLogger) Info(message string, fields ...Field) {
+	switch universalLogger.format {
 	case JsonType:
 		if len(fields) == 0 {
-			loggerStandard.writeJson(LevelInfo, message)
+			universalLogger.writeJson(LevelInfo, message)
 		} else {
-			loggerStandard.writeJsonFields(LevelInfo, message, fields)
+			universalLogger.writeJsonFields(LevelInfo, message, fields)
 		}
 	case TextType:
 		if len(fields) == 0 {
-			loggerStandard.writeText(LevelInfo, message)
+			universalLogger.writeText(LevelInfo, message)
 		} else {
-			loggerStandard.writeTextFields(LevelInfo, message, fields)
+			universalLogger.writeTextFields(LevelInfo, message, fields)
 		}
 	}
 }
-func (loggerStandard *LoggerStandard) Warn(message string, fields ...Field) {
-	switch loggerStandard.format {
+func (universalLogger *UniversalLogger) Warn(message string, fields ...Field) {
+	switch universalLogger.format {
 	case JsonType:
 		if len(fields) == 0 {
-			loggerStandard.writeJson(LevelWarn, message)
+			universalLogger.writeJson(LevelWarn, message)
 		} else {
-			loggerStandard.writeJsonFields(LevelWarn, message, fields)
+			universalLogger.writeJsonFields(LevelWarn, message, fields)
 		}
 	case TextType:
 		if len(fields) == 0 {
-			loggerStandard.writeText(LevelWarn, message)
+			universalLogger.writeText(LevelWarn, message)
 		} else {
-			loggerStandard.writeTextFields(LevelWarn, message, fields)
+			universalLogger.writeTextFields(LevelWarn, message, fields)
 		}
 	}
 }
-func (loggerStandard *LoggerStandard) SetLevel(level TypeLevel) {
-	loggerStandard.mutex.Lock()
-	defer loggerStandard.mutex.Unlock()
-	loggerStandard.level = level
+func (universalLogger *UniversalLogger) SetLevel(level TypeLevel) {
+	universalLogger.mutex.Lock()
+	defer universalLogger.mutex.Unlock()
+	universalLogger.level = level
 }
-func (loggerStandard *LoggerStandard) SetOutput(w io.Writer) {
-	loggerStandard.mutex.Lock()
-	defer loggerStandard.mutex.Unlock()
-	if loggerStandard.async {
-		if asyncWriter, ok := loggerStandard.writer.(*AsyncWriter); ok {
+func (universalLogger *UniversalLogger) SetOutput(w io.Writer) {
+	universalLogger.mutex.Lock()
+	defer universalLogger.mutex.Unlock()
+	if universalLogger.async {
+		if asyncWriter, ok := universalLogger.writer.(*AsyncWriter); ok {
 			go asyncWriter.Close()
 		}
-		loggerStandard.writer = NewAsyncWriter(w, 10000)
+		universalLogger.writer = NewAsyncWriter(w, 10000)
 	} else {
-		loggerStandard.writer = w
+		universalLogger.writer = w
 	}
 }
-func (loggerStandard *LoggerStandard) SetTheme(theme string) {
-	loggerStandard.mutex.Lock()
-	defer loggerStandard.mutex.Unlock()
+func (universalLogger *UniversalLogger) SetTheme(theme string) {
+	universalLogger.mutex.Lock()
+	defer universalLogger.mutex.Unlock()
 	switch strings.ToLower(theme) {
 	case "dark":
-		loggerStandard.scheme = darkScheme
+		universalLogger.scheme = darkScheme
 	case "light":
-		loggerStandard.scheme = lightScheme
+		universalLogger.scheme = lightScheme
 	default:
-		loggerStandard.scheme = getLoggerScheme()
+		universalLogger.scheme = getLoggerScheme()
 	}
 }
-func (loggerStandard *LoggerStandard) Sync() error {
-	if !loggerStandard.async {
+func (universalLogger *UniversalLogger) Sync() error {
+	if !universalLogger.async {
 		return nil
 	}
-	loggerStandard.mutex.RLock()
-	currentWriter := loggerStandard.writer
-	loggerStandard.mutex.RUnlock()
+	universalLogger.mutex.RLock()
+	currentWriter := universalLogger.writer
+	universalLogger.mutex.RUnlock()
 	if asyncWriter, ok := currentWriter.(*AsyncWriter); ok {
 		return asyncWriter.Close()
 	}
 	return nil
 }
-func (loggerStandard *LoggerStandard) Write(p []byte) (n int, err error) {
-	loggerStandard.mutex.RLock()
-	writer := loggerStandard.writer
-	loggerStandard.mutex.RUnlock()
+func (universalLogger *UniversalLogger) Write(p []byte) (n int, err error) {
+	universalLogger.mutex.RLock()
+	writer := universalLogger.writer
+	universalLogger.mutex.RUnlock()
 	return writer.Write(p)
 }
-func (loggerWriter *LoggerWriter) Write(p []byte) (n int, err error) {
-	loggerWriter.mutex.Lock()
-	defer loggerWriter.mutex.Unlock()
+func (standartLogger *StandartLogger) Write(p []byte) (n int, err error) {
+	standartLogger.mutex.Lock()
+	defer standartLogger.mutex.Unlock()
 	start := 0
 	end := len(p)
 	for start < end && p[start] <= ' ' {
@@ -152,6 +152,6 @@ func (loggerWriter *LoggerWriter) Write(p []byte) (n int, err error) {
 		return len(p), nil
 	}
 	message := string(p[start:end])
-	loggerWriter.setMessage(message)
+	standartLogger.setMessage(message)
 	return len(p), nil
 }
