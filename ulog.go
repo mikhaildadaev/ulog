@@ -84,12 +84,6 @@ type Field struct {
 	valueTimes     []time.Time
 	valueType      TypeField
 }
-type AsyncWriter struct {
-	ch     chan []byte
-	limit  int
-	wg     sync.WaitGroup
-	writer io.Writer
-}
 type StandartLogger struct {
 	flags  int
 	level  TypeLevel
@@ -235,11 +229,11 @@ func NewLogger() Logger {
 func NewLoggerAsync() Logger {
 	return &UniversalLogger{
 		async:  true,
-		writer: NewAsyncWriter(os.Stderr, 10000),
 		caller: true,
 		format: TextType,
 		level:  getLoggerLevel(),
 		scheme: getLoggerScheme(),
+		writer: newAsyncWriter(os.Stderr, 10000),
 	}
 }
 func NewErrorLog(logger Logger) *log.Logger {
@@ -253,16 +247,6 @@ func NewErrorLog(logger Logger) *log.Logger {
 		"",
 		0,
 	)
-}
-func NewAsyncWriter(writer io.Writer, bufferSize int) *AsyncWriter {
-	asyncWriter := &AsyncWriter{
-		ch:     make(chan []byte, bufferSize),
-		limit:  bufferSize,
-		writer: writer,
-	}
-	asyncWriter.wg.Add(1)
-	go asyncWriter.run()
-	return asyncWriter
 }
 func NewWithWriter(logger Logger, level TypeLevel) io.Writer {
 	return &StandartLogger{
@@ -282,6 +266,24 @@ func GetCopyright() string {
 }
 func GetVersion() string {
 	return Version
+}
+
+// Публичные методы
+func (asyncWriter *asyncWriter) Close() error {
+	close(asyncWriter.ch)
+	asyncWriter.wg.Wait()
+	return nil
+}
+func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
+	buf := make([]byte, len(p))
+	copy(buf, p)
+	select {
+	case asyncWriter.ch <- buf:
+		return len(p), nil
+	default:
+		asyncWriter.ch <- buf
+		return len(p), nil
+	}
 }
 
 // Приватные константы
@@ -362,6 +364,26 @@ var (
 		},
 	}
 )
+
+// Приватная структура
+type asyncWriter struct {
+	ch     chan []byte
+	limit  int
+	wg     sync.WaitGroup
+	writer io.Writer
+}
+
+// Приватные конструкторы
+func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
+	asyncWriter := &asyncWriter{
+		ch:     make(chan []byte, bufferSize),
+		limit:  bufferSize,
+		writer: writer,
+	}
+	asyncWriter.wg.Add(1)
+	go asyncWriter.run()
+	return asyncWriter
+}
 
 // Приватные функции
 func formatData(dataBuf *bytes.Buffer, scheme colorScheme, message string) {
@@ -538,27 +560,11 @@ func isIgnoredError(data []byte) bool {
 }
 
 // Приватные методы
-func (asyncWriter *AsyncWriter) run() {
+func (asyncWriter *asyncWriter) run() {
 	defer asyncWriter.wg.Done()
 	for buf := range asyncWriter.ch {
 		asyncWriter.writer.Write(buf)
 	}
-}
-func (asyncWriter *AsyncWriter) Write(p []byte) (n int, err error) {
-	buf := make([]byte, len(p))
-	copy(buf, p)
-	select {
-	case asyncWriter.ch <- buf:
-		return len(p), nil
-	default:
-		asyncWriter.ch <- buf
-		return len(p), nil
-	}
-}
-func (asyncWriter *AsyncWriter) Close() error {
-	close(asyncWriter.ch)
-	asyncWriter.wg.Wait()
-	return nil
 }
 func (universalLogger *UniversalLogger) getCaller() string {
 	if !universalLogger.caller {
@@ -627,20 +633,4 @@ func (universalLogger *UniversalLogger) writeTextFields(level TypeLevel, message
 	universalLogger.mutex.Lock()
 	universalLogger.writer.Write(dataBuf.Bytes())
 	universalLogger.mutex.Unlock()
-}
-func (standartLogger *StandartLogger) setMessage(message string) {
-	switch standartLogger.level {
-	case LevelDebug:
-		standartLogger.logger.Debug(message)
-	case LevelInfo:
-		standartLogger.logger.Info(message)
-	case LevelWarn:
-		standartLogger.logger.Warn(message)
-	case LevelError:
-		standartLogger.logger.Error(message)
-	case LevelFatal:
-		standartLogger.logger.Fatal(message)
-	default:
-		standartLogger.logger.Info(message)
-	}
 }

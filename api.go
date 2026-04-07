@@ -6,6 +6,38 @@ import (
 )
 
 // Публичные методы
+func (standartLogger *StandartLogger) Write(p []byte) (n int, err error) {
+	standartLogger.mutex.Lock()
+	defer standartLogger.mutex.Unlock()
+	start := 0
+	end := len(p)
+	for start < end && p[start] <= ' ' {
+		start++
+	}
+	for end > start && p[end-1] <= ' ' {
+		end--
+	}
+	if start >= end {
+		return len(p), nil
+	}
+	if isIgnoredError(p[start:end]) {
+		return len(p), nil
+	}
+	message := string(p[start:end])
+	switch standartLogger.level {
+	case LevelDebug:
+		standartLogger.logger.Debug(message)
+	case LevelInfo:
+		standartLogger.logger.Info(message)
+	case LevelWarn:
+		standartLogger.logger.Warn(message)
+	case LevelError:
+		standartLogger.logger.Error(message)
+	case LevelFatal:
+		standartLogger.logger.Fatal(message)
+	}
+	return len(p), nil
+}
 func (universalLogger *UniversalLogger) Debug(message string, fields ...Field) {
 	switch universalLogger.format {
 	case JsonType:
@@ -92,16 +124,16 @@ func (universalLogger *UniversalLogger) SetLevel(level TypeLevel) {
 	defer universalLogger.mutex.Unlock()
 	universalLogger.level = level
 }
-func (universalLogger *UniversalLogger) SetOutput(w io.Writer) {
+func (universalLogger *UniversalLogger) SetOutput(writer io.Writer) {
 	universalLogger.mutex.Lock()
 	defer universalLogger.mutex.Unlock()
 	if universalLogger.async {
-		if asyncWriter, ok := universalLogger.writer.(*AsyncWriter); ok {
+		if asyncWriter, ok := universalLogger.writer.(*asyncWriter); ok {
 			go asyncWriter.Close()
 		}
-		universalLogger.writer = NewAsyncWriter(w, 10000)
+		universalLogger.writer = newAsyncWriter(writer, 10000)
 	} else {
-		universalLogger.writer = w
+		universalLogger.writer = writer
 	}
 }
 func (universalLogger *UniversalLogger) SetTheme(theme string) {
@@ -123,7 +155,7 @@ func (universalLogger *UniversalLogger) Sync() error {
 	universalLogger.mutex.RLock()
 	currentWriter := universalLogger.writer
 	universalLogger.mutex.RUnlock()
-	if asyncWriter, ok := currentWriter.(*AsyncWriter); ok {
+	if asyncWriter, ok := currentWriter.(*asyncWriter); ok {
 		return asyncWriter.Close()
 	}
 	return nil
@@ -133,25 +165,4 @@ func (universalLogger *UniversalLogger) Write(p []byte) (n int, err error) {
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
 	return writer.Write(p)
-}
-func (standartLogger *StandartLogger) Write(p []byte) (n int, err error) {
-	standartLogger.mutex.Lock()
-	defer standartLogger.mutex.Unlock()
-	start := 0
-	end := len(p)
-	for start < end && p[start] <= ' ' {
-		start++
-	}
-	for end > start && p[end-1] <= ' ' {
-		end--
-	}
-	if start >= end {
-		return len(p), nil
-	}
-	if isIgnoredError(p[start:end]) {
-		return len(p), nil
-	}
-	message := string(p[start:end])
-	standartLogger.setMessage(message)
-	return len(p), nil
 }
