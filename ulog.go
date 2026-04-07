@@ -384,94 +384,100 @@ func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
 }
 
 // Приватные функции
-func formatData(dataBuf *bytes.Buffer, scheme colorScheme, message string) {
-	dataBuf.WriteString(scheme.message)
-	dataBuf.WriteString(message)
-	dataBuf.WriteString(scheme.reset)
-	dataBuf.WriteByte('\n')
+func formatDataJson(dataBuf *bytes.Buffer, message string, fields []Field) {
+	if len(fields) == 0 {
+	} else {
+	}
 }
-func formatDataf(dataBuf *bytes.Buffer, scheme colorScheme, message string, fields []Field) {
-	dataBuf.WriteByte(' ')
-	dataBuf.WriteString(scheme.message)
-	dataBuf.WriteString(message)
-	dataBuf.WriteByte(':')
-	for _, field := range fields {
+func formatDataText(dataBuf *bytes.Buffer, scheme colorScheme, message string, fields []Field) {
+	if len(fields) == 0 {
+		dataBuf.WriteString(scheme.message)
+		dataBuf.WriteString(message)
+	} else {
 		dataBuf.WriteByte(' ')
-		dataBuf.WriteString(field.keyName)
-		dataBuf.WriteByte('=')
-		switch field.valueType {
-		case BoolType:
-			dataBuf.WriteString(strconv.FormatBool(field.valueBool))
-		case BoolsType:
-			dataBuf.WriteByte('[')
-			for i, value := range field.valueBools {
-				if i > 0 {
-					dataBuf.WriteByte(' ')
+		dataBuf.WriteString(scheme.message)
+		dataBuf.WriteString(message)
+		dataBuf.WriteByte(':')
+		for _, field := range fields {
+			dataBuf.WriteByte(' ')
+			dataBuf.WriteString(field.keyName)
+			dataBuf.WriteByte('=')
+			switch field.valueType {
+			case BoolType:
+				dataBuf.WriteString(strconv.FormatBool(field.valueBool))
+			case BoolsType:
+				dataBuf.WriteByte('[')
+				for i, value := range field.valueBools {
+					if i > 0 {
+						dataBuf.WriteByte(' ')
+					}
+					dataBuf.WriteString(strconv.FormatBool(value))
 				}
-				dataBuf.WriteString(strconv.FormatBool(value))
-			}
-			dataBuf.WriteByte(']')
-		case DurationType:
-			dataBuf.WriteString(field.valueDuration.String())
-		case DurationsType:
-			dataBuf.WriteByte('[')
-			for i, value := range field.valueDurations {
-				if i > 0 {
-					dataBuf.WriteByte(' ')
+				dataBuf.WriteByte(']')
+			case DurationType:
+				dataBuf.WriteString(field.valueDuration.String())
+			case DurationsType:
+				dataBuf.WriteByte('[')
+				for i, value := range field.valueDurations {
+					if i > 0 {
+						dataBuf.WriteByte(' ')
+					}
+					dataBuf.WriteString(value.String())
 				}
-				dataBuf.WriteString(value.String())
-			}
-			dataBuf.WriteByte(']')
-		case FloatType:
-			dataBuf.WriteString(strconv.FormatFloat(field.valueFloat, 'f', -1, 64))
-		case FloatsType:
-			dataBuf.WriteByte('[')
-			for i, value := range field.valueFloats {
-				if i > 0 {
-					dataBuf.WriteByte(' ')
+				dataBuf.WriteByte(']')
+			case FloatType:
+				dataBuf.WriteString(strconv.FormatFloat(field.valueFloat, 'f', -1, 64))
+			case FloatsType:
+				dataBuf.WriteByte('[')
+				for i, value := range field.valueFloats {
+					if i > 0 {
+						dataBuf.WriteByte(' ')
+					}
+					dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
 				}
-				dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
-			}
-			dataBuf.WriteByte(']')
-		case IntType:
-			dataBuf.WriteString(strconv.FormatInt(field.valueInt, 10))
-		case IntsType:
-			dataBuf.WriteByte('[')
-			for i, value := range field.valueInts {
-				if i > 0 {
-					dataBuf.WriteByte(' ')
+				dataBuf.WriteByte(']')
+			case IntType:
+				dataBuf.WriteString(strconv.FormatInt(field.valueInt, 10))
+			case IntsType:
+				dataBuf.WriteByte('[')
+				for i, value := range field.valueInts {
+					if i > 0 {
+						dataBuf.WriteByte(' ')
+					}
+					dataBuf.WriteString(strconv.FormatInt(value, 10))
 				}
-				dataBuf.WriteString(strconv.FormatInt(value, 10))
-			}
-			dataBuf.WriteByte(']')
-		case StringType:
-			dataBuf.WriteString(field.valueString)
-		case StringsType:
-			dataBuf.WriteByte('[')
-			for i, value := range field.valueStrings {
-				if i > 0 {
-					dataBuf.WriteByte(' ')
+				dataBuf.WriteByte(']')
+			case StringType:
+				dataBuf.WriteString(field.valueString)
+			case StringsType:
+				dataBuf.WriteByte('[')
+				for i, value := range field.valueStrings {
+					if i > 0 {
+						dataBuf.WriteByte(' ')
+					}
+					dataBuf.WriteString(value)
 				}
-				dataBuf.WriteString(value)
-			}
-			dataBuf.WriteByte(']')
-		case TimeType:
-			dataBuf.Write(field.valueTime.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
-		case TimesType:
-			dataBuf.WriteByte('[')
-			for i, value := range field.valueTimes {
-				if i > 0 {
-					dataBuf.WriteByte(' ')
+				dataBuf.WriteByte(']')
+			case TimeType:
+				dataBuf.Write(field.valueTime.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
+			case TimesType:
+				dataBuf.WriteByte('[')
+				for i, value := range field.valueTimes {
+					if i > 0 {
+						dataBuf.WriteByte(' ')
+					}
+					dataBuf.Write(value.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
 				}
-				dataBuf.Write(value.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
+				dataBuf.WriteByte(']')
 			}
-			dataBuf.WriteByte(']')
 		}
 	}
 	dataBuf.WriteString(scheme.reset)
 	dataBuf.WriteByte('\n')
 }
-func formatPrefix(dataBuf *bytes.Buffer, scheme colorScheme, level TypeLevel, caller string) {
+func formatPrefixJson(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
+}
+func formatPrefixText(dataBuf *bytes.Buffer, scheme colorScheme, level TypeLevel, caller string) {
 	switch level {
 	case LevelDebug:
 		dataBuf.WriteString(scheme.colorCyan)
@@ -496,7 +502,14 @@ func formatPrefix(dataBuf *bytes.Buffer, scheme colorScheme, level TypeLevel, ca
 		dataBuf.WriteByte(' ')
 	}
 }
-func formatTime(dataBuf *bytes.Buffer, time time.Time) {
+func formatTimeJson(dataBuf *bytes.Buffer, time time.Time) {
+	timeBuf := timePool.Get().([]byte)
+	timeBuf = time.AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
+	dataBuf.Write(timeBuf)
+	timePool.Put(timeBuf)
+	dataBuf.WriteByte(' ')
+}
+func formatTimeText(dataBuf *bytes.Buffer, time time.Time) {
 	timeBuf := timePool.Get().([]byte)
 	timeBuf = time.AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
 	dataBuf.Write(timeBuf)
@@ -584,49 +597,36 @@ func (universalLogger *UniversalLogger) getScheme() colorScheme {
 	defer universalLogger.mutex.RUnlock()
 	return universalLogger.scheme
 }
-func (universalLogger *UniversalLogger) writeJson(level TypeLevel, message string) {
+func (universalLogger *UniversalLogger) writeJson(level TypeLevel, message string, fields []Field) {
 	if universalLogger.getLevel() > level {
 		return
 	}
-	// Дописать
-}
-func (universalLogger *UniversalLogger) writeText(level TypeLevel, message string) {
-	if universalLogger.getLevel() > level {
-		return
-	}
-	caller := universalLogger.getCaller(level)
-	scheme := universalLogger.getScheme()
-	time := time.Now()
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
-	formatTime(dataBuf, time)
-	formatPrefix(dataBuf, scheme, level, caller)
-	formatData(dataBuf, scheme, message)
+	caller := universalLogger.getCaller(level)
+	time := time.Now()
+	formatTimeJson(dataBuf, time)
+	formatPrefixJson(dataBuf, level, caller)
+	formatDataJson(dataBuf, message, fields)
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
 	writer.Write(dataBuf.Bytes())
 }
-func (universalLogger *UniversalLogger) writeJsonFields(level TypeLevel, message string, fields []Field) {
+func (universalLogger *UniversalLogger) writeText(level TypeLevel, message string, fields []Field) {
 	if universalLogger.getLevel() > level {
 		return
 	}
-	// Дописать
-}
-func (universalLogger *UniversalLogger) writeTextFields(level TypeLevel, message string, fields []Field) {
-	if universalLogger.getLevel() > level {
-		return
-	}
-	caller := universalLogger.getCaller(level)
-	scheme := universalLogger.getScheme()
-	time := time.Now()
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
-	formatTime(dataBuf, time)
-	formatPrefix(dataBuf, scheme, level, caller)
-	formatDataf(dataBuf, scheme, message, fields)
+	caller := universalLogger.getCaller(level)
+	scheme := universalLogger.getScheme()
+	time := time.Now()
+	formatTimeText(dataBuf, time)
+	formatPrefixText(dataBuf, scheme, level, caller)
+	formatDataText(dataBuf, scheme, message, fields)
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()

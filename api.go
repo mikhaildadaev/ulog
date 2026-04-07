@@ -42,82 +42,42 @@ func (standardLogger *StandardLogger) Write(p []byte) (n int, err error) {
 func (universalLogger *UniversalLogger) Debug(message string, fields ...Field) {
 	switch universalLogger.format {
 	case JsonType:
-		if len(fields) == 0 {
-			universalLogger.writeJson(LevelDebug, message)
-		} else {
-			universalLogger.writeJsonFields(LevelDebug, message, fields)
-		}
+		universalLogger.writeJson(LevelDebug, message, fields)
 	case TextType:
-		if len(fields) == 0 {
-			universalLogger.writeText(LevelDebug, message)
-		} else {
-			universalLogger.writeTextFields(LevelDebug, message, fields)
-		}
+		universalLogger.writeText(LevelDebug, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) Error(message string, fields ...Field) {
 	switch universalLogger.format {
 	case JsonType:
-		if len(fields) == 0 {
-			universalLogger.writeJson(LevelError, message)
-		} else {
-			universalLogger.writeJsonFields(LevelError, message, fields)
-		}
+		universalLogger.writeJson(LevelError, message, fields)
 	case TextType:
-		if len(fields) == 0 {
-			universalLogger.writeText(LevelError, message)
-		} else {
-			universalLogger.writeTextFields(LevelError, message, fields)
-		}
+		universalLogger.writeText(LevelError, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) Fatal(message string, fields ...Field) {
 	switch universalLogger.format {
 	case JsonType:
-		if len(fields) == 0 {
-			universalLogger.writeJson(LevelFatal, message)
-		} else {
-			universalLogger.writeJsonFields(LevelFatal, message, fields)
-		}
+		universalLogger.writeJson(LevelFatal, message, fields)
 	case TextType:
-		if len(fields) == 0 {
-			universalLogger.writeText(LevelFatal, message)
-		} else {
-			universalLogger.writeTextFields(LevelFatal, message, fields)
-		}
+		universalLogger.writeText(LevelFatal, message, fields)
 	}
 	osExit(1)
 }
 func (universalLogger *UniversalLogger) Info(message string, fields ...Field) {
 	switch universalLogger.format {
 	case JsonType:
-		if len(fields) == 0 {
-			universalLogger.writeJson(LevelInfo, message)
-		} else {
-			universalLogger.writeJsonFields(LevelInfo, message, fields)
-		}
+		universalLogger.writeJson(LevelInfo, message, fields)
 	case TextType:
-		if len(fields) == 0 {
-			universalLogger.writeText(LevelInfo, message)
-		} else {
-			universalLogger.writeTextFields(LevelInfo, message, fields)
-		}
+		universalLogger.writeText(LevelInfo, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) Warn(message string, fields ...Field) {
 	switch universalLogger.format {
 	case JsonType:
-		if len(fields) == 0 {
-			universalLogger.writeJson(LevelWarn, message)
-		} else {
-			universalLogger.writeJsonFields(LevelWarn, message, fields)
-		}
+		universalLogger.writeJson(LevelWarn, message, fields)
 	case TextType:
-		if len(fields) == 0 {
-			universalLogger.writeText(LevelWarn, message)
-		} else {
-			universalLogger.writeTextFields(LevelWarn, message, fields)
-		}
+		universalLogger.writeText(LevelWarn, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) SetLevel(level TypeLevel) {
