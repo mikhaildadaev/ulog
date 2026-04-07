@@ -94,7 +94,6 @@ type StandardLogger struct {
 type UniversalLogger struct {
 	async  bool
 	cache  sync.Map
-	caller bool
 	format TypeFormat
 	level  TypeLevel
 	mutex  sync.RWMutex
@@ -219,7 +218,6 @@ func Times(keyName string, valueTimes []time.Time) Field {
 func NewLogger() Logger {
 	return &UniversalLogger{
 		async:  false,
-		caller: true,
 		format: TextType,
 		level:  getLoggerLevel(),
 		scheme: getLoggerScheme(),
@@ -229,7 +227,6 @@ func NewLogger() Logger {
 func NewLoggerAsync() Logger {
 	return &UniversalLogger{
 		async:  true,
-		caller: true,
 		format: TextType,
 		level:  getLoggerLevel(),
 		scheme: getLoggerScheme(),
@@ -565,8 +562,8 @@ func (asyncWriter *asyncWriter) run() {
 		asyncWriter.writer.Write(buf)
 	}
 }
-func (universalLogger *UniversalLogger) getCaller() string {
-	if !universalLogger.caller {
+func (universalLogger *UniversalLogger) getCaller(level TypeLevel) string {
+	if level != LevelDebug {
 		return ""
 	}
 	pc, file, line, _ := runtime.Caller(2)
@@ -597,7 +594,7 @@ func (universalLogger *UniversalLogger) writeText(level TypeLevel, message strin
 	if universalLogger.getLevel() > level {
 		return
 	}
-	caller := universalLogger.getCaller()
+	caller := universalLogger.getCaller(level)
 	scheme := universalLogger.getScheme()
 	time := time.Now()
 	dataBuf := dataPool.Get().(*bytes.Buffer)
@@ -621,7 +618,7 @@ func (universalLogger *UniversalLogger) writeTextFields(level TypeLevel, message
 	if universalLogger.getLevel() > level {
 		return
 	}
-	caller := universalLogger.getCaller()
+	caller := universalLogger.getCaller(level)
 	scheme := universalLogger.getScheme()
 	time := time.Now()
 	dataBuf := dataPool.Get().(*bytes.Buffer)
