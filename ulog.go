@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -86,7 +87,7 @@ type Field struct {
 }
 type StandardLogger struct {
 	flags  int
-	level  TypeLevel
+	level  atomic.Int32
 	logger Logger
 	mutex  sync.Mutex
 	scheme colorScheme
@@ -95,7 +96,7 @@ type UniversalLogger struct {
 	async  bool
 	cache  sync.Map
 	format TypeFormat
-	level  TypeLevel
+	level  atomic.Int32
 	mutex  sync.RWMutex
 	scheme colorScheme
 	writer io.Writer
@@ -216,41 +217,42 @@ func Times(keyName string, valueTimes []time.Time) Field {
 	}
 }
 func NewLogger() Logger {
-	return &UniversalLogger{
+	universalLogger := &UniversalLogger{
 		async:  false,
 		format: TextType,
-		level:  getLoggerLevel(),
 		scheme: getLoggerScheme(),
 		writer: os.Stderr,
 	}
+	universalLogger.level.Store(int32(getLoggerLevel()))
+	return universalLogger
 }
 func NewLoggerAsync() Logger {
-	return &UniversalLogger{
+	universalLogger := &UniversalLogger{
 		async:  true,
 		format: TextType,
-		level:  getLoggerLevel(),
 		scheme: getLoggerScheme(),
 		writer: newAsyncWriter(os.Stderr, 10000),
 	}
+	universalLogger.level.Store(int32(getLoggerLevel()))
+	return universalLogger
 }
 func NewLoggerError(logger Logger) *log.Logger {
-	return log.New(
-		&StandardLogger{
-			flags:  log.LstdFlags | log.Lmicroseconds,
-			level:  LevelError,
-			logger: logger,
-			scheme: getLoggerScheme(),
-		},
-		"",
-		0,
-	)
-}
-func NewWithWriter(level TypeLevel, logger Logger) io.Writer {
-	return &StandardLogger{
-		level:  level,
+	standardLogger := &StandardLogger{
+		flags:  log.LstdFlags | log.Lmicroseconds,
 		logger: logger,
 		scheme: getLoggerScheme(),
 	}
+	standardLogger.level.Store(int32(LevelError))
+	return log.New(standardLogger, "", 0)
+}
+func NewWithWriter(level TypeLevel, logger Logger) io.Writer {
+	standardLogger := &StandardLogger{
+		flags:  log.LstdFlags | log.Lmicroseconds,
+		logger: logger,
+		scheme: getLoggerScheme(),
+	}
+	standardLogger.level.Store(int32(level))
+	return standardLogger
 }
 
 // Публичные функции
@@ -575,9 +577,7 @@ func (universalLogger *UniversalLogger) getCaller(level TypeLevel) string {
 	return caller
 }
 func (universalLogger *UniversalLogger) getLevel() TypeLevel {
-	universalLogger.mutex.RLock()
-	defer universalLogger.mutex.RUnlock()
-	return universalLogger.level
+	return TypeLevel(universalLogger.level.Load())
 }
 func (universalLogger *UniversalLogger) getScheme() colorScheme {
 	universalLogger.mutex.RLock()

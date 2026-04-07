@@ -25,7 +25,7 @@ func (standardLogger *StandardLogger) Write(p []byte) (n int, err error) {
 		return len(p), nil
 	}
 	message := string(p[start:end])
-	switch standardLogger.level {
+	switch TypeLevel(standardLogger.level.Load()) {
 	case LevelDebug:
 		standardLogger.logger.Debug(message)
 	case LevelInfo:
@@ -121,9 +121,7 @@ func (universalLogger *UniversalLogger) Warn(message string, fields ...Field) {
 	}
 }
 func (universalLogger *UniversalLogger) SetLevel(level TypeLevel) {
-	universalLogger.mutex.Lock()
-	defer universalLogger.mutex.Unlock()
-	universalLogger.level = level
+	universalLogger.level.Store(int32(level))
 }
 func (universalLogger *UniversalLogger) SetOutput(writer io.Writer) {
 	universalLogger.mutex.Lock()

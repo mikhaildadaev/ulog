@@ -96,9 +96,9 @@ func TestEnvLogLevel(t *testing.T) {
 func TestLoggerError(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &UniversalLogger{
-		level:  LevelDebug,
 		scheme: darkScheme,
 	}
+	logger.level.Store(int32(LevelDebug))
 	stdLogger := NewLoggerError(logger)
 	stdLogger.Println("")
 	if !strings.Contains(buf.String(), colorDarkRed+"[ERROR]") {
@@ -108,9 +108,9 @@ func TestLoggerError(t *testing.T) {
 func TestWithWriter(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &UniversalLogger{
-		level:  LevelDebug,
 		scheme: darkScheme,
 	}
+	logger.level.Store(int32(LevelDebug))
 	writer := NewWithWriter(LevelWarn, logger)
 	writer.Write([]byte("test message"))
 	output := buf.String()
@@ -129,9 +129,9 @@ func TestLevel(t *testing.T) {
 		osExit = func(int) { exited = true }
 		var buf bytes.Buffer
 		logger := &UniversalLogger{
-			level:  LevelError,
 			scheme: darkScheme,
 		}
+		logger.level.Store(int32(LevelError))
 		logger.Fatal("")
 		if !exited {
 			t.Error("Fatal should call os.Exit")
@@ -143,9 +143,9 @@ func TestLevel(t *testing.T) {
 	t.Run("Standard level", func(t *testing.T) {
 		var buf bytes.Buffer
 		logger := &UniversalLogger{
-			level:  LevelDebug,
 			scheme: darkScheme,
 		}
+		logger.level.Store(int32(LevelDebug))
 		tests := []struct {
 			name     string
 			logFunc  func()
@@ -170,9 +170,9 @@ func TestLevelFiltering(t *testing.T) {
 	for _, level := range levels {
 		var buf bytes.Buffer
 		logger := &UniversalLogger{
-			level:  level,
 			scheme: darkScheme,
 		}
+		logger.level.Store(int32(level))
 		logger.Debug("debug")
 		logger.Info("info")
 		logger.Warn("warn")
