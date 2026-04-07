@@ -402,78 +402,81 @@ func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, schem
 			dataBuf.WriteByte(' ')
 			dataBuf.WriteString(field.keyName)
 			dataBuf.WriteByte('=')
-			switch field.valueType {
-			case TypeBool:
-				dataBuf.WriteString(strconv.FormatBool(field.valueBool))
-			case TypeBools:
-				dataBuf.WriteByte('[')
-				for i, value := range field.valueBools {
-					if i > 0 {
-						dataBuf.WriteByte(' ')
-					}
-					dataBuf.WriteString(strconv.FormatBool(value))
-				}
-				dataBuf.WriteByte(']')
-			case TypeDuration:
-				dataBuf.WriteString(field.valueDuration.String())
-			case TypeDurations:
-				dataBuf.WriteByte('[')
-				for i, value := range field.valueDurations {
-					if i > 0 {
-						dataBuf.WriteByte(' ')
-					}
-					dataBuf.WriteString(value.String())
-				}
-				dataBuf.WriteByte(']')
-			case TypeFloat:
-				dataBuf.WriteString(strconv.FormatFloat(field.valueFloat, 'f', -1, 64))
-			case TypeFloats:
-				dataBuf.WriteByte('[')
-				for i, value := range field.valueFloats {
-					if i > 0 {
-						dataBuf.WriteByte(' ')
-					}
-					dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
-				}
-				dataBuf.WriteByte(']')
-			case TypeInt:
-				dataBuf.WriteString(strconv.FormatInt(field.valueInt, 10))
-			case TypeInts:
-				dataBuf.WriteByte('[')
-				for i, value := range field.valueInts {
-					if i > 0 {
-						dataBuf.WriteByte(' ')
-					}
-					dataBuf.WriteString(strconv.FormatInt(value, 10))
-				}
-				dataBuf.WriteByte(']')
-			case TypeString:
-				dataBuf.WriteString(field.valueString)
-			case TypeStrings:
-				dataBuf.WriteByte('[')
-				for i, value := range field.valueStrings {
-					if i > 0 {
-						dataBuf.WriteByte(' ')
-					}
-					dataBuf.WriteString(value)
-				}
-				dataBuf.WriteByte(']')
-			case TypeTime:
-				dataBuf.Write(field.valueTime.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
-			case TypeTimes:
-				dataBuf.WriteByte('[')
-				for i, value := range field.valueTimes {
-					if i > 0 {
-						dataBuf.WriteByte(' ')
-					}
-					dataBuf.Write(value.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
-				}
-				dataBuf.WriteByte(']')
-			}
+			formatFieldValue(dataBuf, field)
 		}
 	}
 	dataBuf.WriteString(scheme.reset)
 	dataBuf.WriteByte('\n')
+}
+func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
+	switch field.valueType {
+	case TypeBool:
+		dataBuf.WriteString(strconv.FormatBool(field.valueBool))
+	case TypeBools:
+		dataBuf.WriteByte('[')
+		for i, value := range field.valueBools {
+			if i > 0 {
+				dataBuf.WriteByte(',')
+			}
+			dataBuf.WriteString(strconv.FormatBool(value))
+		}
+		dataBuf.WriteByte(']')
+	case TypeDuration:
+		dataBuf.WriteString(field.valueDuration.String())
+	case TypeDurations:
+		dataBuf.WriteByte('[')
+		for i, value := range field.valueDurations {
+			if i > 0 {
+				dataBuf.WriteByte(',')
+			}
+			dataBuf.WriteString(value.String())
+		}
+		dataBuf.WriteByte(']')
+	case TypeFloat:
+		dataBuf.WriteString(strconv.FormatFloat(field.valueFloat, 'f', -1, 64))
+	case TypeFloats:
+		dataBuf.WriteByte('[')
+		for i, value := range field.valueFloats {
+			if i > 0 {
+				dataBuf.WriteByte(',')
+			}
+			dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
+		}
+		dataBuf.WriteByte(']')
+	case TypeInt:
+		dataBuf.WriteString(strconv.FormatInt(field.valueInt, 10))
+	case TypeInts:
+		dataBuf.WriteByte('[')
+		for i, value := range field.valueInts {
+			if i > 0 {
+				dataBuf.WriteByte(',')
+			}
+			dataBuf.WriteString(strconv.FormatInt(value, 10))
+		}
+		dataBuf.WriteByte(']')
+	case TypeString:
+		dataBuf.WriteString(field.valueString)
+	case TypeStrings:
+		dataBuf.WriteByte('[')
+		for i, value := range field.valueStrings {
+			if i > 0 {
+				dataBuf.WriteByte(',')
+			}
+			dataBuf.WriteString(value)
+		}
+		dataBuf.WriteByte(']')
+	case TypeTime:
+		dataBuf.Write(field.valueTime.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
+	case TypeTimes:
+		dataBuf.WriteByte('[')
+		for i, value := range field.valueTimes {
+			if i > 0 {
+				dataBuf.WriteByte(',')
+			}
+			dataBuf.Write(value.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
+		}
+		dataBuf.WriteByte(']')
+	}
 }
 func formatPrefixJson(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
 }
@@ -490,25 +493,17 @@ func formatPrefixText(dataBuf *bytes.Buffer, level TypeLevel, caller string, sch
 	case LevelWarn:
 		dataBuf.WriteString(scheme.prefixWarn)
 	}
-	dataBuf.WriteByte(' ')
 	if caller != "" {
+		dataBuf.WriteByte(' ')
 		dataBuf.WriteString(scheme.caller)
 		dataBuf.WriteString(caller)
-		dataBuf.WriteByte(' ')
 	}
 }
-func formatTimeJson(dataBuf *bytes.Buffer, time time.Time) {
+func formatTime(dataBuf *bytes.Buffer, time time.Time) {
 	timeBuf := timePool.Get().([]byte)
 	timeBuf = time.AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
 	dataBuf.Write(timeBuf)
 	timePool.Put(timeBuf)
-}
-func formatTimeText(dataBuf *bytes.Buffer, time time.Time) {
-	timeBuf := timePool.Get().([]byte)
-	timeBuf = time.AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
-	dataBuf.Write(timeBuf)
-	timePool.Put(timeBuf)
-	dataBuf.WriteByte(' ')
 }
 func getLoggerCaller(path string) string {
 	for i := len(path) - 1; i >= 0; i-- {
@@ -601,8 +596,10 @@ func (universalLogger *UniversalLogger) writeJson(level TypeLevel, message strin
 	caller := universalLogger.getCaller(level)
 	time := time.Now()
 	dataBuf.WriteByte('{')
-	formatTimeJson(dataBuf, time)
+	formatTime(dataBuf, time)
+	dataBuf.WriteByte(',')
 	formatPrefixJson(dataBuf, level, caller)
+	dataBuf.WriteByte(',')
 	formatDataJson(dataBuf, message, fields)
 	dataBuf.WriteByte('}')
 	universalLogger.mutex.RLock()
@@ -620,8 +617,10 @@ func (universalLogger *UniversalLogger) writeText(level TypeLevel, message strin
 	caller := universalLogger.getCaller(level)
 	scheme := universalLogger.getScheme()
 	time := time.Now()
-	formatTimeText(dataBuf, time)
+	formatTime(dataBuf, time)
+	dataBuf.WriteByte(' ')
 	formatPrefixText(dataBuf, level, caller, scheme)
+	dataBuf.WriteByte(' ')
 	formatDataText(dataBuf, message, fields, scheme)
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
