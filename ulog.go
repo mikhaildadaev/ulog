@@ -384,6 +384,44 @@ func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
 }
 
 // Приватные функции
+func escapeJSON(buf *bytes.Buffer, s string) {
+	start := 0
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if ch >= 0x20 && ch != '"' && ch != '\\' {
+			continue
+		}
+		if start < i {
+			buf.WriteString(s[start:i])
+		}
+		switch ch {
+		case '"':
+			buf.WriteString(`\"`)
+		case '\\':
+			buf.WriteString(`\\`)
+		case '\b':
+			buf.WriteString(`\b`)
+		case '\f':
+			buf.WriteString(`\f`)
+		case '\n':
+			buf.WriteString(`\n`)
+		case '\r':
+			buf.WriteString(`\r`)
+		case '\t':
+			buf.WriteString(`\t`)
+		default:
+			if ch < 0x20 {
+				buf.WriteString(fmt.Sprintf(`\u%04x`, ch))
+			} else {
+				buf.WriteByte(ch)
+			}
+		}
+		start = i + 1
+	}
+	if start < len(s) {
+		buf.WriteString(s[start:])
+	}
+}
 func formatDataJson(dataBuf *bytes.Buffer, message string, fields []Field) {
 	if len(fields) == 0 {
 	} else {
@@ -479,6 +517,25 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 	}
 }
 func formatPrefixJson(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
+	dataBuf.WriteString(`"level":"`)
+	switch level {
+	case LevelDebug:
+		dataBuf.WriteString("debug")
+	case LevelInfo:
+		dataBuf.WriteString("info")
+	case LevelWarn:
+		dataBuf.WriteString("warn")
+	case LevelError:
+		dataBuf.WriteString("error")
+	case LevelFatal:
+		dataBuf.WriteString("fatal")
+	}
+	dataBuf.WriteByte('"')
+	if caller != "" {
+		dataBuf.WriteString(`,"caller":"`)
+		escapeJSON(dataBuf, caller)
+		dataBuf.WriteByte('"')
+	}
 }
 func formatPrefixText(dataBuf *bytes.Buffer, level TypeLevel, caller string, scheme colorScheme) {
 	switch level {
