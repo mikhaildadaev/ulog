@@ -3,6 +3,7 @@ package ulog
 import (
 	"io"
 	"strings"
+	"time"
 )
 
 // Публичные методы
@@ -130,6 +131,7 @@ func (universalLogger *UniversalLogger) SetOutput(writer io.Writer) {
 	if universalLogger.async {
 		if asyncWriter, ok := universalLogger.writer.(*asyncWriter); ok {
 			asyncWriter.Close()
+			time.Sleep(time.Millisecond)
 		}
 		universalLogger.writer = newAsyncWriter(writer, 10000)
 	} else {
