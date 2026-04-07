@@ -9,7 +9,9 @@ import (
 func BenchmarkDebug(b *testing.B) {
 	b.Run("Simple", func(b *testing.B) {
 		logger := NewLogger()
-		logger.Debug("test debug simple message")
+		if b.N == 1 {
+			logger.Debug("test debug simple message")
+		}
 		logger.SetOutput(io.Discard)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -19,10 +21,12 @@ func BenchmarkDebug(b *testing.B) {
 	})
 	b.Run("Format", func(b *testing.B) {
 		logger := NewLogger()
-		logger.Debug("test debug format message",
-			Int("user_id", 12345),
-			String("path", "/api/v1/test"),
-		)
+		if b.N == 1 {
+			logger.Debug("test debug format message",
+				Int("user_id", 12345),
+				String("path", "/api/v1/test"),
+			)
+		}
 		logger.SetOutput(io.Discard)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -37,7 +41,9 @@ func BenchmarkDebug(b *testing.B) {
 func BenchmarkError(b *testing.B) {
 	b.Run("Simple", func(b *testing.B) {
 		logger := NewLogger()
-		logger.Error("test error simple message")
+		if b.N == 1 {
+			logger.Error("test error simple message")
+		}
 		logger.SetOutput(io.Discard)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -47,10 +53,12 @@ func BenchmarkError(b *testing.B) {
 	})
 	b.Run("Format", func(b *testing.B) {
 		logger := NewLogger()
-		logger.Error("test error format message",
-			Int("user_id", 12345),
-			String("path", "/api/v1/test"),
-		)
+		if b.N == 1 {
+			logger.Error("test error format message",
+				Int("user_id", 12345),
+				String("path", "/api/v1/test"),
+			)
+		}
 		logger.SetOutput(io.Discard)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -65,7 +73,9 @@ func BenchmarkError(b *testing.B) {
 func BenchmarkInfo(b *testing.B) {
 	b.Run("Simple", func(b *testing.B) {
 		logger := NewLogger()
-		logger.Info("test info simple message")
+		if b.N == 1 {
+			logger.Info("test info simple message")
+		}
 		logger.SetOutput(io.Discard)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -75,10 +85,12 @@ func BenchmarkInfo(b *testing.B) {
 	})
 	b.Run("Format", func(b *testing.B) {
 		logger := NewLogger()
-		logger.Info("test info format message",
-			Int("user_id", 12345),
-			String("path", "/api/v1/test"),
-		)
+		if b.N == 1 {
+			logger.Info("test info format message",
+				Int("user_id", 12345),
+				String("path", "/api/v1/test"),
+			)
+		}
 		logger.SetOutput(io.Discard)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -93,7 +105,9 @@ func BenchmarkInfo(b *testing.B) {
 func BenchmarkWarn(b *testing.B) {
 	b.Run("Simple", func(b *testing.B) {
 		logger := NewLogger()
-		logger.Warn("test warn simple message")
+		if b.N == 1 {
+			logger.Warn("test warn simple message")
+		}
 		logger.SetOutput(io.Discard)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -103,10 +117,12 @@ func BenchmarkWarn(b *testing.B) {
 	})
 	b.Run("Format", func(b *testing.B) {
 		logger := NewLogger()
-		logger.Warn("test warn format message",
-			Int("user_id", 12345),
-			String("path", "/api/v1/test"),
-		)
+		if b.N == 1 {
+			logger.Warn("test warn format message",
+				Int("user_id", 12345),
+				String("path", "/api/v1/test"),
+			)
+		}
 		logger.SetOutput(io.Discard)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
