@@ -41,10 +41,12 @@ const (
 	TypeBools
 	TypeDuration
 	TypeDurations
-	TypeFloat
-	TypeFloats
+	TypeFloat64
+	TypeFloats64
 	TypeInt
 	TypeInts
+	TypeInt64
+	TypeInts64
 	TypeString
 	TypeStrings
 	TypeTime
@@ -75,10 +77,12 @@ type Field struct {
 	valueBools     []bool
 	valueDuration  time.Duration
 	valueDurations []time.Duration
-	valueInt       int64
-	valueInts      []int64
-	valueFloat     float64
-	valueFloats    []float64
+	valueInt       int
+	valueInts      []int
+	valueInt64     int64
+	valueInts64    []int64
+	valueFloat64   float64
+	valueFloats64  []float64
 	valueString    string
 	valueStrings   []string
 	valueTime      time.Time
@@ -160,32 +164,46 @@ func Errs(errs []error) Field {
 		valueStrings: values,
 	}
 }
-func Float(keyName string, valueFloat float64) Field {
+func Float64(keyName string, valueFloat64 float64) Field {
 	return Field{
-		valueType:  TypeFloat,
-		keyName:    keyName,
-		valueFloat: valueFloat,
+		valueType:    TypeFloat64,
+		keyName:      keyName,
+		valueFloat64: valueFloat64,
 	}
 }
-func Floats64(keyName string, valueFloats []float64) Field {
+func Floats64(keyName string, valueFloats64 []float64) Field {
 	return Field{
-		valueType:   TypeFloat,
-		keyName:     keyName,
-		valueFloats: valueFloats,
+		valueType:     TypeFloat64,
+		keyName:       keyName,
+		valueFloats64: valueFloats64,
 	}
 }
-func Int(keyName string, valueInt int64) Field {
+func Int(keyName string, valueInt int) Field {
 	return Field{
 		valueType: TypeInt,
 		keyName:   keyName,
 		valueInt:  valueInt,
 	}
 }
-func Ints(keyName string, valueInts []int64) Field {
+func Ints(keyName string, valueInts []int) Field {
 	return Field{
 		valueType: TypeInt,
 		keyName:   keyName,
 		valueInts: valueInts,
+	}
+}
+func Int64(keyName string, valueInt64 int64) Field {
+	return Field{
+		valueType:  TypeInt,
+		keyName:    keyName,
+		valueInt64: valueInt64,
+	}
+}
+func Ints64(keyName string, valueInts64 []int64) Field {
+	return Field{
+		valueType:   TypeInt,
+		keyName:     keyName,
+		valueInts64: valueInts64,
 	}
 }
 func String(keyName string, valueString string) Field {
@@ -479,11 +497,11 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 			dataBuf.WriteString(value.String())
 		}
 		dataBuf.WriteByte(']')
-	case TypeFloat:
-		dataBuf.WriteString(strconv.FormatFloat(field.valueFloat, 'f', -1, 64))
-	case TypeFloats:
+	case TypeFloat64:
+		dataBuf.WriteString(strconv.FormatFloat(field.valueFloat64, 'f', -1, 64))
+	case TypeFloats64:
 		dataBuf.WriteByte('[')
-		for i, value := range field.valueFloats {
+		for i, value := range field.valueFloats64 {
 			if i > 0 {
 				dataBuf.WriteByte(',')
 			}
@@ -491,10 +509,21 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 		}
 		dataBuf.WriteByte(']')
 	case TypeInt:
-		dataBuf.WriteString(strconv.FormatInt(field.valueInt, 10))
+		dataBuf.WriteString(strconv.Itoa(field.valueInt))
 	case TypeInts:
 		dataBuf.WriteByte('[')
 		for i, value := range field.valueInts {
+			if i > 0 {
+				dataBuf.WriteByte(',')
+			}
+			dataBuf.WriteString(strconv.Itoa(value))
+		}
+		dataBuf.WriteByte(']')
+	case TypeInt64:
+		dataBuf.WriteString(strconv.FormatInt(field.valueInt64, 10))
+	case TypeInts64:
+		dataBuf.WriteByte('[')
+		for i, value := range field.valueInts64 {
 			if i > 0 {
 				dataBuf.WriteByte(',')
 			}
