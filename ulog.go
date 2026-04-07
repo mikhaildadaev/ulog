@@ -23,7 +23,6 @@ import (
 type TypeLevel int
 type TypeField int
 type TypeFormat int
-type TypeSymbol int
 
 // Публичные константы
 const (
@@ -54,15 +53,6 @@ const (
 const (
 	TypeJson TypeFormat = iota
 	TypeText
-)
-const (
-	SymbolСolon TypeSymbol = iota
-	SymbolBracketSquareL
-	SymbolBracketSquareR
-	SymbolBracketCurlyL
-	SymbolBracketCurlyR
-	SymbolEqual
-	SymbolSpace
 )
 
 // Публичные интерфейсы
@@ -404,81 +394,81 @@ func formatDataText(dataBuf *bytes.Buffer, scheme colorScheme, message string, f
 		dataBuf.WriteString(scheme.message)
 		dataBuf.WriteString(message)
 	} else {
-		formatSymbol(dataBuf, SymbolSpace)
+		dataBuf.WriteByte(' ')
 		dataBuf.WriteString(scheme.message)
 		dataBuf.WriteString(message)
-		formatSymbol(dataBuf, SymbolСolon)
+		dataBuf.WriteByte(':')
 		for _, field := range fields {
-			formatSymbol(dataBuf, SymbolSpace)
+			dataBuf.WriteByte(' ')
 			dataBuf.WriteString(field.keyName)
-			formatSymbol(dataBuf, SymbolEqual)
+			dataBuf.WriteByte('=')
 			switch field.valueType {
 			case TypeBool:
 				dataBuf.WriteString(strconv.FormatBool(field.valueBool))
 			case TypeBools:
-				formatSymbol(dataBuf, SymbolBracketSquareL)
+				dataBuf.WriteByte('[')
 				for i, value := range field.valueBools {
 					if i > 0 {
-						formatSymbol(dataBuf, SymbolSpace)
+						dataBuf.WriteByte(' ')
 					}
 					dataBuf.WriteString(strconv.FormatBool(value))
 				}
-				formatSymbol(dataBuf, SymbolBracketSquareR)
+				dataBuf.WriteByte(']')
 			case TypeDuration:
 				dataBuf.WriteString(field.valueDuration.String())
 			case TypeDurations:
-				formatSymbol(dataBuf, SymbolBracketSquareL)
+				dataBuf.WriteByte('[')
 				for i, value := range field.valueDurations {
 					if i > 0 {
-						formatSymbol(dataBuf, SymbolSpace)
+						dataBuf.WriteByte(' ')
 					}
 					dataBuf.WriteString(value.String())
 				}
-				formatSymbol(dataBuf, SymbolBracketSquareR)
+				dataBuf.WriteByte(']')
 			case TypeFloat:
 				dataBuf.WriteString(strconv.FormatFloat(field.valueFloat, 'f', -1, 64))
 			case TypeFloats:
-				formatSymbol(dataBuf, SymbolBracketSquareL)
+				dataBuf.WriteByte('[')
 				for i, value := range field.valueFloats {
 					if i > 0 {
-						formatSymbol(dataBuf, SymbolSpace)
+						dataBuf.WriteByte(' ')
 					}
 					dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
 				}
-				formatSymbol(dataBuf, SymbolBracketSquareR)
+				dataBuf.WriteByte(']')
 			case TypeInt:
 				dataBuf.WriteString(strconv.FormatInt(field.valueInt, 10))
 			case TypeInts:
-				formatSymbol(dataBuf, SymbolBracketSquareL)
+				dataBuf.WriteByte('[')
 				for i, value := range field.valueInts {
 					if i > 0 {
-						formatSymbol(dataBuf, SymbolSpace)
+						dataBuf.WriteByte(' ')
 					}
 					dataBuf.WriteString(strconv.FormatInt(value, 10))
 				}
-				formatSymbol(dataBuf, SymbolBracketSquareR)
+				dataBuf.WriteByte(']')
 			case TypeString:
 				dataBuf.WriteString(field.valueString)
 			case TypeStrings:
-				formatSymbol(dataBuf, SymbolBracketSquareL)
+				dataBuf.WriteByte('[')
 				for i, value := range field.valueStrings {
 					if i > 0 {
-						formatSymbol(dataBuf, SymbolSpace)
+						dataBuf.WriteByte(' ')
 					}
 					dataBuf.WriteString(value)
 				}
-				formatSymbol(dataBuf, SymbolBracketSquareR)
+				dataBuf.WriteByte(']')
 			case TypeTime:
 				dataBuf.Write(field.valueTime.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
 			case TypeTimes:
-				formatSymbol(dataBuf, SymbolBracketSquareL)
+				dataBuf.WriteByte('[')
 				for i, value := range field.valueTimes {
 					if i > 0 {
-						formatSymbol(dataBuf, SymbolSpace)
+						dataBuf.WriteByte(' ')
 					}
 					dataBuf.Write(value.AppendFormat(nil, "2006-01-02T15:04:05.000Z07:00"))
 				}
-				formatSymbol(dataBuf, SymbolBracketSquareR)
+				dataBuf.WriteByte(']')
 			}
 		}
 	}
@@ -505,28 +495,10 @@ func formatPrefixText(dataBuf *bytes.Buffer, scheme colorScheme, level TypeLevel
 		dataBuf.WriteString(scheme.colorYellow)
 		dataBuf.WriteString("[WARN]")
 	}
-	formatSymbol(dataBuf, SymbolSpace)
+	dataBuf.WriteByte(' ')
 	if caller != "" {
 		dataBuf.WriteString(scheme.caller)
 		dataBuf.WriteString(caller)
-		formatSymbol(dataBuf, SymbolSpace)
-	}
-}
-func formatSymbol(dataBuf *bytes.Buffer, symbol TypeSymbol) {
-	switch symbol {
-	case SymbolСolon:
-		dataBuf.WriteByte(':')
-	case SymbolBracketCurlyL:
-		dataBuf.WriteByte('{')
-	case SymbolBracketCurlyR:
-		dataBuf.WriteByte('}')
-	case SymbolBracketSquareL:
-		dataBuf.WriteByte('[')
-	case SymbolBracketSquareR:
-		dataBuf.WriteByte(']')
-	case SymbolEqual:
-		dataBuf.WriteByte('=')
-	case SymbolSpace:
 		dataBuf.WriteByte(' ')
 	}
 }
@@ -541,7 +513,7 @@ func formatTimeText(dataBuf *bytes.Buffer, time time.Time) {
 	timeBuf = time.AppendFormat(timeBuf[:0], "2006/01/02 15:04:05.000000")
 	dataBuf.Write(timeBuf)
 	timePool.Put(timeBuf)
-	formatSymbol(dataBuf, SymbolSpace)
+	dataBuf.WriteByte(' ')
 }
 func getLoggerCaller(path string) string {
 	for i := len(path) - 1; i >= 0; i-- {
@@ -633,11 +605,11 @@ func (universalLogger *UniversalLogger) writeJson(level TypeLevel, message strin
 	defer dataPool.Put(dataBuf)
 	caller := universalLogger.getCaller(level)
 	time := time.Now()
-	formatSymbol(dataBuf, SymbolBracketCurlyL)
+	dataBuf.WriteByte('{')
 	formatTimeJson(dataBuf, time)
 	formatPrefixJson(dataBuf, level, caller)
 	formatDataJson(dataBuf, message, fields)
-	formatSymbol(dataBuf, SymbolBracketCurlyR)
+	dataBuf.WriteByte('}')
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
