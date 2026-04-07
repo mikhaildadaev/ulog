@@ -512,8 +512,8 @@ func formatPrefixText(dataBuf *bytes.Buffer, scheme colorScheme, level TypeLevel
 		formatSymbol(dataBuf, SymbolSpace)
 	}
 }
-func formatSymbol(dataBuf *bytes.Buffer, group TypeSymbol) {
-	switch group {
+func formatSymbol(dataBuf *bytes.Buffer, symbol TypeSymbol) {
+	switch symbol {
 	case SymbolСolon:
 		dataBuf.WriteByte(':')
 	case SymbolBracketCurlyL:
