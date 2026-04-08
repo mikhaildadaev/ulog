@@ -7,6 +7,44 @@ import (
 	"time"
 )
 
+// Публичные функции
+func WithAsync(bufferSize int) OptionLogger {
+	return func(universalLogger *UniversalLogger) {
+		if bufferSize <= 0 {
+			bufferSize = 10000
+		}
+		universalLogger.async = true
+		universalLogger.writer = newAsyncWriter(universalLogger.writer, bufferSize)
+	}
+}
+func WithFormat(format TypeFormat) OptionLogger {
+	return func(universalLogger *UniversalLogger) {
+		universalLogger.format = format
+	}
+}
+func WithLevel(level TypeLevel) OptionLogger {
+	return func(universalLogger *UniversalLogger) {
+		universalLogger.level.Store(int32(level))
+	}
+}
+func WithOutput(writer io.Writer) OptionLogger {
+	return func(universalLogger *UniversalLogger) {
+		universalLogger.writer = writer
+	}
+}
+func WithTheme(theme TypeTheme) OptionLogger {
+	return func(universalLogger *UniversalLogger) {
+		switch theme {
+		case ThemeDark:
+			universalLogger.scheme = darkScheme
+		case ThemeLight:
+			universalLogger.scheme = lightScheme
+		default:
+			universalLogger.scheme = getLoggerScheme()
+		}
+	}
+}
+
 // Публичные методы
 func (standardLogger *StandardLogger) Write(p []byte) (n int, err error) {
 	standardLogger.mutex.Lock()

@@ -24,6 +24,7 @@ import (
 type TypeLevel int
 type TypeField int
 type TypeFormat int
+type TypeTheme int
 
 // Публичные константы
 const (
@@ -57,14 +58,23 @@ const (
 	TypeJson TypeFormat = iota
 	TypeText
 )
+const (
+	ThemeDark TypeTheme = iota
+	ThemeLight
+)
 
 // Публичные интерфейсы
 type Logger interface {
 	Debug(message string, fields ...Field)
+	DebugWithContext(ctx context.Context, msg string, fields ...Field)
 	Error(message string, fields ...Field)
+	ErrorWithContext(ctx context.Context, msg string, fields ...Field)
 	Fatal(message string, fields ...Field)
+	FatalWithContext(ctx context.Context, msg string, fields ...Field)
 	Info(message string, fields ...Field)
+	InfoWithContext(ctx context.Context, msg string, fields ...Field)
 	Warn(message string, fields ...Field)
+	WarnWithContext(ctx context.Context, msg string, fields ...Field)
 	SetLevel(level TypeLevel)
 	SetOutput(writer io.Writer)
 	SetTheme(theme string)
@@ -106,6 +116,7 @@ type UniversalLogger struct {
 	scheme colorScheme
 	writer io.Writer
 }
+type OptionLogger func(*UniversalLogger)
 
 // Публичные конструкторы
 func Bool(keyName string, valueBool bool) Field {
