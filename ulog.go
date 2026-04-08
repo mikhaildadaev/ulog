@@ -7,6 +7,7 @@ package ulog
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -693,9 +694,12 @@ func (universalLogger *UniversalLogger) getScheme() colorScheme {
 	defer universalLogger.mutex.RUnlock()
 	return universalLogger.scheme
 }
-func (universalLogger *UniversalLogger) writeJson(level TypeLevel, message string, fields []Field) {
+func (universalLogger *UniversalLogger) writeJson(level TypeLevel, context context.Context, message string, fields []Field) {
 	if universalLogger.getLevel() > level {
 		return
+	}
+	if context != nil {
+		//
 	}
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
@@ -714,9 +718,12 @@ func (universalLogger *UniversalLogger) writeJson(level TypeLevel, message strin
 	universalLogger.mutex.RUnlock()
 	writer.Write(dataBuf.Bytes())
 }
-func (universalLogger *UniversalLogger) writeText(level TypeLevel, message string, fields []Field) {
+func (universalLogger *UniversalLogger) writeText(level TypeLevel, context context.Context, message string, fields []Field) {
 	if universalLogger.getLevel() > level {
 		return
+	}
+	if context != nil {
+		//
 	}
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
