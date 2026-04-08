@@ -44,8 +44,6 @@ func WithTheme(theme TypeTheme) OptionLogger {
 			universalLogger.scheme = darkScheme
 		case ThemeLight:
 			universalLogger.scheme = lightScheme
-		default:
-			universalLogger.scheme = getLoggerScheme()
 		}
 	}
 }
@@ -82,6 +80,18 @@ func (standardLogger *standardLogger) Write(p []byte) (n int, err error) {
 		standardLogger.logger.Fatal(message)
 	}
 	return len(p), nil
+}
+func (universalLogger *universalLogger) Close() error {
+	if universalLogger.mode != ModeAsync {
+		return nil
+	}
+	universalLogger.mutex.RLock()
+	currentWriter := universalLogger.writer
+	universalLogger.mutex.RUnlock()
+	if asyncWriter, ok := currentWriter.(*asyncWriter); ok {
+		return asyncWriter.Close()
+	}
+	return nil
 }
 func (universalLogger *universalLogger) Debug(message string, fields ...Field) {
 	switch universalLogger.format {
@@ -168,7 +178,7 @@ func (universalLogger *universalLogger) WarnWithContext(context context.Context,
 func (universalLogger *universalLogger) SetLevel(level TypeLevel) {
 	universalLogger.level.Store(int32(level))
 }
-func (universalLogger *universalLogger) SetOutput(mode TypeMode, writer io.Writer, bufferSize ...int) {
+func (universalLogger *universalLogger) SetMode(mode TypeMode, writer io.Writer, bufferSize ...int) {
 	universalLogger.mutex.Lock()
 	defer universalLogger.mutex.Unlock()
 	if universalLogger.mode == ModeAsync {
@@ -197,21 +207,7 @@ func (universalLogger *universalLogger) SetTheme(theme TypeTheme) {
 		universalLogger.scheme = darkScheme
 	case ThemeLight:
 		universalLogger.scheme = lightScheme
-	default:
-		universalLogger.scheme = getLoggerScheme()
 	}
-}
-func (universalLogger *universalLogger) Close() error {
-	if universalLogger.mode != ModeAsync {
-		return nil
-	}
-	universalLogger.mutex.RLock()
-	currentWriter := universalLogger.writer
-	universalLogger.mutex.RUnlock()
-	if asyncWriter, ok := currentWriter.(*asyncWriter); ok {
-		return asyncWriter.Close()
-	}
-	return nil
 }
 func (universalLogger *universalLogger) Sync() error {
 	if universalLogger.mode != ModeAsync {

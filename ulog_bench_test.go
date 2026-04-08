@@ -23,7 +23,7 @@ func Benchmark_Debug_Multi(b *testing.B) {
 			if b.N == 1 {
 				logger.Debug("test debug simple message")
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -40,7 +40,7 @@ func Benchmark_Debug_Multi(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -70,7 +70,7 @@ func Benchmark_Debug_Single(b *testing.B) {
 			if b.N == 1 {
 				logger.Debug("test debug simple message")
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				logger.Debug("test debug simple message")
@@ -85,7 +85,7 @@ func Benchmark_Debug_Single(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				logger.Debug("test debug format message",
@@ -113,7 +113,7 @@ func Benchmark_Error_Multi(b *testing.B) {
 			if b.N == 1 {
 				logger.Error("test error simple message")
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -130,7 +130,7 @@ func Benchmark_Error_Multi(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -160,7 +160,7 @@ func Benchmark_Error_Single(b *testing.B) {
 			if b.N == 1 {
 				logger.Error("test error simple message")
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				logger.Error("test error simple message")
@@ -175,7 +175,7 @@ func Benchmark_Error_Single(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				logger.Error("test error format message",
@@ -203,7 +203,7 @@ func Benchmark_Info_Multi(b *testing.B) {
 			if b.N == 1 {
 				logger.Info("test info simple message")
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -220,7 +220,7 @@ func Benchmark_Info_Multi(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -250,7 +250,7 @@ func Benchmark_Info_Single(b *testing.B) {
 			if b.N == 1 {
 				logger.Info("test info simple message")
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				logger.Info("test info simple message")
@@ -265,7 +265,7 @@ func Benchmark_Info_Single(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				logger.Info("test info format message",
@@ -293,7 +293,7 @@ func Benchmark_Warn_Multi(b *testing.B) {
 			if b.N == 1 {
 				logger.Warn("test warn simple message")
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -310,7 +310,7 @@ func Benchmark_Warn_Multi(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -340,7 +340,7 @@ func Benchmark_Warn_Single(b *testing.B) {
 			if b.N == 1 {
 				logger.Warn("test warn simple message")
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				logger.Warn("test warn simple message")
@@ -355,7 +355,7 @@ func Benchmark_Warn_Single(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				logger.Warn("test warn format message",
@@ -380,7 +380,7 @@ func Benchmark_LoggerWriter_Multi(b *testing.B) {
 		b.Run(format.name, func(b *testing.B) {
 			logger := NewLogger()
 			defer logger.Close()
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			writer := NewWithWriter(LevelInfo, logger)
 			data := []byte("test message")
 			b.ResetTimer()
@@ -406,7 +406,7 @@ func Benchmark_LoggerWriter_Single(b *testing.B) {
 		b.Run(format.name, func(b *testing.B) {
 			logger := NewLogger()
 			defer logger.Close()
-			logger.SetOutput(format.mode, format.writer, format.bufferSize)
+			logger.SetMode(format.mode, format.writer, format.bufferSize)
 			writer := NewWithWriter(LevelInfo, logger)
 			data := []byte("test message")
 			b.ResetTimer()

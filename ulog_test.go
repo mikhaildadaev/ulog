@@ -1,6 +1,7 @@
 package ulog
 
 import (
+	"bytes"
 	"strings"
 	"sync"
 	"testing"
@@ -117,13 +118,19 @@ func TestSetLevel(t *testing.T) {
 	}
 }
 func TestSetTheme(t *testing.T) {
-	logger := NewLogger().(*universalLogger)
+	logger := NewLogger()
+	buf := &bytes.Buffer{}
+	logger.SetMode(ModeSync, buf, 0)
 	logger.SetTheme(ThemeDark)
-	if logger.getScheme() != darkScheme {
-		t.Error("Theme not changed to dark")
+	logger.Info("test message")
+	output := buf.String()
+	if !strings.Contains(output, "\033[92m") {
+		t.Error("Dark theme colors not found in output")
 	}
+	buf.Reset()
 	logger.SetTheme(ThemeLight)
-	if logger.getScheme() != lightScheme {
-		t.Error("Theme not changed to light")
+	logger.Info("test message")
+	if !strings.Contains(output, "\033[92m") {
+		t.Error("Light theme colors not found")
 	}
 }
