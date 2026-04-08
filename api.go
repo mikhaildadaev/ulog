@@ -173,12 +173,16 @@ func (universalLogger *UniversalLogger) SetOutput(mode TypeMode, writer io.Write
 			time.Sleep(time.Millisecond)
 		}
 	}
-	if bufferSize <= 0 {
-		universalLogger.mode = ModeSync
-		universalLogger.writer = writer
-	} else {
+	switch mode {
+	case ModeAsync:
+		if bufferSize <= 0 {
+			bufferSize = 10000
+		}
 		universalLogger.mode = ModeAsync
 		universalLogger.writer = newAsyncWriter(writer, bufferSize)
+	case ModeSync:
+		universalLogger.mode = ModeSync
+		universalLogger.writer = writer
 	}
 }
 func (universalLogger *UniversalLogger) SetTheme(theme string) {
