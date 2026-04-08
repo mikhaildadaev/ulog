@@ -13,12 +13,13 @@ func BenchmarkDebug(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, 10000},
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
 		{"Sync", ModeSync, io.Discard, 0},
 	}
+	logger := NewLogger()
+	defer logger.Close()
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
 			if b.N == 1 {
 				logger.Debug("test debug simple message")
 			}
@@ -27,10 +28,8 @@ func BenchmarkDebug(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				logger.Debug("test debug simple message")
 			}
-			logger.Sync()
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger()
 			if b.N == 1 {
 				logger.Debug("test debug format message",
 					Int("user_id", 12345),
@@ -45,7 +44,6 @@ func BenchmarkDebug(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.Sync()
 		})
 	}
 }
@@ -56,12 +54,13 @@ func BenchmarkError(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, 10000},
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
 		{"Sync", ModeSync, io.Discard, 0},
 	}
+	logger := NewLogger()
+	defer logger.Close()
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
 			if b.N == 1 {
 				logger.Error("test error simple message")
 			}
@@ -70,10 +69,8 @@ func BenchmarkError(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				logger.Error("test error simple message")
 			}
-			logger.Sync()
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger()
 			if b.N == 1 {
 				logger.Error("test error format message",
 					Int("user_id", 12345),
@@ -88,7 +85,6 @@ func BenchmarkError(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.Sync()
 		})
 	}
 }
@@ -99,12 +95,13 @@ func BenchmarkInfo(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, 10000},
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
 		{"Sync", ModeSync, io.Discard, 0},
 	}
+	logger := NewLogger()
+	defer logger.Close()
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
 			if b.N == 1 {
 				logger.Info("test info simple message")
 			}
@@ -113,10 +110,8 @@ func BenchmarkInfo(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				logger.Info("test info simple message")
 			}
-			logger.Sync()
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger()
 			if b.N == 1 {
 				logger.Info("test info format message",
 					Int("user_id", 12345),
@@ -131,7 +126,6 @@ func BenchmarkInfo(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.Sync()
 		})
 	}
 }
@@ -142,12 +136,13 @@ func BenchmarkWarn(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, 10000},
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
 		{"Sync", ModeSync, io.Discard, 0},
 	}
+	logger := NewLogger()
+	defer logger.Close()
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
 			if b.N == 1 {
 				logger.Warn("test warn simple message")
 			}
@@ -156,10 +151,8 @@ func BenchmarkWarn(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				logger.Warn("test warn simple message")
 			}
-			logger.Sync()
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger()
 			if b.N == 1 {
 				logger.Warn("test warn format message",
 					Int("user_id", 12345),
@@ -174,7 +167,6 @@ func BenchmarkWarn(b *testing.B) {
 					String("path", "/api/v1/test"),
 				)
 			}
-			logger.Sync()
 		})
 	}
 }
@@ -185,11 +177,12 @@ func BenchmarkLoggerWriter(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, 10000},
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
 		{"Sync", ModeSync, io.Discard, 0},
 	}
+	logger := NewLogger()
+	defer logger.Close()
 	for _, format := range formats {
-		logger := NewLogger()
 		logger.SetOutput(format.mode, format.writer, format.bufferSize)
 		writer := NewWithWriter(LevelInfo, logger)
 		data := []byte("test message")
@@ -197,6 +190,5 @@ func BenchmarkLoggerWriter(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			writer.Write(data)
 		}
-		logger.Sync()
 	}
 }

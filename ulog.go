@@ -70,6 +70,7 @@ const (
 
 // Публичные интерфейсы
 type Logger interface {
+	Close() error
 	Debug(message string, fields ...Field)
 	DebugWithContext(ctx context.Context, msg string, fields ...Field)
 	Error(message string, fields ...Field)
@@ -301,6 +302,10 @@ func (asyncWriter *asyncWriter) Close() error {
 	asyncWriter.wg.Wait()
 	return nil
 }
+func (asyncWriter *asyncWriter) Sync() error {
+	asyncWriter.wg.Wait()
+	return nil
+}
 func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 	buf := make([]byte, len(p))
 	copy(buf, p)
@@ -313,6 +318,9 @@ func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 }
 
 // Приватные константы
+const (
+	defaultBufferSize = 10000
+)
 const (
 	colorReset = "\033[0m"
 	// Темная тема (ANSI коды 90-97)

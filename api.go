@@ -10,7 +10,7 @@ import (
 func WithAsync(writer io.Writer, bufferSize ...int) OptionLogger {
 	return func(universalLogger *UniversalLogger) {
 		if bufferSize == nil || bufferSize[0] <= 0 {
-			bufferSize[0] = 10000
+			bufferSize[0] = defaultBufferSize
 		}
 		universalLogger.mode = ModeAsync
 		universalLogger.writer = newAsyncWriter(writer, bufferSize[0])
@@ -175,7 +175,7 @@ func (universalLogger *UniversalLogger) SetOutput(mode TypeMode, writer io.Write
 	switch mode {
 	case ModeAsync:
 		if bufferSize == nil || bufferSize[0] <= 0 {
-			bufferSize[0] = 10000
+			bufferSize[0] = defaultBufferSize
 		}
 		universalLogger.mode = ModeAsync
 		universalLogger.writer = newAsyncWriter(writer, bufferSize[0])
@@ -196,7 +196,7 @@ func (universalLogger *UniversalLogger) SetTheme(theme TypeTheme) {
 		universalLogger.scheme = getLoggerScheme()
 	}
 }
-func (universalLogger *UniversalLogger) Sync() error {
+func (universalLogger *UniversalLogger) Close() error {
 	if universalLogger.mode != ModeAsync {
 		return nil
 	}
@@ -205,6 +205,18 @@ func (universalLogger *UniversalLogger) Sync() error {
 	universalLogger.mutex.RUnlock()
 	if asyncWriter, ok := currentWriter.(*asyncWriter); ok {
 		return asyncWriter.Close()
+	}
+	return nil
+}
+func (universalLogger *UniversalLogger) Sync() error {
+	if universalLogger.mode != ModeAsync {
+		return nil
+	}
+	universalLogger.mutex.RLock()
+	currentWriter := universalLogger.writer
+	universalLogger.mutex.RUnlock()
+	if asyncWriter, ok := currentWriter.(*asyncWriter); ok {
+		return asyncWriter.Sync()
 	}
 	return nil
 }
