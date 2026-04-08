@@ -253,23 +253,12 @@ func NewLogger(options ...OptionLogger) Logger {
 	}
 	return universalLogger
 }
-func NewLoggerError(logger Logger) *log.Logger {
+func NewLoggerLogError(logger Logger) *log.Logger {
 	standardLogger := &standardLogger{
-		flags:  log.LstdFlags | log.Lmicroseconds,
 		logger: logger,
-		scheme: getLoggerScheme(),
 	}
 	standardLogger.level.Store(int32(LevelError))
 	return log.New(standardLogger, "", 0)
-}
-func NewWithWriter(level TypeLevel, logger Logger) io.Writer {
-	standardLogger := &standardLogger{
-		flags:  log.LstdFlags | log.Lmicroseconds,
-		logger: logger,
-		scheme: getLoggerScheme(),
-	}
-	standardLogger.level.Store(int32(level))
-	return standardLogger
 }
 
 // Публичные функции
@@ -352,11 +341,9 @@ type colorScheme struct {
 	reset       string
 }
 type standardLogger struct {
-	flags  int
 	level  atomic.Int32
 	logger Logger
 	mutex  sync.Mutex
-	scheme colorScheme
 }
 type universalLogger struct {
 	cache     sync.Map
