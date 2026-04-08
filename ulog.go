@@ -113,7 +113,6 @@ type StandardLogger struct {
 	scheme colorScheme
 }
 type UniversalLogger struct {
-	async  bool
 	cache  sync.Map
 	format TypeFormat
 	level  atomic.Int32
