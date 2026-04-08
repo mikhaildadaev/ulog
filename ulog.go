@@ -114,14 +114,16 @@ type StandardLogger struct {
 	scheme colorScheme
 }
 type UniversalLogger struct {
-	cache  sync.Map
-	format TypeFormat
-	level  atomic.Int32
-	mode   TypeMode
-	mutex  sync.RWMutex
-	scheme colorScheme
-	writer io.Writer
+	cache     sync.Map
+	extractor ContextExtractor
+	format    TypeFormat
+	level     atomic.Int32
+	mode      TypeMode
+	mutex     sync.RWMutex
+	scheme    colorScheme
+	writer    io.Writer
 }
+type ContextExtractor func(context context.Context) []Field
 type OptionLogger func(*UniversalLogger)
 
 // Публичные конструкторы
@@ -715,8 +717,8 @@ func (universalLogger *UniversalLogger) writeJson(level TypeLevel, context conte
 	if universalLogger.getLevel() > level {
 		return
 	}
-	if context != nil {
-		//
+	if universalLogger.extractor != nil && context != nil {
+		fields = append(fields, universalLogger.extractor(context)...)
 	}
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
@@ -739,8 +741,8 @@ func (universalLogger *UniversalLogger) writeText(level TypeLevel, context conte
 	if universalLogger.getLevel() > level {
 		return
 	}
-	if context != nil {
-		//
+	if universalLogger.extractor != nil && context != nil {
+		fields = append(fields, universalLogger.extractor(context)...)
 	}
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()

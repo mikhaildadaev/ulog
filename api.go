@@ -16,6 +16,11 @@ func WithAsync(writer io.Writer, bufferSize ...int) OptionLogger {
 		universalLogger.writer = newAsyncWriter(writer, bufferSize[0])
 	}
 }
+func WithExtractor(extractor ContextExtractor) OptionLogger {
+	return func(universalLogger *UniversalLogger) {
+		universalLogger.extractor = extractor
+	}
+}
 func WithFormat(format TypeFormat) OptionLogger {
 	return func(universalLogger *UniversalLogger) {
 		universalLogger.format = format
