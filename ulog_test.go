@@ -80,19 +80,6 @@ func TestEnvLogLevel(t *testing.T) {
 		}
 	}
 }
-
-//	func TestFormatting(t *testing.T) {
-//		var buf bytes.Buffer
-//		logger := &LoggerStandard{
-//			Logger: log.New(&buf, "", 0),
-//			level:  LevelDebug,
-//			scheme: darkScheme,
-//		}
-//		logger.Info("User %s has %d points", "alice", 100)
-//		if !strings.Contains(buf.String(), "User alice has 100 points") {
-//			t.Errorf("Formatted message not correct: %s", buf.String())
-//		}
-//	}
 func TestLoggerError(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &UniversalLogger{
