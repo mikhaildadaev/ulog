@@ -23,7 +23,7 @@ func WithExtractor(extractor ContextExtractor) OptionLogger {
 }
 func WithFormat(format TypeFormat) OptionLogger {
 	return func(universalLogger *universalLogger) {
-		universalLogger.format = format
+		universalLogger.format.Store(int32(format))
 	}
 }
 func WithLevel(level TypeLevel) OptionLogger {
@@ -94,7 +94,7 @@ func (universalLogger *universalLogger) Close() error {
 	return nil
 }
 func (universalLogger *universalLogger) Debug(message string, fields ...Field) {
-	switch universalLogger.format {
+	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:
 		universalLogger.writeJson(LevelDebug, context.Background(), message, fields)
 	case FormatText:
@@ -102,7 +102,7 @@ func (universalLogger *universalLogger) Debug(message string, fields ...Field) {
 	}
 }
 func (universalLogger *universalLogger) DebugWithContext(context context.Context, message string, fields ...Field) {
-	switch universalLogger.format {
+	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:
 		universalLogger.writeJson(LevelDebug, context, message, fields)
 	case FormatText:
@@ -110,7 +110,7 @@ func (universalLogger *universalLogger) DebugWithContext(context context.Context
 	}
 }
 func (universalLogger *universalLogger) Error(message string, fields ...Field) {
-	switch universalLogger.format {
+	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:
 		universalLogger.writeJson(LevelError, context.Background(), message, fields)
 	case FormatText:
@@ -118,7 +118,7 @@ func (universalLogger *universalLogger) Error(message string, fields ...Field) {
 	}
 }
 func (universalLogger *universalLogger) ErrorWithContext(context context.Context, message string, fields ...Field) {
-	switch universalLogger.format {
+	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:
 		universalLogger.writeJson(LevelError, context, message, fields)
 	case FormatText:
@@ -126,7 +126,7 @@ func (universalLogger *universalLogger) ErrorWithContext(context context.Context
 	}
 }
 func (universalLogger *universalLogger) Fatal(message string, fields ...Field) {
-	switch universalLogger.format {
+	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:
 		universalLogger.writeJson(LevelFatal, context.Background(), message, fields)
 	case FormatText:
@@ -135,7 +135,7 @@ func (universalLogger *universalLogger) Fatal(message string, fields ...Field) {
 	osExit(1)
 }
 func (universalLogger *universalLogger) FatalWithContext(context context.Context, message string, fields ...Field) {
-	switch universalLogger.format {
+	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:
 		universalLogger.writeJson(LevelFatal, context, message, fields)
 	case FormatText:
@@ -144,7 +144,7 @@ func (universalLogger *universalLogger) FatalWithContext(context context.Context
 	osExit(1)
 }
 func (universalLogger *universalLogger) Info(message string, fields ...Field) {
-	switch universalLogger.format {
+	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:
 		universalLogger.writeJson(LevelInfo, context.Background(), message, fields)
 	case FormatText:
@@ -152,7 +152,7 @@ func (universalLogger *universalLogger) Info(message string, fields ...Field) {
 	}
 }
 func (universalLogger *universalLogger) InfoWithContext(context context.Context, message string, fields ...Field) {
-	switch universalLogger.format {
+	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:
 		universalLogger.writeJson(LevelInfo, context, message, fields)
 	case FormatText:
@@ -160,7 +160,7 @@ func (universalLogger *universalLogger) InfoWithContext(context context.Context,
 	}
 }
 func (universalLogger *universalLogger) Warn(message string, fields ...Field) {
-	switch universalLogger.format {
+	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:
 		universalLogger.writeJson(LevelWarn, context.Background(), message, fields)
 	case FormatText:
@@ -168,12 +168,15 @@ func (universalLogger *universalLogger) Warn(message string, fields ...Field) {
 	}
 }
 func (universalLogger *universalLogger) WarnWithContext(context context.Context, message string, fields ...Field) {
-	switch universalLogger.format {
+	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:
 		universalLogger.writeJson(LevelWarn, context, message, fields)
 	case FormatText:
 		universalLogger.writeText(LevelWarn, context, message, fields)
 	}
+}
+func (universalLogger *universalLogger) SetFormat(format TypeFormat) {
+	universalLogger.format.Store(int32(format))
 }
 func (universalLogger *universalLogger) SetLevel(level TypeLevel) {
 	universalLogger.level.Store(int32(level))

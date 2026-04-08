@@ -241,10 +241,10 @@ func Times(keyName string, valueTimes []time.Time) Field {
 func NewLogger(options ...OptionLogger) Logger {
 	universalLogger := &universalLogger{
 		mode:   ModeSync,
-		format: FormatText,
 		scheme: getLoggerScheme(),
 		writer: os.Stderr,
 	}
+	universalLogger.level.Store(int32(FormatText))
 	universalLogger.level.Store(int32(getLoggerLevel()))
 	for _, option := range options {
 		option(universalLogger)
@@ -359,7 +359,7 @@ type standardLogger struct {
 type universalLogger struct {
 	cache     sync.Map
 	extractor ContextExtractor
-	format    TypeFormat
+	format    atomic.Int32
 	level     atomic.Int32
 	mode      TypeMode
 	mutex     sync.RWMutex
