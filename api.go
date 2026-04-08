@@ -29,7 +29,7 @@ func WithLevel(level TypeLevel) OptionLogger {
 }
 func WithSync(writer io.Writer) OptionLogger {
 	return func(universalLogger *UniversalLogger) {
-		universalLogger.async = true
+		universalLogger.async = false
 		universalLogger.writer = writer
 	}
 }
