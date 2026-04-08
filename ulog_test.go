@@ -82,7 +82,7 @@ func TestEnvLogLevel(t *testing.T) {
 }
 func TestLoggerError(t *testing.T) {
 	var buf bytes.Buffer
-	logger := &UniversalLogger{
+	logger := &universalLogger{
 		scheme: darkScheme,
 	}
 	logger.level.Store(int32(LevelDebug))
@@ -94,7 +94,7 @@ func TestLoggerError(t *testing.T) {
 }
 func TestWithWriter(t *testing.T) {
 	var buf bytes.Buffer
-	logger := &UniversalLogger{
+	logger := &universalLogger{
 		scheme: darkScheme,
 	}
 	logger.level.Store(int32(LevelDebug))
@@ -115,7 +115,7 @@ func TestLevel(t *testing.T) {
 		defer func() { osExit = oldExit }()
 		osExit = func(int) { exited = true }
 		var buf bytes.Buffer
-		logger := &UniversalLogger{
+		logger := &universalLogger{
 			scheme: darkScheme,
 		}
 		logger.level.Store(int32(LevelError))
@@ -129,7 +129,7 @@ func TestLevel(t *testing.T) {
 	})
 	t.Run("Standard level", func(t *testing.T) {
 		var buf bytes.Buffer
-		logger := &UniversalLogger{
+		logger := &universalLogger{
 			scheme: darkScheme,
 		}
 		logger.level.Store(int32(LevelDebug))
@@ -156,7 +156,7 @@ func TestLevelFiltering(t *testing.T) {
 	levels := []TypeLevel{LevelDebug, LevelInfo, LevelWarn, LevelError}
 	for _, level := range levels {
 		var buf bytes.Buffer
-		logger := &UniversalLogger{
+		logger := &universalLogger{
 			scheme: darkScheme,
 		}
 		logger.level.Store(int32(level))
@@ -182,14 +182,14 @@ func TestLevelFiltering(t *testing.T) {
 	}
 }
 func TestSetLevel(t *testing.T) {
-	logger := NewLogger().(*UniversalLogger)
+	logger := NewLogger().(*universalLogger)
 	logger.SetLevel(LevelError)
 	if logger.getLevel() != LevelError {
 		t.Errorf("Expected level %d, got %d", LevelError, logger.getLevel())
 	}
 }
 func TestSetTheme(t *testing.T) {
-	logger := NewLogger().(*UniversalLogger)
+	logger := NewLogger().(*universalLogger)
 	logger.SetTheme(ThemeDark)
 	if logger.getScheme() != darkScheme {
 		t.Error("Theme not changed to dark")
