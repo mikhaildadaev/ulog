@@ -106,25 +106,9 @@ type Field struct {
 	valueTimes     []time.Time
 	valueType      TypeField
 }
-type StandardLogger struct {
-	flags  int
-	level  atomic.Int32
-	logger Logger
-	mutex  sync.Mutex
-	scheme colorScheme
-}
-type UniversalLogger struct {
-	cache     sync.Map
-	extractor ContextExtractor
-	format    TypeFormat
-	level     atomic.Int32
-	mode      TypeMode
-	mutex     sync.RWMutex
-	scheme    colorScheme
-	writer    io.Writer
-}
+
 type ContextExtractor func(context context.Context) []Field
-type OptionLogger func(*UniversalLogger)
+type OptionLogger func(*universalLogger)
 
 // Публичные конструкторы
 func Bool(keyName string, valueBool bool) Field {
@@ -255,7 +239,7 @@ func Times(keyName string, valueTimes []time.Time) Field {
 	}
 }
 func NewLogger(options ...OptionLogger) Logger {
-	universalLogger := &UniversalLogger{
+	universalLogger := &universalLogger{
 		mode:   ModeSync,
 		format: FormatText,
 		scheme: getLoggerScheme(),
@@ -268,7 +252,7 @@ func NewLogger(options ...OptionLogger) Logger {
 	return universalLogger
 }
 func NewLoggerError(logger Logger) *log.Logger {
-	standardLogger := &StandardLogger{
+	standardLogger := &standardLogger{
 		flags:  log.LstdFlags | log.Lmicroseconds,
 		logger: logger,
 		scheme: getLoggerScheme(),
@@ -277,7 +261,7 @@ func NewLoggerError(logger Logger) *log.Logger {
 	return log.New(standardLogger, "", 0)
 }
 func NewWithWriter(level TypeLevel, logger Logger) io.Writer {
-	standardLogger := &StandardLogger{
+	standardLogger := &standardLogger{
 		flags:  log.LstdFlags | log.Lmicroseconds,
 		logger: logger,
 		scheme: getLoggerScheme(),
@@ -364,6 +348,23 @@ type colorScheme struct {
 	prefixInfo  string
 	prefixWarn  string
 	reset       string
+}
+type standardLogger struct {
+	flags  int
+	level  atomic.Int32
+	logger Logger
+	mutex  sync.Mutex
+	scheme colorScheme
+}
+type universalLogger struct {
+	cache     sync.Map
+	extractor ContextExtractor
+	format    TypeFormat
+	level     atomic.Int32
+	mode      TypeMode
+	mutex     sync.RWMutex
+	scheme    colorScheme
+	writer    io.Writer
 }
 
 // Приватные переменные
@@ -693,7 +694,7 @@ func (asyncWriter *asyncWriter) run() {
 		asyncWriter.writer.Write(buf)
 	}
 }
-func (universalLogger *UniversalLogger) getCaller(level TypeLevel) string {
+func (universalLogger *universalLogger) getCaller(level TypeLevel) string {
 	if level != LevelDebug {
 		return ""
 	}
@@ -705,15 +706,15 @@ func (universalLogger *UniversalLogger) getCaller(level TypeLevel) string {
 	universalLogger.cache.Store(pc, caller)
 	return caller
 }
-func (universalLogger *UniversalLogger) getLevel() TypeLevel {
+func (universalLogger *universalLogger) getLevel() TypeLevel {
 	return TypeLevel(universalLogger.level.Load())
 }
-func (universalLogger *UniversalLogger) getScheme() colorScheme {
+func (universalLogger *universalLogger) getScheme() colorScheme {
 	universalLogger.mutex.RLock()
 	defer universalLogger.mutex.RUnlock()
 	return universalLogger.scheme
 }
-func (universalLogger *UniversalLogger) writeJson(level TypeLevel, context context.Context, message string, fields []Field) {
+func (universalLogger *universalLogger) writeJson(level TypeLevel, context context.Context, message string, fields []Field) {
 	if universalLogger.getLevel() > level {
 		return
 	}
@@ -737,7 +738,7 @@ func (universalLogger *UniversalLogger) writeJson(level TypeLevel, context conte
 	universalLogger.mutex.RUnlock()
 	writer.Write(dataBuf.Bytes())
 }
-func (universalLogger *UniversalLogger) writeText(level TypeLevel, context context.Context, message string, fields []Field) {
+func (universalLogger *universalLogger) writeText(level TypeLevel, context context.Context, message string, fields []Field) {
 	if universalLogger.getLevel() > level {
 		return
 	}
