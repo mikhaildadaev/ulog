@@ -7,15 +7,6 @@ import (
 )
 
 // Публичные функции
-func WithAsync(writer io.Writer, bufferSize ...int) OptionLogger {
-	return func(universalLogger *universalLogger) {
-		if bufferSize == nil || bufferSize[0] <= 0 {
-			bufferSize[0] = defaultBufferSize
-		}
-		universalLogger.mode = ModeAsync
-		universalLogger.writer = newAsyncWriter(writer, bufferSize[0])
-	}
-}
 func WithExtractor(extractor ContextExtractor) OptionLogger {
 	return func(universalLogger *universalLogger) {
 		universalLogger.extractor = extractor
@@ -31,10 +22,19 @@ func WithLevel(level TypeLevel) OptionLogger {
 		universalLogger.level.Store(int32(level))
 	}
 }
-func WithSync(writer io.Writer) OptionLogger {
+func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) OptionLogger {
 	return func(universalLogger *universalLogger) {
-		universalLogger.mode = ModeSync
-		universalLogger.writer = writer
+		switch mode {
+		case ModeAsync:
+			if bufferSize == nil || bufferSize[0] <= 0 {
+				bufferSize[0] = defaultBufferSize
+			}
+			universalLogger.mode = ModeAsync
+			universalLogger.writer = newAsyncWriter(writer, bufferSize[0])
+		case ModeSync:
+			universalLogger.mode = ModeSync
+			universalLogger.writer = writer
+		}
 	}
 }
 func WithTheme(theme TypeTheme) OptionLogger {
