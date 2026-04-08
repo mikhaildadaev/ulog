@@ -246,7 +246,7 @@ func NewLogger(options ...OptionLogger) Logger {
 		scheme: getLoggerScheme(),
 		writer: os.Stderr,
 	}
-	universalLogger.level.Store(int32(FormatText))
+	universalLogger.format.Store(int32(defaultFormat))
 	universalLogger.level.Store(int32(getLoggerLevel()))
 	for _, option := range options {
 		option(universalLogger)
@@ -296,6 +296,7 @@ func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 
 // Приватные константы
 const (
+	defaultFormat     = FormatText
 	defaultBufferSize = 10000
 )
 const (
