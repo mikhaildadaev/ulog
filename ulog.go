@@ -557,14 +557,14 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 		}
 		dataBuf.WriteByte(']')
 	case FieldTime:
-		dataBuf.Write(field.valueTime.AppendFormat(nil, time.RFC3339Nano))
+		dataBuf.Write(field.valueTime.AppendFormat(nil, "2006-01-02T15:04:05.000000000-07:00"))
 	case FieldTimes:
 		dataBuf.WriteByte('[')
 		for i, value := range field.valueTimes {
 			if i > 0 {
 				dataBuf.WriteByte(',')
 			}
-			dataBuf.Write(value.AppendFormat(nil, time.RFC3339Nano))
+			dataBuf.Write(value.AppendFormat(nil, "2006-01-02T15:04:05.000000000-07:00"))
 		}
 		dataBuf.WriteByte(']')
 	}
@@ -612,14 +612,14 @@ func formatPrefixText(dataBuf *bytes.Buffer, level TypeLevel, caller string, sch
 func formatTimeJson(dataBuf *bytes.Buffer, timestamp time.Time) {
 	dataBuf.WriteString(`"time":"`)
 	timeBuf := timePool.Get().([]byte)
-	timeBuf = timestamp.AppendFormat(timeBuf[:0], time.RFC3339Nano)
+	timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05.000000000-07:00")
 	dataBuf.Write(timeBuf)
 	timePool.Put(timeBuf)
 	dataBuf.WriteByte('"')
 }
 func formatTimeText(dataBuf *bytes.Buffer, timestamp time.Time) {
 	timeBuf := timePool.Get().([]byte)
-	timeBuf = timestamp.AppendFormat(timeBuf[:0], time.RFC3339Nano)
+	timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05.000000000-07:00")
 	dataBuf.Write(timeBuf)
 	timePool.Put(timeBuf)
 }
