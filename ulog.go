@@ -253,11 +253,11 @@ func NewLogger(options ...OptionLogger) Logger {
 	}
 	return universalLogger
 }
-func NewLoggerLogError(logger Logger) *log.Logger {
+func NewLoggerLog(level TypeLevel, logger Logger) *log.Logger {
 	standardLogger := &standardLogger{
 		logger: logger,
 	}
-	standardLogger.level.Store(int32(LevelError))
+	standardLogger.level.Store(int32(level))
 	return log.New(standardLogger, "", 0)
 }
 

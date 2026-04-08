@@ -6,7 +6,7 @@ import (
 )
 
 // Бенчмарки компонентов
-func Benchmark_Debug_Multi(b *testing.B) {
+func Benchmark_Logger_Debug_Multi(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -53,7 +53,7 @@ func Benchmark_Debug_Multi(b *testing.B) {
 		})
 	}
 }
-func Benchmark_Debug_Single(b *testing.B) {
+func Benchmark_Logger_Debug_Single(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -96,7 +96,7 @@ func Benchmark_Debug_Single(b *testing.B) {
 		})
 	}
 }
-func Benchmark_Error_Multi(b *testing.B) {
+func Benchmark_Logger_Error_Multi(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -143,7 +143,7 @@ func Benchmark_Error_Multi(b *testing.B) {
 		})
 	}
 }
-func Benchmark_Error_Single(b *testing.B) {
+func Benchmark_Logger_Error_Single(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -186,7 +186,7 @@ func Benchmark_Error_Single(b *testing.B) {
 		})
 	}
 }
-func Benchmark_Info_Multi(b *testing.B) {
+func Benchmark_Logger_Info_Multi(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -233,7 +233,7 @@ func Benchmark_Info_Multi(b *testing.B) {
 		})
 	}
 }
-func Benchmark_Info_Single(b *testing.B) {
+func Benchmark_Logger_Info_Single(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -276,7 +276,7 @@ func Benchmark_Info_Single(b *testing.B) {
 		})
 	}
 }
-func Benchmark_Warn_Multi(b *testing.B) {
+func Benchmark_Logger_Warn_Multi(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -323,7 +323,7 @@ func Benchmark_Warn_Multi(b *testing.B) {
 		})
 	}
 }
-func Benchmark_Warn_Single(b *testing.B) {
+func Benchmark_Logger_Warn_Single(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -366,7 +366,7 @@ func Benchmark_Warn_Single(b *testing.B) {
 		})
 	}
 }
-func Benchmark_LoggerWriter_Multi(b *testing.B) {
+func Benchmark_LoggerLog_Error_Multi(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -378,21 +378,18 @@ func Benchmark_LoggerWriter_Multi(b *testing.B) {
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
-			logger := NewLogger()
-			defer logger.Close()
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			writer := NewWithWriter(LevelInfo, logger)
-			data := []byte("test message")
+			logger := NewLogger(WithMode(format.mode, format.writer, format.bufferSize))
+			loggerLog := NewLoggerLog(LevelError, logger)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					writer.Write(data)
+					loggerLog.Print("test error message")
 				}
 			})
 		})
 	}
 }
-func Benchmark_LoggerWriter_Single(b *testing.B) {
+func Benchmark_LoggerLog_Error_Single(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -404,14 +401,11 @@ func Benchmark_LoggerWriter_Single(b *testing.B) {
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
-			logger := NewLogger()
-			defer logger.Close()
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			writer := NewWithWriter(LevelInfo, logger)
-			data := []byte("test message")
+			logger := NewLogger(WithMode(format.mode, format.writer, format.bufferSize))
+			loggerLog := NewLoggerLog(LevelError, logger)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				writer.Write(data)
+				loggerLog.Print("test error message")
 			}
 		})
 	}
