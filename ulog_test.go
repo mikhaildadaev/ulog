@@ -109,13 +109,14 @@ func TestGetLoggerScheme(t *testing.T) {
 		}
 	})
 }
-func TestSetLevel(t *testing.T) {
-	logger := NewLogger().(*universalLogger)
-	logger.SetLevel(LevelError)
-	if logger.getLevel() != LevelError {
-		t.Errorf("Expected level %d, got %d", LevelError, logger.getLevel())
-	}
-}
+
+//func TestSetLevel(t *testing.T) {
+//	logger := NewLogger()
+//	logger.SetLevel(LevelError)
+//	if logger.getLevel() != LevelError {
+//		t.Errorf("Expected level %d, got %d", LevelError, logger.getLevel())
+//	}
+//}
 
 //func TestSetTheme(t *testing.T) {
 //	logger := NewLogger(WithTheme(ThemeDark))

@@ -175,6 +175,11 @@ func (universalLogger *universalLogger) WarnWithContext(context context.Context,
 		universalLogger.writeText(LevelWarn, context, message, fields)
 	}
 }
+func (universalLogger *universalLogger) SetExtractor(extractor ContextExtractor) {
+	universalLogger.mutex.Lock()
+	defer universalLogger.mutex.Unlock()
+	universalLogger.extractor = extractor
+}
 func (universalLogger *universalLogger) SetFormat(format TypeFormat) {
 	universalLogger.format.Store(int32(format))
 }
