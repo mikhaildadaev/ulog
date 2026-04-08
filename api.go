@@ -3,7 +3,6 @@ package ulog
 import (
 	"context"
 	"io"
-	"strings"
 	"time"
 )
 
@@ -185,13 +184,13 @@ func (universalLogger *UniversalLogger) SetOutput(mode TypeMode, writer io.Write
 		universalLogger.writer = writer
 	}
 }
-func (universalLogger *UniversalLogger) SetTheme(theme string) {
+func (universalLogger *UniversalLogger) SetTheme(theme TypeTheme) {
 	universalLogger.mutex.Lock()
 	defer universalLogger.mutex.Unlock()
-	switch strings.ToLower(theme) {
-	case "dark":
+	switch theme {
+	case ThemeDark:
 		universalLogger.scheme = darkScheme
-	case "light":
+	case ThemeLight:
 		universalLogger.scheme = lightScheme
 	default:
 		universalLogger.scheme = getLoggerScheme()
