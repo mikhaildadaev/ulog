@@ -47,7 +47,7 @@ func TestConcurrency(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			logger.SetLevel(LevelDebug)
-			logger.SetTheme("dark")
+			logger.SetTheme(ThemeDark)
 		}()
 	}
 	for i := 0; i < 100; i++ {
@@ -203,12 +203,12 @@ func TestSetLevel(t *testing.T) {
 }
 func TestSetTheme(t *testing.T) {
 	logger := NewLogger().(*UniversalLogger)
-	logger.SetTheme("light")
-	if logger.getScheme() != lightScheme {
-		t.Error("Theme not changed to light")
-	}
-	logger.SetTheme("dark")
+	logger.SetTheme(ThemeDark)
 	if logger.getScheme() != darkScheme {
 		t.Error("Theme not changed to dark")
+	}
+	logger.SetTheme(ThemeLight)
+	if logger.getScheme() != lightScheme {
+		t.Error("Theme not changed to light")
 	}
 }

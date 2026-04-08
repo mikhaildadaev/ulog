@@ -163,7 +163,7 @@ func (universalLogger *UniversalLogger) WarnWithContext(context context.Context,
 func (universalLogger *UniversalLogger) SetLevel(level TypeLevel) {
 	universalLogger.level.Store(int32(level))
 }
-func (universalLogger *UniversalLogger) SetOutput(mode TypeMode, writer io.Writer, bufferSize int) {
+func (universalLogger *UniversalLogger) SetOutput(mode TypeMode, writer io.Writer, bufferSize ...int) {
 	universalLogger.mutex.Lock()
 	defer universalLogger.mutex.Unlock()
 	if universalLogger.mode == ModeAsync {
@@ -174,11 +174,11 @@ func (universalLogger *UniversalLogger) SetOutput(mode TypeMode, writer io.Write
 	}
 	switch mode {
 	case ModeAsync:
-		if bufferSize <= 0 {
-			bufferSize = 10000
+		if bufferSize[0] <= 0 {
+			bufferSize[0] = 10000
 		}
 		universalLogger.mode = ModeAsync
-		universalLogger.writer = newAsyncWriter(writer, bufferSize)
+		universalLogger.writer = newAsyncWriter(writer, bufferSize[0])
 	case ModeSync:
 		universalLogger.mode = ModeSync
 		universalLogger.writer = writer

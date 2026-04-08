@@ -81,7 +81,7 @@ type Logger interface {
 	Warn(message string, fields ...Field)
 	WarnWithContext(ctx context.Context, msg string, fields ...Field)
 	SetLevel(level TypeLevel)
-	SetOutput(mode TypeMode, writer io.Writer, bufferSize int)
+	SetOutput(mode TypeMode, writer io.Writer, bufferSize ...int)
 	SetTheme(theme TypeTheme)
 	Sync() error
 }
