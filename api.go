@@ -13,7 +13,7 @@ func WithAsync(writer io.Writer, bufferSize int) OptionLogger {
 		if bufferSize <= 0 {
 			bufferSize = 10000
 		}
-		universalLogger.async = true
+		universalLogger.mode = ModeAsync
 		universalLogger.writer = newAsyncWriter(writer, bufferSize)
 	}
 }
@@ -29,7 +29,7 @@ func WithLevel(level TypeLevel) OptionLogger {
 }
 func WithSync(writer io.Writer) OptionLogger {
 	return func(universalLogger *UniversalLogger) {
-		universalLogger.async = false
+		universalLogger.mode = ModeSync
 		universalLogger.writer = writer
 	}
 }
@@ -81,100 +81,104 @@ func (standardLogger *StandardLogger) Write(p []byte) (n int, err error) {
 }
 func (universalLogger *UniversalLogger) Debug(message string, fields ...Field) {
 	switch universalLogger.format {
-	case TypeJson:
+	case FormatJson:
 		universalLogger.writeJson(LevelDebug, context.Background(), message, fields)
-	case TypeText:
+	case FormatText:
 		universalLogger.writeText(LevelDebug, context.Background(), message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) DebugWithContext(context context.Context, message string, fields ...Field) {
 	switch universalLogger.format {
-	case TypeJson:
+	case FormatJson:
 		universalLogger.writeJson(LevelDebug, context, message, fields)
-	case TypeText:
+	case FormatText:
 		universalLogger.writeText(LevelDebug, context, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) Error(message string, fields ...Field) {
 	switch universalLogger.format {
-	case TypeJson:
+	case FormatJson:
 		universalLogger.writeJson(LevelError, context.Background(), message, fields)
-	case TypeText:
+	case FormatText:
 		universalLogger.writeText(LevelError, context.Background(), message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) ErrorWithContext(context context.Context, message string, fields ...Field) {
 	switch universalLogger.format {
-	case TypeJson:
+	case FormatJson:
 		universalLogger.writeJson(LevelError, context, message, fields)
-	case TypeText:
+	case FormatText:
 		universalLogger.writeText(LevelError, context, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) Fatal(message string, fields ...Field) {
 	switch universalLogger.format {
-	case TypeJson:
+	case FormatJson:
 		universalLogger.writeJson(LevelFatal, context.Background(), message, fields)
-	case TypeText:
+	case FormatText:
 		universalLogger.writeText(LevelFatal, context.Background(), message, fields)
 	}
 	osExit(1)
 }
 func (universalLogger *UniversalLogger) FatalWithContext(context context.Context, message string, fields ...Field) {
 	switch universalLogger.format {
-	case TypeJson:
+	case FormatJson:
 		universalLogger.writeJson(LevelFatal, context, message, fields)
-	case TypeText:
+	case FormatText:
 		universalLogger.writeText(LevelFatal, context, message, fields)
 	}
 	osExit(1)
 }
 func (universalLogger *UniversalLogger) Info(message string, fields ...Field) {
 	switch universalLogger.format {
-	case TypeJson:
+	case FormatJson:
 		universalLogger.writeJson(LevelInfo, context.Background(), message, fields)
-	case TypeText:
+	case FormatText:
 		universalLogger.writeText(LevelInfo, context.Background(), message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) InfoWithContext(context context.Context, message string, fields ...Field) {
 	switch universalLogger.format {
-	case TypeJson:
+	case FormatJson:
 		universalLogger.writeJson(LevelInfo, context, message, fields)
-	case TypeText:
+	case FormatText:
 		universalLogger.writeText(LevelInfo, context, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) Warn(message string, fields ...Field) {
 	switch universalLogger.format {
-	case TypeJson:
+	case FormatJson:
 		universalLogger.writeJson(LevelWarn, context.Background(), message, fields)
-	case TypeText:
+	case FormatText:
 		universalLogger.writeText(LevelWarn, context.Background(), message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) WarnWithContext(context context.Context, message string, fields ...Field) {
 	switch universalLogger.format {
-	case TypeJson:
+	case FormatJson:
 		universalLogger.writeJson(LevelWarn, context, message, fields)
-	case TypeText:
+	case FormatText:
 		universalLogger.writeText(LevelWarn, context, message, fields)
 	}
 }
 func (universalLogger *UniversalLogger) SetLevel(level TypeLevel) {
 	universalLogger.level.Store(int32(level))
 }
-func (universalLogger *UniversalLogger) SetOutput(writer io.Writer) {
+func (universalLogger *UniversalLogger) SetOutput(mode TypeMode, writer io.Writer, bufferSize int) {
 	universalLogger.mutex.Lock()
 	defer universalLogger.mutex.Unlock()
-	if universalLogger.async {
+	if universalLogger.mode == ModeAsync {
 		if asyncWriter, ok := universalLogger.writer.(*asyncWriter); ok {
 			asyncWriter.Close()
 			time.Sleep(time.Millisecond)
 		}
-		universalLogger.writer = newAsyncWriter(writer, 10000)
-	} else {
+	}
+	if bufferSize <= 0 {
+		universalLogger.mode = ModeSync
 		universalLogger.writer = writer
+	} else {
+		universalLogger.mode = ModeAsync
+		universalLogger.writer = newAsyncWriter(writer, bufferSize)
 	}
 }
 func (universalLogger *UniversalLogger) SetTheme(theme string) {
@@ -190,7 +194,7 @@ func (universalLogger *UniversalLogger) SetTheme(theme string) {
 	}
 }
 func (universalLogger *UniversalLogger) Sync() error {
-	if !universalLogger.async {
+	if universalLogger.mode != ModeAsync {
 		return nil
 	}
 	universalLogger.mutex.RLock()

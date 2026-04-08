@@ -24,12 +24,33 @@ import (
 type TypeLevel int
 type TypeField int
 type TypeFormat int
+type TypeMode int
 type TypeTheme int
 
 // Публичные константы
 const (
 	Author  = "Mikhail Dadaev"
 	Version = "1.26.5"
+)
+const (
+	FieldBool TypeField = iota
+	FieldBools
+	FieldDuration
+	FieldDurations
+	FieldFloat64
+	FieldFloats64
+	FieldInt
+	FieldInts
+	FieldInt64
+	FieldInts64
+	FieldString
+	FieldStrings
+	FieldTime
+	FieldTimes
+)
+const (
+	FormatJson TypeFormat = iota
+	FormatText
 )
 const (
 	LevelDebug TypeLevel = iota
@@ -39,24 +60,8 @@ const (
 	LevelFatal
 )
 const (
-	TypeBool TypeField = iota
-	TypeBools
-	TypeDuration
-	TypeDurations
-	TypeFloat64
-	TypeFloats64
-	TypeInt
-	TypeInts
-	TypeInt64
-	TypeInts64
-	TypeString
-	TypeStrings
-	TypeTime
-	TypeTimes
-)
-const (
-	TypeJson TypeFormat = iota
-	TypeText
+	ModeAsync TypeMode = iota
+	ModeSync
 )
 const (
 	ThemeDark TypeTheme = iota
@@ -76,7 +81,7 @@ type Logger interface {
 	Warn(message string, fields ...Field)
 	WarnWithContext(ctx context.Context, msg string, fields ...Field)
 	SetLevel(level TypeLevel)
-	SetOutput(writer io.Writer)
+	SetOutput(mode TypeMode, writer io.Writer, bufferSize int)
 	SetTheme(theme string)
 	Sync() error
 }
@@ -112,6 +117,7 @@ type UniversalLogger struct {
 	cache  sync.Map
 	format TypeFormat
 	level  atomic.Int32
+	mode   TypeMode
 	mutex  sync.RWMutex
 	scheme colorScheme
 	writer io.Writer
@@ -121,28 +127,28 @@ type OptionLogger func(*UniversalLogger)
 // Публичные конструкторы
 func Bool(keyName string, valueBool bool) Field {
 	return Field{
-		valueType: TypeBool,
+		valueType: FieldBool,
 		keyName:   keyName,
 		valueBool: valueBool,
 	}
 }
 func Bools(keyName string, valueBools []bool) Field {
 	return Field{
-		valueType:  TypeBool,
+		valueType:  FieldBool,
 		keyName:    keyName,
 		valueBools: valueBools,
 	}
 }
 func Duration(keyName string, valueDuration time.Duration) Field {
 	return Field{
-		valueType:     TypeDuration,
+		valueType:     FieldDuration,
 		keyName:       keyName,
 		valueDuration: valueDuration,
 	}
 }
 func Durations(keyName string, valueDurations []time.Duration) Field {
 	return Field{
-		valueType:      TypeDuration,
+		valueType:      FieldDuration,
 		keyName:        keyName,
 		valueDurations: valueDurations,
 	}
@@ -150,13 +156,13 @@ func Durations(keyName string, valueDurations []time.Duration) Field {
 func Err(err error) Field {
 	if err == nil {
 		return Field{
-			valueType:   TypeString,
+			valueType:   FieldString,
 			keyName:     "error",
 			valueString: "nil",
 		}
 	}
 	return Field{
-		valueType:   TypeString,
+		valueType:   FieldString,
 		keyName:     "error",
 		valueString: err.Error(),
 	}
@@ -171,85 +177,85 @@ func Errs(errs []error) Field {
 		}
 	}
 	return Field{
-		valueType:    TypeString,
+		valueType:    FieldString,
 		keyName:      "errors",
 		valueStrings: values,
 	}
 }
 func Float64(keyName string, valueFloat64 float64) Field {
 	return Field{
-		valueType:    TypeFloat64,
+		valueType:    FieldFloat64,
 		keyName:      keyName,
 		valueFloat64: valueFloat64,
 	}
 }
 func Floats64(keyName string, valueFloats64 []float64) Field {
 	return Field{
-		valueType:     TypeFloat64,
+		valueType:     FieldFloat64,
 		keyName:       keyName,
 		valueFloats64: valueFloats64,
 	}
 }
 func Int(keyName string, valueInt int) Field {
 	return Field{
-		valueType: TypeInt,
+		valueType: FieldInt,
 		keyName:   keyName,
 		valueInt:  valueInt,
 	}
 }
 func Ints(keyName string, valueInts []int) Field {
 	return Field{
-		valueType: TypeInt,
+		valueType: FieldInt,
 		keyName:   keyName,
 		valueInts: valueInts,
 	}
 }
 func Int64(keyName string, valueInt64 int64) Field {
 	return Field{
-		valueType:  TypeInt,
+		valueType:  FieldInt,
 		keyName:    keyName,
 		valueInt64: valueInt64,
 	}
 }
 func Ints64(keyName string, valueInts64 []int64) Field {
 	return Field{
-		valueType:   TypeInt,
+		valueType:   FieldInt,
 		keyName:     keyName,
 		valueInts64: valueInts64,
 	}
 }
 func String(keyName string, valueString string) Field {
 	return Field{
-		valueType:   TypeString,
+		valueType:   FieldString,
 		keyName:     keyName,
 		valueString: valueString,
 	}
 }
 func Strings(keyName string, valueStrings []string) Field {
 	return Field{
-		valueType:    TypeString,
+		valueType:    FieldString,
 		keyName:      keyName,
 		valueStrings: valueStrings,
 	}
 }
 func Time(keyName string, valueTime time.Time) Field {
 	return Field{
-		valueType: TypeTime,
+		valueType: FieldTime,
 		keyName:   keyName,
 		valueTime: valueTime,
 	}
 }
 func Times(keyName string, valueTimes []time.Time) Field {
 	return Field{
-		valueType:  TypeTime,
+		valueType:  FieldTime,
 		keyName:    keyName,
 		valueTimes: valueTimes,
 	}
 }
 func NewLogger(options ...OptionLogger) Logger {
 	universalLogger := &UniversalLogger{
-		async:  false,
-		format: TypeText,
+		mode:   ModeSync,
+		format: FormatText,
 		scheme: getLoggerScheme(),
 		writer: os.Stderr,
 	}
@@ -480,9 +486,9 @@ func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, schem
 }
 func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 	switch field.valueType {
-	case TypeBool:
+	case FieldBool:
 		dataBuf.WriteString(strconv.FormatBool(field.valueBool))
-	case TypeBools:
+	case FieldBools:
 		dataBuf.WriteByte('[')
 		for i, value := range field.valueBools {
 			if i > 0 {
@@ -491,9 +497,9 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 			dataBuf.WriteString(strconv.FormatBool(value))
 		}
 		dataBuf.WriteByte(']')
-	case TypeDuration:
+	case FieldDuration:
 		dataBuf.WriteString(field.valueDuration.String())
-	case TypeDurations:
+	case FieldDurations:
 		dataBuf.WriteByte('[')
 		for i, value := range field.valueDurations {
 			if i > 0 {
@@ -502,9 +508,9 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 			dataBuf.WriteString(value.String())
 		}
 		dataBuf.WriteByte(']')
-	case TypeFloat64:
+	case FieldFloat64:
 		dataBuf.WriteString(strconv.FormatFloat(field.valueFloat64, 'f', -1, 64))
-	case TypeFloats64:
+	case FieldFloats64:
 		dataBuf.WriteByte('[')
 		for i, value := range field.valueFloats64 {
 			if i > 0 {
@@ -513,9 +519,9 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 			dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
 		}
 		dataBuf.WriteByte(']')
-	case TypeInt:
+	case FieldInt:
 		dataBuf.WriteString(strconv.Itoa(field.valueInt))
-	case TypeInts:
+	case FieldInts:
 		dataBuf.WriteByte('[')
 		for i, value := range field.valueInts {
 			if i > 0 {
@@ -524,9 +530,9 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 			dataBuf.WriteString(strconv.Itoa(value))
 		}
 		dataBuf.WriteByte(']')
-	case TypeInt64:
+	case FieldInt64:
 		dataBuf.WriteString(strconv.FormatInt(field.valueInt64, 10))
-	case TypeInts64:
+	case FieldInts64:
 		dataBuf.WriteByte('[')
 		for i, value := range field.valueInts64 {
 			if i > 0 {
@@ -535,11 +541,11 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 			dataBuf.WriteString(strconv.FormatInt(value, 10))
 		}
 		dataBuf.WriteByte(']')
-	case TypeString:
+	case FieldString:
 		dataBuf.WriteByte('"')
 		dataBuf.WriteString(field.valueString)
 		dataBuf.WriteByte('"')
-	case TypeStrings:
+	case FieldStrings:
 		dataBuf.WriteByte('[')
 		for i, value := range field.valueStrings {
 			if i > 0 {
@@ -550,9 +556,9 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 			dataBuf.WriteByte('"')
 		}
 		dataBuf.WriteByte(']')
-	case TypeTime:
+	case FieldTime:
 		dataBuf.Write(field.valueTime.AppendFormat(nil, time.RFC3339Nano))
-	case TypeTimes:
+	case FieldTimes:
 		dataBuf.WriteByte('[')
 		for i, value := range field.valueTimes {
 			if i > 0 {
