@@ -7,13 +7,13 @@ import (
 )
 
 // Публичные функции
-func WithAsync(writer io.Writer, bufferSize int) OptionLogger {
+func WithAsync(writer io.Writer, bufferSize ...int) OptionLogger {
 	return func(universalLogger *UniversalLogger) {
-		if bufferSize <= 0 {
-			bufferSize = 10000
+		if bufferSize == nil || bufferSize[0] <= 0 {
+			bufferSize[0] = 10000
 		}
 		universalLogger.mode = ModeAsync
-		universalLogger.writer = newAsyncWriter(writer, bufferSize)
+		universalLogger.writer = newAsyncWriter(writer, bufferSize[0])
 	}
 }
 func WithFormat(format TypeFormat) OptionLogger {
@@ -174,7 +174,7 @@ func (universalLogger *UniversalLogger) SetOutput(mode TypeMode, writer io.Write
 	}
 	switch mode {
 	case ModeAsync:
-		if bufferSize[0] <= 0 {
+		if bufferSize == nil || bufferSize[0] <= 0 {
 			bufferSize[0] = 10000
 		}
 		universalLogger.mode = ModeAsync
