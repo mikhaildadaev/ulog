@@ -246,7 +246,7 @@ func Times(keyName string, valueTimes []time.Time) Field {
 		valueTimes: valueTimes,
 	}
 }
-func NewLogger() Logger {
+func NewLogger(options ...OptionLogger) Logger {
 	universalLogger := &UniversalLogger{
 		async:  false,
 		format: TypeText,
@@ -254,16 +254,9 @@ func NewLogger() Logger {
 		writer: os.Stderr,
 	}
 	universalLogger.level.Store(int32(getLoggerLevel()))
-	return universalLogger
-}
-func NewLoggerAsync() Logger {
-	universalLogger := &UniversalLogger{
-		async:  true,
-		format: TypeText,
-		scheme: getLoggerScheme(),
-		writer: newAsyncWriter(os.Stderr, 10000),
+	for _, option := range options {
+		option(universalLogger)
 	}
-	universalLogger.level.Store(int32(getLoggerLevel()))
 	return universalLogger
 }
 func NewLoggerError(logger Logger) *log.Logger {
