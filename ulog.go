@@ -286,6 +286,7 @@ func (asyncWriter *asyncWriter) Sync() error {
 func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 	buf := make([]byte, len(p))
 	copy(buf, p)
+	asyncWriter.wg.Add(1)
 	select {
 	case asyncWriter.ch <- buf:
 		return len(p), nil
@@ -409,7 +410,6 @@ func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
 		limit:  bufferSize,
 		writer: writer,
 	}
-	asyncWriter.wg.Add(1)
 	go asyncWriter.run()
 	return asyncWriter
 }
@@ -681,9 +681,11 @@ func isIgnoredError(data []byte) bool {
 
 // Приватные методы
 func (asyncWriter *asyncWriter) run() {
-	defer asyncWriter.wg.Done()
 	for buf := range asyncWriter.ch {
-		asyncWriter.writer.Write(buf)
+		if _, err := asyncWriter.writer.Write(buf); err != nil {
+			// Куда-то логируем ошибку
+		}
+		asyncWriter.wg.Done()
 	}
 }
 func (universalLogger *universalLogger) getCaller(level TypeLevel) string {

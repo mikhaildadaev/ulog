@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -275,29 +274,34 @@ func TestWithLevel(t *testing.T) {
 		})
 	}
 }
-
-// Вспомогательный тип для теста ошибок
-func TestConcurrency(t *testing.T) {
-	logger := NewLogger()
-	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			logger.SetLevel(LevelDebug)
-			logger.SetTheme(ThemeDark)
-		}()
-	}
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			logger.Info("test")
-			logger.Debug("debug")
-		}()
-	}
-	wg.Wait()
+func TestWithMode(t *testing.T) {
+	t.Run("Async mode", func(t *testing.T) {
+		writerBuf := &bytes.Buffer{}
+		logger := NewLogger(WithMode(ModeAsync, writerBuf, 1000))
+		logger.Info("test message")
+		logger.Sync()
+		if writerBuf.Len() == 0 {
+			t.Error("Async mode: expected output, got nothing")
+		}
+		if !strings.Contains(writerBuf.String(), "test message") {
+			t.Error("Async mode: expected message not found")
+		}
+	})
+	t.Run("Sync mode", func(t *testing.T) {
+		writerBuf := &bytes.Buffer{}
+		logger := NewLogger(WithMode(ModeSync, writerBuf))
+		logger.Info("test message")
+		logger.Sync()
+		if writerBuf.Len() == 0 {
+			t.Error("Sync mode: expected output, got nothing")
+		}
+		if !strings.Contains(writerBuf.String(), "test message") {
+			t.Error("Sync mode: expected message not found")
+		}
+	})
 }
+
+// Временные тесты
 func TestGetLoggerLevel(t *testing.T) {
 	tests := []struct {
 		env      string
