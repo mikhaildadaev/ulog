@@ -300,7 +300,6 @@ const (
 	defaultFormat     = FormatText
 	defaultLevel      = LevelInfo
 	defaultMode       = ModeSync
-	defaultTheme      = ThemeDark
 )
 const (
 	colorReset = "\033[0m"
