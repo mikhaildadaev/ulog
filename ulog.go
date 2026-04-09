@@ -242,7 +242,7 @@ func Times(nameKey string, valueTimes []time.Time) Field {
 }
 func NewLogger(options ...OptionLogger) Logger {
 	universalLogger := &universalLogger{
-		mode:   ModeSync,
+		mode:   defaultMode,
 		theme:  getLoggerTheme(),
 		writer: os.Stderr,
 	}
@@ -296,8 +296,11 @@ func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 
 // Приватные константы
 const (
-	defaultFormat     = FormatText
 	defaultBufferSize = 10000
+	defaultFormat     = FormatText
+	defaultLevel      = LevelInfo
+	defaultMode       = ModeSync
+	defaultTheme      = ThemeDark
 )
 const (
 	colorReset = "\033[0m"
@@ -594,14 +597,14 @@ func formatPrefixText(dataBuf *bytes.Buffer, level TypeLevel, caller string, the
 	switch level {
 	case LevelDebug:
 		dataBuf.WriteString(theme.prefixDebug)
-	case LevelError:
-		dataBuf.WriteString(theme.prefixError)
-	case LevelFatal:
-		dataBuf.WriteString(theme.prefixFatal)
 	case LevelInfo:
 		dataBuf.WriteString(theme.prefixInfo)
 	case LevelWarn:
 		dataBuf.WriteString(theme.prefixWarn)
+	case LevelError:
+		dataBuf.WriteString(theme.prefixError)
+	case LevelFatal:
+		dataBuf.WriteString(theme.prefixFatal)
 	}
 	if caller != "" {
 		dataBuf.WriteByte(' ')
@@ -631,6 +634,24 @@ func getLoggerCaller(path string) string {
 	}
 	return path
 }
+func getLoggerLevel() TypeLevel {
+	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
+	case "debug":
+		return LevelDebug
+	case "info":
+		return LevelInfo
+	case "warn", "warning":
+		return LevelWarn
+	case "error":
+		return LevelError
+	case "fatal":
+		return LevelFatal
+	}
+	if os.Getenv("DEBUG") == "true" {
+		return LevelDebug
+	}
+	return defaultLevel
+}
 func getLoggerTheme() colorTheme {
 	switch strings.ToLower(os.Getenv("TERM_THEME")) {
 	case "dark":
@@ -649,24 +670,6 @@ func getLoggerTheme() colorTheme {
 		}
 	}
 	return darkTheme
-}
-func getLoggerLevel() TypeLevel {
-	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
-	case "debug":
-		return LevelDebug
-	case "info":
-		return LevelInfo
-	case "warn", "warning":
-		return LevelWarn
-	case "error":
-		return LevelError
-	case "fatal":
-		return LevelFatal
-	}
-	if os.Getenv("DEBUG") == "true" {
-		return LevelDebug
-	}
-	return LevelInfo
 }
 func isIgnoredError(data []byte) bool {
 	for _, err := range ignoredErrors {
