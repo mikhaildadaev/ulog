@@ -19,7 +19,6 @@ func Benchmark_Logger_Debug_Multi(b *testing.B) {
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Debug("test debug simple message")
 			}
@@ -33,7 +32,6 @@ func Benchmark_Logger_Debug_Multi(b *testing.B) {
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Debug("test debug format message",
 					Int("user_id", 12345),
@@ -66,7 +64,6 @@ func Benchmark_Logger_Debug_Single(b *testing.B) {
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Debug("test debug simple message")
 			}
@@ -78,7 +75,6 @@ func Benchmark_Logger_Debug_Single(b *testing.B) {
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Debug("test debug format message",
 					Int("user_id", 12345),
@@ -109,7 +105,6 @@ func Benchmark_Logger_Error_Multi(b *testing.B) {
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Error("test error simple message")
 			}
@@ -123,7 +118,6 @@ func Benchmark_Logger_Error_Multi(b *testing.B) {
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Error("test error format message",
 					Int("user_id", 12345),
@@ -156,7 +150,6 @@ func Benchmark_Logger_Error_Single(b *testing.B) {
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Error("test error simple message")
 			}
@@ -168,7 +161,6 @@ func Benchmark_Logger_Error_Single(b *testing.B) {
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Error("test error format message",
 					Int("user_id", 12345),
@@ -199,7 +191,6 @@ func Benchmark_Logger_Info_Multi(b *testing.B) {
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Info("test info simple message")
 			}
@@ -213,7 +204,6 @@ func Benchmark_Logger_Info_Multi(b *testing.B) {
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Info("test info format message",
 					Int("user_id", 12345),
@@ -246,7 +236,6 @@ func Benchmark_Logger_Info_Single(b *testing.B) {
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Info("test info simple message")
 			}
@@ -258,7 +247,6 @@ func Benchmark_Logger_Info_Single(b *testing.B) {
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Info("test info format message",
 					Int("user_id", 12345),
@@ -289,7 +277,6 @@ func Benchmark_Logger_Warn_Multi(b *testing.B) {
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Warn("test warn simple message")
 			}
@@ -303,7 +290,6 @@ func Benchmark_Logger_Warn_Multi(b *testing.B) {
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Warn("test warn format message",
 					Int("user_id", 12345),
@@ -336,7 +322,6 @@ func Benchmark_Logger_Warn_Single(b *testing.B) {
 	for _, format := range formats {
 		b.Run("Simple "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Warn("test warn simple message")
 			}
@@ -348,7 +333,6 @@ func Benchmark_Logger_Warn_Single(b *testing.B) {
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
 			logger := NewLogger()
-			defer logger.Close()
 			if b.N == 1 {
 				logger.Warn("test warn format message",
 					Int("user_id", 12345),
