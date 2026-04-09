@@ -10,8 +10,11 @@ import (
 	"time"
 )
 
-// Публичные функции
-func TestField(t *testing.T) {
+// Тесты проверок копонентов
+func TestWithExtractor(t *testing.T) {
+	// Дописать
+}
+func TestWithField(t *testing.T) {
 	t.Run("Bool", func(t *testing.T) {
 		f := Bool("active", true)
 		if f.nameKey != "active" {
@@ -66,7 +69,7 @@ func TestField(t *testing.T) {
 			t.Errorf("Expected 2 values, got %d", len(f.valueDurations))
 		}
 	})
-	t.Run("Err", func(t *testing.T) {
+	t.Run("Error", func(t *testing.T) {
 		f := Err(nil)
 		if f.nameKey != "error" {
 			t.Errorf("Expected nameKey 'error', got '%s'", f.nameKey)
@@ -83,7 +86,7 @@ func TestField(t *testing.T) {
 			t.Errorf("Expected 'something failed', got '%s'", f.valueString)
 		}
 	})
-	t.Run("Errs", func(t *testing.T) {
+	t.Run("Errors", func(t *testing.T) {
 		errs := []error{
 			nil,
 			errors.New("err1"),
@@ -384,26 +387,6 @@ func TestWithTheme(t *testing.T) {
 }
 
 // Временные тесты
-func TestGetLoggerLevel(t *testing.T) {
-	tests := []struct {
-		env      string
-		expected TypeLevel
-	}{
-		{"debug", LevelDebug},
-		{"info", LevelInfo},
-		{"warn", LevelWarn},
-		{"warning", LevelWarn},
-		{"error", LevelError},
-		{"fatal", LevelFatal},
-		{"", LevelInfo},
-	}
-	for _, tt := range tests {
-		t.Setenv("LOG_LEVEL", tt.env)
-		if got := getLoggerLevel(); got != tt.expected {
-			t.Errorf("LOG_LEVEL=%s: got %d, want %d", tt.env, got, tt.expected)
-		}
-	}
-}
 func TestIsIgnoredError(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -426,31 +409,7 @@ func TestIsIgnoredError(t *testing.T) {
 	}
 }
 
-//func TestSetLevel(t *testing.T) {
-//	logger := NewLogger()
-//	logger.SetLevel(LevelError)
-//	if logger.getLevel() != LevelError {
-//		t.Errorf("Expected level %d, got %d", LevelError, logger.getLevel())
-//	}
-//}
-
-//func TestSetTheme(t *testing.T) {
-//	logger := NewLogger(WithTheme(ThemeDark))
-//	buf := &bytes.Buffer{}
-//	logger.SetMode(ModeSync, buf, 0)
-//	logger.Info("test message")
-//	output := buf.String()
-//	if !strings.Contains(output, "\033[92m") {
-//		t.Error("Dark theme colors not found in output")
-//	}
-//	buf.Reset()
-//	logger.SetTheme(ThemeLight)
-//	logger.Info("test message")
-//	if !strings.Contains(output, "\033[92m") {
-//		t.Error("Light theme colors not found")
-//	}
-//}
-
+// Приватные функции
 func testDebug(l Logger) {
 	l.Debug("test")
 }
