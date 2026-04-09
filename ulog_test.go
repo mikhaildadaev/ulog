@@ -2,6 +2,7 @@ package ulog
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -11,10 +12,7 @@ import (
 )
 
 // Тесты проверок копонентов
-func TestWithExtractor(t *testing.T) {
-	// Дописать
-}
-func TestWithField(t *testing.T) {
+func TestFields(t *testing.T) {
 	t.Run("Bool", func(t *testing.T) {
 		f := Bool("active", true)
 		if f.nameKey != "active" {
@@ -204,6 +202,48 @@ func TestWithField(t *testing.T) {
 		}
 	})
 }
+func TestMethods(t *testing.T) {
+	array := []struct {
+		name      string
+		logFunc   func(Logger)
+		level     TypeLevel
+		shouldLog bool
+	}{
+		// DEBUG
+		{"Debug", testDebug, LevelDebug, true},
+		{"DebugWithContext", testDebugWithContext, LevelDebug, true},
+		// ERROR
+		{"Error", testError, LevelError, true},
+		{"ErrorWithContext", testErrorWithContext, LevelError, true},
+		// FATAL
+		{"Fatal", testFatal, LevelFatal, true},
+		{"FatalWithContext", testFatalWithContext, LevelFatal, true},
+		// INFO
+		{"Info", testInfo, LevelInfo, true},
+		{"InfoWithContext", testInfoWithContext, LevelInfo, true},
+		// WARN
+		{"Warn", testWarn, LevelWarn, true},
+		{"WarnWithContext", testWarnWithContext, LevelWarn, true},
+	}
+	for _, elem := range array {
+		t.Run(elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger(
+				WithMode(ModeSync, buf),
+				WithLevel(elem.level),
+			)
+			elem.logFunc(logger)
+			logger.Sync()
+			output := buf.String()
+			if elem.shouldLog && !strings.Contains(output, "message") {
+				t.Errorf("Expected message not found in output: %q", output)
+			}
+		})
+	}
+}
+func TestWithExtractor(t *testing.T) {
+	// Дописать
+}
 func TestWithFormat(t *testing.T) {
 	array := []struct {
 		name   string
@@ -377,11 +417,11 @@ func TestWithTheme(t *testing.T) {
 					t.Errorf("%s: expected message color %q not found", level, elem.reset)
 				}
 			}
-			testLevel("DEBUG", testDebug, elem.prefixDebug)
-			testLevel("ERROR", testError, elem.prefixError)
-			testLevel("FATAL", testFatal, elem.prefixFatal)
-			testLevel("INFO", testInfo, elem.prefixInfo)
-			testLevel("WARN", testWarn, elem.prefixWarn)
+			testLevel("Debug", testDebug, elem.prefixDebug)
+			testLevel("Error", testError, elem.prefixError)
+			testLevel("Fatal", testFatal, elem.prefixFatal)
+			testLevel("Info", testInfo, elem.prefixInfo)
+			testLevel("Warn", testWarn, elem.prefixWarn)
 		})
 	}
 }
@@ -411,20 +451,38 @@ func TestIsIgnoredError(t *testing.T) {
 
 // Приватные функции
 func testDebug(l Logger) {
-	l.Debug("test")
+	l.Debug("message")
+}
+func testDebugWithContext(l Logger) {
+	l.DebugWithContext(context.Background(), "message")
 }
 func testError(l Logger) {
-	l.Error("test")
+	l.Error("message")
+}
+func testErrorWithContext(l Logger) {
+	l.ErrorWithContext(context.Background(), "message")
 }
 func testFatal(l Logger) {
 	oldExit := osExit
 	osExit = func(int) {}
 	defer func() { osExit = oldExit }()
-	l.Fatal("test")
+	l.Fatal("message")
+}
+func testFatalWithContext(l Logger) {
+	oldExit := osExit
+	osExit = func(int) {}
+	defer func() { osExit = oldExit }()
+	l.FatalWithContext(context.Background(), "message")
 }
 func testInfo(l Logger) {
-	l.Info("test")
+	l.Info("message")
+}
+func testInfoWithContext(l Logger) {
+	l.InfoWithContext(context.Background(), "message")
 }
 func testWarn(l Logger) {
-	l.Warn("test")
+	l.Warn("message")
+}
+func testWarnWithContext(l Logger) {
+	l.WarnWithContext(context.Background(), "message")
 }
