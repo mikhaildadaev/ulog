@@ -21,9 +21,9 @@ import (
 )
 
 // Публичные типы
-type TypeLevel int
 type TypeField int
 type TypeFormat int
+type TypeLevel int
 type TypeMode int
 type TypeTheme int
 
@@ -91,7 +91,8 @@ type Logger interface {
 
 // Публичные структуры
 type Field struct {
-	keyName        string
+	nameKey        string
+	typeValue      TypeField
 	valueBool      bool
 	valueBools     []bool
 	valueDuration  time.Duration
@@ -106,52 +107,51 @@ type Field struct {
 	valueStrings   []string
 	valueTime      time.Time
 	valueTimes     []time.Time
-	valueType      TypeField
 }
 
 type ContextExtractor func(context context.Context) []Field
 type OptionLogger func(*universalLogger)
 
 // Публичные конструкторы
-func Bool(keyName string, valueBool bool) Field {
+func Bool(nameKey string, valueBool bool) Field {
 	return Field{
-		valueType: FieldBool,
-		keyName:   keyName,
+		nameKey:   nameKey,
+		typeValue: FieldBool,
 		valueBool: valueBool,
 	}
 }
-func Bools(keyName string, valueBools []bool) Field {
+func Bools(nameKey string, valueBools []bool) Field {
 	return Field{
-		valueType:  FieldBool,
-		keyName:    keyName,
+		nameKey:    nameKey,
+		typeValue:  FieldBool,
 		valueBools: valueBools,
 	}
 }
-func Duration(keyName string, valueDuration time.Duration) Field {
+func Duration(nameKey string, valueDuration time.Duration) Field {
 	return Field{
-		valueType:     FieldDuration,
-		keyName:       keyName,
+		nameKey:       nameKey,
+		typeValue:     FieldDuration,
 		valueDuration: valueDuration,
 	}
 }
-func Durations(keyName string, valueDurations []time.Duration) Field {
+func Durations(nameKey string, valueDurations []time.Duration) Field {
 	return Field{
-		valueType:      FieldDuration,
-		keyName:        keyName,
+		nameKey:        nameKey,
+		typeValue:      FieldDuration,
 		valueDurations: valueDurations,
 	}
 }
 func Err(err error) Field {
 	if err == nil {
 		return Field{
-			valueType:   FieldString,
-			keyName:     "error",
+			nameKey:     "error",
+			typeValue:   FieldString,
 			valueString: "nil",
 		}
 	}
 	return Field{
-		valueType:   FieldString,
-		keyName:     "error",
+		nameKey:     "error",
+		typeValue:   FieldString,
 		valueString: err.Error(),
 	}
 }
@@ -165,78 +165,78 @@ func Errs(errs []error) Field {
 		}
 	}
 	return Field{
-		valueType:    FieldString,
-		keyName:      "errors",
+		nameKey:      "errors",
+		typeValue:    FieldString,
 		valueStrings: values,
 	}
 }
-func Float64(keyName string, valueFloat64 float64) Field {
+func Float64(nameKey string, valueFloat64 float64) Field {
 	return Field{
-		valueType:    FieldFloat64,
-		keyName:      keyName,
+		nameKey:      nameKey,
+		typeValue:    FieldFloat64,
 		valueFloat64: valueFloat64,
 	}
 }
-func Floats64(keyName string, valueFloats64 []float64) Field {
+func Floats64(nameKey string, valueFloats64 []float64) Field {
 	return Field{
-		valueType:     FieldFloat64,
-		keyName:       keyName,
+		nameKey:       nameKey,
+		typeValue:     FieldFloat64,
 		valueFloats64: valueFloats64,
 	}
 }
-func Int(keyName string, valueInt int) Field {
+func Int(nameKey string, valueInt int) Field {
 	return Field{
-		valueType: FieldInt,
-		keyName:   keyName,
+		nameKey:   nameKey,
+		typeValue: FieldInt,
 		valueInt:  valueInt,
 	}
 }
-func Ints(keyName string, valueInts []int) Field {
+func Ints(nameKey string, valueInts []int) Field {
 	return Field{
-		valueType: FieldInt,
-		keyName:   keyName,
+		nameKey:   nameKey,
+		typeValue: FieldInt,
 		valueInts: valueInts,
 	}
 }
-func Int64(keyName string, valueInt64 int64) Field {
+func Int64(nameKey string, valueInt64 int64) Field {
 	return Field{
-		valueType:  FieldInt,
-		keyName:    keyName,
+		nameKey:    nameKey,
+		typeValue:  FieldInt,
 		valueInt64: valueInt64,
 	}
 }
-func Ints64(keyName string, valueInts64 []int64) Field {
+func Ints64(nameKey string, valueInts64 []int64) Field {
 	return Field{
-		valueType:   FieldInt,
-		keyName:     keyName,
+		nameKey:     nameKey,
+		typeValue:   FieldInt,
 		valueInts64: valueInts64,
 	}
 }
-func String(keyName string, valueString string) Field {
+func String(nameKey string, valueString string) Field {
 	return Field{
-		valueType:   FieldString,
-		keyName:     keyName,
+		nameKey:     nameKey,
+		typeValue:   FieldString,
 		valueString: valueString,
 	}
 }
-func Strings(keyName string, valueStrings []string) Field {
+func Strings(nameKey string, valueStrings []string) Field {
 	return Field{
-		valueType:    FieldString,
-		keyName:      keyName,
+		nameKey:      nameKey,
+		typeValue:    FieldString,
 		valueStrings: valueStrings,
 	}
 }
-func Time(keyName string, valueTime time.Time) Field {
+func Time(nameKey string, valueTime time.Time) Field {
 	return Field{
-		valueType: FieldTime,
-		keyName:   keyName,
+		nameKey:   nameKey,
+		typeValue: FieldTime,
 		valueTime: valueTime,
 	}
 }
-func Times(keyName string, valueTimes []time.Time) Field {
+func Times(nameKey string, valueTimes []time.Time) Field {
 	return Field{
-		valueType:  FieldTime,
-		keyName:    keyName,
+		nameKey:    nameKey,
+		typeValue:  FieldTime,
 		valueTimes: valueTimes,
 	}
 }
@@ -462,7 +462,7 @@ func formatDataJson(dataBuf *bytes.Buffer, message string, fields []Field) {
 				dataBuf.WriteByte(',')
 			}
 			dataBuf.WriteByte('"')
-			escapeJSON(dataBuf, field.keyName)
+			escapeJSON(dataBuf, field.nameKey)
 			dataBuf.WriteString(`":`)
 			formatFieldValue(dataBuf, field)
 		}
@@ -476,7 +476,7 @@ func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, schem
 		dataBuf.WriteByte(':')
 		for _, field := range fields {
 			dataBuf.WriteByte(' ')
-			dataBuf.WriteString(field.keyName)
+			dataBuf.WriteString(field.nameKey)
 			dataBuf.WriteByte('=')
 			formatFieldValue(dataBuf, field)
 		}
@@ -485,7 +485,7 @@ func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, schem
 	dataBuf.WriteByte('\n')
 }
 func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
-	switch field.valueType {
+	switch field.typeValue {
 	case FieldBool:
 		dataBuf.WriteString(strconv.FormatBool(field.valueBool))
 	case FieldBools:
