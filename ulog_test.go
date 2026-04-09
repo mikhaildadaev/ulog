@@ -255,9 +255,11 @@ func TestWithFormat(t *testing.T) {
 	}
 	for _, elem := range array {
 		t.Run(elem.name, func(t *testing.T) {
-			logger := NewLogger(WithFormat(elem.format))
 			buf := &bytes.Buffer{}
-			logger.SetMode(ModeSync, buf, 0)
+			logger := NewLogger(
+				WithFormat(elem.format),
+				WithMode(ModeSync, buf, 0),
+			)
 			logger.Info("test")
 			output := buf.String()
 			if !strings.Contains(output, elem.expect) {
@@ -306,9 +308,11 @@ func TestWithLevel(t *testing.T) {
 	}
 	for _, elem := range array {
 		t.Run(elem.name, func(t *testing.T) {
-			logger := NewLogger(WithLevel(elem.level))
 			buf := &bytes.Buffer{}
-			logger.SetMode(ModeSync, buf, 0)
+			logger := NewLogger(
+				WithLevel(elem.level),
+				WithMode(ModeSync, buf, 0),
+			)
 			elem.logFunc(logger)
 			if elem.shouldLog && buf.Len() == 0 {
 				t.Error("Expected log to be written, but got nothing")
@@ -322,7 +326,9 @@ func TestWithLevel(t *testing.T) {
 func TestWithMode(t *testing.T) {
 	t.Run("Async mode", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
-		logger := NewLogger(WithMode(ModeAsync, writerBuf, 1000))
+		logger := NewLogger(
+			WithMode(ModeAsync, writerBuf, 1000),
+		)
 		logger.Info("test message")
 		logger.Sync()
 		if writerBuf.Len() == 0 {
@@ -334,7 +340,9 @@ func TestWithMode(t *testing.T) {
 	})
 	t.Run("Sync mode", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
-		logger := NewLogger(WithMode(ModeSync, writerBuf))
+		logger := NewLogger(
+			WithMode(ModeSync, writerBuf),
+		)
 		logger.Info("test message")
 		logger.Sync()
 		if writerBuf.Len() == 0 {
@@ -397,6 +405,193 @@ func TestWithTheme(t *testing.T) {
 					WithMode(ModeSync, w),
 					WithTheme(elem.theme),
 				)
+				logFunc(logger)
+				w.Close()
+				output, err := io.ReadAll(r)
+				if err != nil {
+					t.Fatal(err)
+				}
+				outputStr := string(output)
+				if !strings.Contains(outputStr, elem.callerColor) && level == "DEBUG" {
+					t.Errorf("%s: expected prefix %q not found in %q", level, elem.callerColor, outputStr)
+				}
+				if !strings.Contains(outputStr, expectedPrefix) {
+					t.Errorf("%s: expected prefix %q not found in %q", level, expectedPrefix, outputStr)
+				}
+				if !strings.Contains(outputStr, elem.messageColor) {
+					t.Errorf("%s: expected message color %q not found", level, elem.messageColor)
+				}
+				if !strings.Contains(outputStr, elem.reset) {
+					t.Errorf("%s: expected message color %q not found", level, elem.reset)
+				}
+			}
+			testLevel("Debug", testDebug, elem.prefixDebug)
+			testLevel("Error", testError, elem.prefixError)
+			testLevel("Fatal", testFatal, elem.prefixFatal)
+			testLevel("Info", testInfo, elem.prefixInfo)
+			testLevel("Warn", testWarn, elem.prefixWarn)
+		})
+	}
+}
+func TestSetExtractor(t *testing.T) {
+	// Дописать
+}
+func TestSetFormat(t *testing.T) {
+	array := []struct {
+		name   string
+		format TypeFormat
+		expect string
+	}{
+		{"Json", FormatJson, `"message":"test"`},
+		{"Text", FormatText, "test"},
+	}
+	for _, elem := range array {
+		t.Run(elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger()
+			logger.SetFormat(elem.format)
+			logger.SetMode(ModeSync, buf, 0)
+			logger.Info("test")
+			output := buf.String()
+			if !strings.Contains(output, elem.expect) {
+				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
+			}
+		})
+	}
+}
+func TestSetLevel(t *testing.T) {
+	array := []struct {
+		name      string
+		level     TypeLevel
+		logFunc   func(Logger)
+		shouldLog bool
+	}{
+		// DEBUG
+		{"DEBUG->DEBUG", LevelDebug, testDebug, true},
+		{"DEBUG->INFO", LevelDebug, testInfo, true},
+		{"DEBUG->WARN", LevelDebug, testWarn, true},
+		{"DEBUG->ERROR", LevelDebug, testError, true},
+		{"DEBUG->FATAL", LevelDebug, testFatal, true},
+		// INFO
+		{"INFO->DEBUG", LevelInfo, testDebug, false},
+		{"INFO->INFO", LevelInfo, testInfo, true},
+		{"INFO->WARN", LevelInfo, testWarn, true},
+		{"INFO->ERROR", LevelInfo, testError, true},
+		{"INFO->FATAL", LevelInfo, testFatal, true},
+		// WARN
+		{"WARN->DEBUG", LevelWarn, testDebug, false},
+		{"WARN->INFO", LevelWarn, testInfo, false},
+		{"WARN->WARN", LevelWarn, testWarn, true},
+		{"WARN->ERROR", LevelWarn, testError, true},
+		{"WARN->FATAL", LevelWarn, testFatal, true},
+		// ERROR
+		{"ERROR->DEBUG", LevelError, testDebug, false},
+		{"ERROR->INFO", LevelError, testInfo, false},
+		{"ERROR->WARN", LevelError, testWarn, false},
+		{"ERROR->ERROR", LevelError, testError, true},
+		{"ERROR->FATAL", LevelError, testFatal, true},
+		// FATAL
+		{"FATAL->DEBUG", LevelFatal, testDebug, false},
+		{"FATAL->INFO", LevelFatal, testInfo, false},
+		{"FATAL->WARN", LevelFatal, testWarn, false},
+		{"FATAL->ERROR", LevelFatal, testError, false},
+		{"FATAL->FATAL", LevelFatal, testFatal, true},
+	}
+	for _, elem := range array {
+		t.Run(elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger()
+			logger.SetLevel(elem.level)
+			logger.SetMode(ModeSync, buf, 0)
+			elem.logFunc(logger)
+			if elem.shouldLog && buf.Len() == 0 {
+				t.Error("Expected log to be written, but got nothing")
+			}
+			if !elem.shouldLog && buf.Len() > 0 {
+				t.Error("Expected no log, but got output")
+			}
+		})
+	}
+}
+func TestSetMode(t *testing.T) {
+	t.Run("Async mode", func(t *testing.T) {
+		writerBuf := &bytes.Buffer{}
+		logger := NewLogger()
+		logger.SetMode(ModeAsync, writerBuf, 1000)
+		logger.Info("test message")
+		logger.Sync()
+		if writerBuf.Len() == 0 {
+			t.Error("Async mode: expected output, got nothing")
+		}
+		if !strings.Contains(writerBuf.String(), "test message") {
+			t.Error("Async mode: expected message not found")
+		}
+	})
+	t.Run("Sync mode", func(t *testing.T) {
+		writerBuf := &bytes.Buffer{}
+		logger := NewLogger()
+		logger.SetMode(ModeSync, writerBuf)
+		logger.Info("test message")
+		logger.Sync()
+		if writerBuf.Len() == 0 {
+			t.Error("Sync mode: expected output, got nothing")
+		}
+		if !strings.Contains(writerBuf.String(), "test message") {
+			t.Error("Sync mode: expected message not found")
+		}
+	})
+}
+func TestSetTheme(t *testing.T) {
+	array := []struct {
+		name         string
+		theme        TypeTheme
+		callerColor  string
+		messageColor string
+		prefixDebug  string
+		prefixError  string
+		prefixFatal  string
+		prefixInfo   string
+		prefixWarn   string
+		reset        string
+	}{
+		{
+			name:         "Dark theme",
+			theme:        ThemeDark,
+			callerColor:  colorDarkBlue,
+			messageColor: colorDarkWhite,
+			prefixDebug:  colorDarkCyan + "[DEBUG]",
+			prefixError:  colorDarkRed + "[ERROR]",
+			prefixFatal:  colorDarkPurple + "[FATAL]",
+			prefixInfo:   colorDarkGreen + "[INFO]",
+			prefixWarn:   colorDarkYellow + "[WARN]",
+			reset:        colorReset,
+		},
+		{
+			name:         "Light theme",
+			theme:        ThemeLight,
+			callerColor:  colorLightBlue,
+			messageColor: colorLightBlack,
+			prefixDebug:  colorLightCyan + "[DEBUG]",
+			prefixError:  colorLightRed + "[ERROR]",
+			prefixFatal:  colorLightPurple + "[FATAL]",
+			prefixInfo:   colorLightGreen + "[INFO]",
+			prefixWarn:   colorLightYellow + "[WARN]",
+			reset:        colorReset,
+		},
+	}
+	for _, elem := range array {
+		t.Run(elem.name, func(t *testing.T) {
+			testLevel := func(level string, logFunc func(Logger), expectedPrefix string) {
+				t.Helper()
+				r, w, err := os.Pipe()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer r.Close()
+				logger := NewLogger()
+				logger.SetLevel(LevelDebug)
+				logger.SetMode(ModeSync, w)
+				logger.SetTheme(elem.theme)
 				logFunc(logger)
 				w.Close()
 				output, err := io.ReadAll(r)
