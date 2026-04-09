@@ -243,7 +243,7 @@ func Times(nameKey string, valueTimes []time.Time) Field {
 func NewLogger(options ...OptionLogger) Logger {
 	universalLogger := &universalLogger{
 		mode:   ModeSync,
-		scheme: getLoggerScheme(),
+		theme:  getLoggerTheme(),
 		writer: os.Stderr,
 	}
 	universalLogger.format.Store(int32(defaultFormat))
@@ -331,7 +331,7 @@ var ignoredErrors = [][]byte{
 }
 
 // Приватные структуры
-type colorScheme struct {
+type colorTheme struct {
 	caller      string
 	message     string
 	prefixDebug string
@@ -353,7 +353,7 @@ type universalLogger struct {
 	level     atomic.Int32
 	mode      TypeMode
 	mutex     sync.RWMutex
-	scheme    colorScheme
+	theme     colorTheme
 	writer    io.Writer
 }
 
@@ -364,7 +364,7 @@ var (
 			return new(bytes.Buffer)
 		},
 	}
-	darkScheme = colorScheme{
+	darkTheme = colorTheme{
 		caller:      colorDarkBlue,
 		message:     colorDarkWhite,
 		prefixDebug: colorDarkCyan + "[DEBUG]",
@@ -374,7 +374,7 @@ var (
 		prefixWarn:  colorDarkYellow + "[WARN]",
 		reset:       colorReset,
 	}
-	lightScheme = colorScheme{
+	lightTheme = colorTheme{
 		caller:      colorLightBlue,
 		message:     colorLightBlack,
 		prefixDebug: colorLightCyan + "[DEBUG]",
@@ -469,8 +469,8 @@ func formatDataJson(dataBuf *bytes.Buffer, message string, fields []Field) {
 		dataBuf.WriteByte('}')
 	}
 }
-func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, scheme colorScheme) {
-	dataBuf.WriteString(scheme.message)
+func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, theme colorTheme) {
+	dataBuf.WriteString(theme.message)
 	dataBuf.WriteString(message)
 	if len(fields) != 0 {
 		dataBuf.WriteByte(':')
@@ -481,7 +481,7 @@ func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, schem
 			formatFieldValue(dataBuf, field)
 		}
 	}
-	dataBuf.WriteString(scheme.reset)
+	dataBuf.WriteString(theme.reset)
 	dataBuf.WriteByte('\n')
 }
 func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
@@ -590,22 +590,22 @@ func formatPrefixJson(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
 		dataBuf.WriteByte('"')
 	}
 }
-func formatPrefixText(dataBuf *bytes.Buffer, level TypeLevel, caller string, scheme colorScheme) {
+func formatPrefixText(dataBuf *bytes.Buffer, level TypeLevel, caller string, theme colorTheme) {
 	switch level {
 	case LevelDebug:
-		dataBuf.WriteString(scheme.prefixDebug)
+		dataBuf.WriteString(theme.prefixDebug)
 	case LevelError:
-		dataBuf.WriteString(scheme.prefixError)
+		dataBuf.WriteString(theme.prefixError)
 	case LevelFatal:
-		dataBuf.WriteString(scheme.prefixFatal)
+		dataBuf.WriteString(theme.prefixFatal)
 	case LevelInfo:
-		dataBuf.WriteString(scheme.prefixInfo)
+		dataBuf.WriteString(theme.prefixInfo)
 	case LevelWarn:
-		dataBuf.WriteString(scheme.prefixWarn)
+		dataBuf.WriteString(theme.prefixWarn)
 	}
 	if caller != "" {
 		dataBuf.WriteByte(' ')
-		dataBuf.WriteString(scheme.caller)
+		dataBuf.WriteString(theme.caller)
 		dataBuf.WriteString(caller)
 	}
 }
@@ -631,24 +631,24 @@ func getLoggerCaller(path string) string {
 	}
 	return path
 }
-func getLoggerScheme() colorScheme {
+func getLoggerTheme() colorTheme {
 	switch strings.ToLower(os.Getenv("TERM_THEME")) {
 	case "dark":
-		return darkScheme
+		return darkTheme
 	case "light":
-		return lightScheme
+		return lightTheme
 	}
 	if os.Getenv("COLORFGBG") != "" {
 		parts := strings.Split(os.Getenv("COLORFGBG"), ";")
 		if len(parts) >= 2 {
 			bg, _ := strconv.Atoi(parts[1])
 			if bg < 8 {
-				return darkScheme
+				return darkTheme
 			}
-			return lightScheme
+			return lightTheme
 		}
 	}
-	return darkScheme
+	return darkTheme
 }
 func getLoggerLevel() TypeLevel {
 	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
@@ -699,10 +699,10 @@ func (universalLogger *universalLogger) getCaller(level TypeLevel) string {
 func (universalLogger *universalLogger) getLevel() TypeLevel {
 	return TypeLevel(universalLogger.level.Load())
 }
-func (universalLogger *universalLogger) getScheme() colorScheme {
+func (universalLogger *universalLogger) getTheme() colorTheme {
 	universalLogger.mutex.RLock()
 	defer universalLogger.mutex.RUnlock()
-	return universalLogger.scheme
+	return universalLogger.theme
 }
 func (universalLogger *universalLogger) writeJson(level TypeLevel, context context.Context, message string, fields []Field) {
 	if universalLogger.getLevel() > level {
@@ -739,13 +739,13 @@ func (universalLogger *universalLogger) writeText(level TypeLevel, context conte
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
 	caller := universalLogger.getCaller(level)
-	scheme := universalLogger.getScheme()
+	theme := universalLogger.getTheme()
 	time := time.Now()
 	formatTimeText(dataBuf, time)
 	dataBuf.WriteByte(' ')
-	formatPrefixText(dataBuf, level, caller, scheme)
+	formatPrefixText(dataBuf, level, caller, theme)
 	dataBuf.WriteByte(' ')
-	formatDataText(dataBuf, message, fields, scheme)
+	formatDataText(dataBuf, message, fields, theme)
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()

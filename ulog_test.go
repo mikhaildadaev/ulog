@@ -69,43 +69,43 @@ func TestEnvLogLevel(t *testing.T) {
 		}
 	}
 }
-func TestGetLoggerScheme(t *testing.T) {
+func TestGetLoggerTheme(t *testing.T) {
 	t.Run("Dark theme", func(t *testing.T) {
 		t.Setenv("TERM_THEME", "dark")
-		scheme := getLoggerScheme()
-		if !strings.HasPrefix(scheme.prefixError, colorDarkRed) {
-			t.Error("Light scheme prefix should start with light red color")
+		theme := getLoggerTheme()
+		if !strings.HasPrefix(theme.prefixError, colorDarkRed) {
+			t.Error("Light theme prefix should start with light red color")
 		}
-		if !strings.HasPrefix(scheme.prefixDebug, colorDarkCyan) {
-			t.Error("Light scheme debug should start with cyan")
+		if !strings.HasPrefix(theme.prefixDebug, colorDarkCyan) {
+			t.Error("Light theme debug should start with cyan")
 		}
-		if !strings.HasPrefix(scheme.prefixFatal, colorDarkPurple) {
-			t.Error("Light scheme fatal should start with purple")
+		if !strings.HasPrefix(theme.prefixFatal, colorDarkPurple) {
+			t.Error("Light theme fatal should start with purple")
 		}
-		if !strings.HasPrefix(scheme.prefixInfo, colorDarkGreen) {
-			t.Error("Light scheme info should start with green")
+		if !strings.HasPrefix(theme.prefixInfo, colorDarkGreen) {
+			t.Error("Light theme info should start with green")
 		}
-		if !strings.HasPrefix(scheme.prefixWarn, colorDarkYellow) {
-			t.Error("Light scheme warn should start with yellow")
+		if !strings.HasPrefix(theme.prefixWarn, colorDarkYellow) {
+			t.Error("Light theme warn should start with yellow")
 		}
 	})
 	t.Run("Light theme", func(t *testing.T) {
 		t.Setenv("TERM_THEME", "light")
-		scheme := getLoggerScheme()
-		if !strings.HasPrefix(scheme.prefixError, colorLightRed) {
-			t.Error("Light scheme prefix should start with light red color")
+		theme := getLoggerTheme()
+		if !strings.HasPrefix(theme.prefixError, colorLightRed) {
+			t.Error("Light theme prefix should start with light red color")
 		}
-		if !strings.HasPrefix(scheme.prefixDebug, colorLightCyan) {
-			t.Error("Light scheme debug should start with cyan")
+		if !strings.HasPrefix(theme.prefixDebug, colorLightCyan) {
+			t.Error("Light theme debug should start with cyan")
 		}
-		if !strings.HasPrefix(scheme.prefixFatal, colorLightPurple) {
-			t.Error("Light scheme fatal should start with purple")
+		if !strings.HasPrefix(theme.prefixFatal, colorLightPurple) {
+			t.Error("Light theme fatal should start with purple")
 		}
-		if !strings.HasPrefix(scheme.prefixInfo, colorLightGreen) {
-			t.Error("Light scheme info should start with green")
+		if !strings.HasPrefix(theme.prefixInfo, colorLightGreen) {
+			t.Error("Light theme info should start with green")
 		}
-		if !strings.HasPrefix(scheme.prefixWarn, colorLightYellow) {
-			t.Error("Light scheme warn should start with yellow")
+		if !strings.HasPrefix(theme.prefixWarn, colorLightYellow) {
+			t.Error("Light theme warn should start with yellow")
 		}
 	})
 }
