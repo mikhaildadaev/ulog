@@ -1,6 +1,7 @@
 package ulog
 
 import (
+	"bytes"
 	"errors"
 	"strings"
 	"sync"
@@ -199,6 +200,81 @@ func TestField(t *testing.T) {
 		}
 	})
 }
+func TestWithFormat(t *testing.T) {
+	array := []struct {
+		name   string
+		format TypeFormat
+		expect string
+	}{
+		{"Json", FormatJson, `"message":"test"`},
+		{"Text", FormatText, "test"},
+	}
+	for _, elem := range array {
+		t.Run(elem.name, func(t *testing.T) {
+			logger := NewLogger(WithFormat(elem.format))
+			buf := &bytes.Buffer{}
+			logger.SetMode(ModeSync, buf, 0)
+			logger.Info("test")
+			output := buf.String()
+			if !strings.Contains(output, elem.expect) {
+				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
+			}
+		})
+	}
+}
+func TestWithLevel(t *testing.T) {
+	array := []struct {
+		name      string
+		level     TypeLevel
+		logFunc   func(Logger)
+		shouldLog bool
+	}{
+		// DEBUG
+		{"DEBUG->DEBUG", LevelDebug, testDebug, true},
+		{"DEBUG->INFO", LevelDebug, testInfo, true},
+		{"DEBUG->WARN", LevelDebug, testWarn, true},
+		{"DEBUG->ERROR", LevelDebug, testError, true},
+		{"DEBUG->FATAL", LevelDebug, testFatal, true},
+		// INFO
+		{"INFO->DEBUG", LevelInfo, testDebug, false},
+		{"INFO->INFO", LevelInfo, testInfo, true},
+		{"INFO->WARN", LevelInfo, testWarn, true},
+		{"INFO->ERROR", LevelInfo, testError, true},
+		{"INFO->FATAL", LevelInfo, testFatal, true},
+		// WARN
+		{"WARN->DEBUG", LevelWarn, testDebug, false},
+		{"WARN->INFO", LevelWarn, testInfo, false},
+		{"WARN->WARN", LevelWarn, testWarn, true},
+		{"WARN->ERROR", LevelWarn, testError, true},
+		{"WARN->FATAL", LevelWarn, testFatal, true},
+		// ERROR
+		{"ERROR->DEBUG", LevelError, testDebug, false},
+		{"ERROR->INFO", LevelError, testInfo, false},
+		{"ERROR->WARN", LevelError, testWarn, false},
+		{"ERROR->ERROR", LevelError, testError, true},
+		{"ERROR->FATAL", LevelError, testFatal, true},
+		// FATAL
+		{"FATAL->DEBUG", LevelFatal, testDebug, false},
+		{"FATAL->INFO", LevelFatal, testInfo, false},
+		{"FATAL->WARN", LevelFatal, testWarn, false},
+		{"FATAL->ERROR", LevelFatal, testError, false},
+		{"FATAL->FATAL", LevelFatal, testFatal, true},
+	}
+	for _, elem := range array {
+		t.Run(elem.name, func(t *testing.T) {
+			logger := NewLogger(WithLevel(elem.level))
+			buf := &bytes.Buffer{}
+			logger.SetMode(ModeSync, buf, 0)
+			elem.logFunc(logger)
+			if elem.shouldLog && buf.Len() == 0 {
+				t.Error("Expected log to be written, but got nothing")
+			}
+			if !elem.shouldLog && buf.Len() > 0 {
+				t.Error("Expected no log, but got output")
+			}
+		})
+	}
+}
 
 // Вспомогательный тип для теста ошибок
 func TestConcurrency(t *testing.T) {
@@ -328,3 +404,22 @@ func TestIsIgnoredError(t *testing.T) {
 //		t.Error("Light theme colors not found")
 //	}
 //}
+
+func testDebug(l Logger) {
+	l.Debug("test")
+}
+func testError(l Logger) {
+	l.Error("test")
+}
+func testFatal(l Logger) {
+	oldExit := osExit
+	osExit = func(int) {}
+	defer func() { osExit = oldExit }()
+	l.Fatal("test")
+}
+func testInfo(l Logger) {
+	l.Info("test")
+}
+func testWarn(l Logger) {
+	l.Warn("test")
+}
