@@ -3,6 +3,8 @@ package ulog
 import (
 	"bytes"
 	"errors"
+	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -300,6 +302,86 @@ func TestWithMode(t *testing.T) {
 		}
 	})
 }
+func TestWithTheme(t *testing.T) {
+	array := []struct {
+		name         string
+		theme        TypeTheme
+		callerColor  string
+		messageColor string
+		prefixDebug  string
+		prefixError  string
+		prefixFatal  string
+		prefixInfo   string
+		prefixWarn   string
+		reset        string
+	}{
+		{
+			name:         "Dark theme",
+			theme:        ThemeDark,
+			callerColor:  colorDarkBlue,
+			messageColor: colorDarkWhite,
+			prefixDebug:  colorDarkCyan + "[DEBUG]",
+			prefixError:  colorDarkRed + "[ERROR]",
+			prefixFatal:  colorDarkPurple + "[FATAL]",
+			prefixInfo:   colorDarkGreen + "[INFO]",
+			prefixWarn:   colorDarkYellow + "[WARN]",
+			reset:        colorReset,
+		},
+		{
+			name:         "Light theme",
+			theme:        ThemeLight,
+			callerColor:  colorLightBlue,
+			messageColor: colorLightBlack,
+			prefixDebug:  colorLightCyan + "[DEBUG]",
+			prefixError:  colorLightRed + "[ERROR]",
+			prefixFatal:  colorLightPurple + "[FATAL]",
+			prefixInfo:   colorLightGreen + "[INFO]",
+			prefixWarn:   colorLightYellow + "[WARN]",
+			reset:        colorReset,
+		},
+	}
+	for _, elem := range array {
+		t.Run(elem.name, func(t *testing.T) {
+			testLevel := func(level string, logFunc func(Logger), expectedPrefix string) {
+				t.Helper()
+				r, w, err := os.Pipe()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer r.Close()
+				logger := NewLogger(
+					WithLevel(LevelDebug),
+					WithMode(ModeSync, w),
+					WithTheme(elem.theme),
+				)
+				logFunc(logger)
+				w.Close()
+				output, err := io.ReadAll(r)
+				if err != nil {
+					t.Fatal(err)
+				}
+				outputStr := string(output)
+				if !strings.Contains(outputStr, elem.callerColor) && level == "DEBUG" {
+					t.Errorf("%s: expected prefix %q not found in %q", level, elem.callerColor, outputStr)
+				}
+				if !strings.Contains(outputStr, expectedPrefix) {
+					t.Errorf("%s: expected prefix %q not found in %q", level, expectedPrefix, outputStr)
+				}
+				if !strings.Contains(outputStr, elem.messageColor) {
+					t.Errorf("%s: expected message color %q not found", level, elem.messageColor)
+				}
+				if !strings.Contains(outputStr, elem.reset) {
+					t.Errorf("%s: expected message color %q not found", level, elem.reset)
+				}
+			}
+			testLevel("DEBUG", testDebug, elem.prefixDebug)
+			testLevel("ERROR", testError, elem.prefixError)
+			testLevel("FATAL", testFatal, elem.prefixFatal)
+			testLevel("INFO", testInfo, elem.prefixInfo)
+			testLevel("WARN", testWarn, elem.prefixWarn)
+		})
+	}
+}
 
 // Временные тесты
 func TestGetLoggerLevel(t *testing.T) {
@@ -321,46 +403,6 @@ func TestGetLoggerLevel(t *testing.T) {
 			t.Errorf("LOG_LEVEL=%s: got %d, want %d", tt.env, got, tt.expected)
 		}
 	}
-}
-func TestGetLoggerTheme(t *testing.T) {
-	t.Run("Dark theme", func(t *testing.T) {
-		t.Setenv("TERM_THEME", "dark")
-		theme := getLoggerTheme()
-		if !strings.HasPrefix(theme.prefixError, colorDarkRed) {
-			t.Error("Light theme prefix should start with red color")
-		}
-		if !strings.HasPrefix(theme.prefixDebug, colorDarkCyan) {
-			t.Error("Light theme debug should start with cyan")
-		}
-		if !strings.HasPrefix(theme.prefixFatal, colorDarkPurple) {
-			t.Error("Light theme fatal should start with purple")
-		}
-		if !strings.HasPrefix(theme.prefixInfo, colorDarkGreen) {
-			t.Error("Light theme info should start with green")
-		}
-		if !strings.HasPrefix(theme.prefixWarn, colorDarkYellow) {
-			t.Error("Light theme warn should start with yellow")
-		}
-	})
-	t.Run("Light theme", func(t *testing.T) {
-		t.Setenv("TERM_THEME", "light")
-		theme := getLoggerTheme()
-		if !strings.HasPrefix(theme.prefixError, colorLightRed) {
-			t.Error("Light theme prefix should start with red color")
-		}
-		if !strings.HasPrefix(theme.prefixDebug, colorLightCyan) {
-			t.Error("Light theme debug should start with cyan")
-		}
-		if !strings.HasPrefix(theme.prefixFatal, colorLightPurple) {
-			t.Error("Light theme fatal should start with purple")
-		}
-		if !strings.HasPrefix(theme.prefixInfo, colorLightGreen) {
-			t.Error("Light theme info should start with green")
-		}
-		if !strings.HasPrefix(theme.prefixWarn, colorLightYellow) {
-			t.Error("Light theme warn should start with yellow")
-		}
-	})
 }
 func TestIsIgnoredError(t *testing.T) {
 	tests := []struct {
