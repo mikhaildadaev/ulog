@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Тесты проверок копонентов
+// Тесты публичных копонентов
 func TestFields(t *testing.T) {
 	t.Run("Bool", func(t *testing.T) {
 		f := Bool("active", true)
@@ -621,7 +621,7 @@ func TestSetTheme(t *testing.T) {
 	}
 }
 
-// Временные тесты
+// Тесты приватных копонентов
 func TestIsIgnoredError(t *testing.T) {
 	tests := []struct {
 		name     string
