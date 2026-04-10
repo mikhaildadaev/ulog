@@ -210,20 +210,20 @@ func TestMethods(t *testing.T) {
 		shouldLog bool
 	}{
 		// DEBUG
-		{"Debug", testDebug, LevelDebug, true},
-		{"DebugWithContext", testDebugWithContext, LevelDebug, true},
+		{"DEBUG", testDebug, LevelDebug, true},
+		{"DEBUG/WithContext", testDebugWithContext, LevelDebug, true},
 		// ERROR
-		{"Error", testError, LevelError, true},
-		{"ErrorWithContext", testErrorWithContext, LevelError, true},
+		{"ERROR", testError, LevelError, true},
+		{"ERROR/WithContext", testErrorWithContext, LevelError, true},
 		// FATAL
-		{"Fatal", testFatal, LevelFatal, true},
-		{"FatalWithContext", testFatalWithContext, LevelFatal, true},
+		{"FATAL", testFatal, LevelFatal, true},
+		{"FATAL/WithContext", testFatalWithContext, LevelFatal, true},
 		// INFO
-		{"Info", testInfo, LevelInfo, true},
-		{"InfoWithContext", testInfoWithContext, LevelInfo, true},
+		{"INFO", testInfo, LevelInfo, true},
+		{"INFO/WithContext", testInfoWithContext, LevelInfo, true},
 		// WARN
-		{"Warn", testWarn, LevelWarn, true},
-		{"WarnWithContext", testWarnWithContext, LevelWarn, true},
+		{"WARN", testWarn, LevelWarn, true},
+		{"WARN/WithContext", testWarnWithContext, LevelWarn, true},
 	}
 	for _, elem := range array {
 		t.Run(elem.name, func(t *testing.T) {
@@ -235,13 +235,13 @@ func TestMethods(t *testing.T) {
 			elem.logFunc(logger)
 			logger.Sync()
 			output := buf.String()
-			if elem.shouldLog && !strings.Contains(output, "message") {
+			if elem.shouldLog && !strings.Contains(output, "test message") {
 				t.Errorf("Expected message not found in output: %q", output)
 			}
 		})
 	}
 }
-func TestWithExtractor(t *testing.T) {
+func TestExtractor(t *testing.T) {
 	tests := []struct {
 		name      string
 		keys      []string
@@ -332,7 +332,7 @@ func TestWithExtractor(t *testing.T) {
 		},
 	}
 	for _, elem := range tests {
-		t.Run(elem.name, func(t *testing.T) {
+		t.Run("WithExtractor/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
 			logger := NewLogger(
 				WithExtractor(elem.keys...),
@@ -363,25 +363,66 @@ func TestWithExtractor(t *testing.T) {
 				}
 			}
 		})
+		t.Run("SetExtractor/"+elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger()
+			logger.SetExtractor(elem.keys...)
+			logger.SetFormat(FormatJson)
+			logger.SetMode(ModeSync, buf)
+			logger.InfoWithContext(elem.context, "test message")
+			logger.Sync()
+			output := buf.String()
+			if elem.shouldAdd {
+				if !strings.Contains(output, elem.wantKey) {
+					t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
+						elem.keys, elem.wantKey, output)
+				}
+				if !strings.Contains(output, elem.wantValue) {
+					t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
+						elem.keys, elem.wantValue, elem.wantKey, output)
+				}
+			} else {
+				for _, key := range elem.keys {
+					if strings.Contains(output, key) {
+						t.Errorf("extractor with keys %v: unexpected field %q found in output: %s",
+							elem.keys, key, output)
+					}
+				}
+				if elem.keys == nil && strings.Contains(output, "trace_id") {
+					t.Errorf("extractor with nil keys: unexpected field 'trace_id' found in output: %s", output)
+				}
+			}
+		})
 	}
 }
-func TestWithFormat(t *testing.T) {
+func TestFormat(t *testing.T) {
 	array := []struct {
 		name   string
 		format TypeFormat
 		expect string
 	}{
-		{"Json", FormatJson, `"message":"test"`},
-		{"Text", FormatText, "test"},
+		{"Json", FormatJson, `"message":"test message"`},
+		{"Text", FormatText, "test message"},
 	}
 	for _, elem := range array {
-		t.Run(elem.name, func(t *testing.T) {
+		t.Run("WithFormat/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
 			logger := NewLogger(
 				WithFormat(elem.format),
 				WithMode(ModeSync, buf, 0),
 			)
-			logger.Info("test")
+			logger.Info("test message")
+			output := buf.String()
+			if !strings.Contains(output, elem.expect) {
+				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
+			}
+		})
+		t.Run("SetFormat/"+elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger()
+			logger.SetFormat(elem.format)
+			logger.SetMode(ModeSync, buf, 0)
+			logger.Info("test message")
 			output := buf.String()
 			if !strings.Contains(output, elem.expect) {
 				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
@@ -389,7 +430,7 @@ func TestWithFormat(t *testing.T) {
 		})
 	}
 }
-func TestWithLevel(t *testing.T) {
+func TestLevel(t *testing.T) {
 	array := []struct {
 		name      string
 		level     TypeLevel
@@ -428,7 +469,7 @@ func TestWithLevel(t *testing.T) {
 		{"FATAL->FATAL", LevelFatal, testFatal, true},
 	}
 	for _, elem := range array {
-		t.Run(elem.name, func(t *testing.T) {
+		t.Run("WithLevel/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
 			logger := NewLogger(
 				WithLevel(elem.level),
@@ -442,10 +483,23 @@ func TestWithLevel(t *testing.T) {
 				t.Error("Expected no log, but got output")
 			}
 		})
+		t.Run("SetLevel/"+elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger()
+			logger.SetLevel(elem.level)
+			logger.SetMode(ModeSync, buf, 0)
+			elem.logFunc(logger)
+			if elem.shouldLog && buf.Len() == 0 {
+				t.Error("Expected log to be written, but got nothing")
+			}
+			if !elem.shouldLog && buf.Len() > 0 {
+				t.Error("Expected no log, but got output")
+			}
+		})
 	}
 }
-func TestWithMode(t *testing.T) {
-	t.Run("Async mode", func(t *testing.T) {
+func TestMode(t *testing.T) {
+	t.Run("WithMode/Async", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
 		logger := NewLogger(
 			WithMode(ModeAsync, writerBuf, 1000),
@@ -459,7 +513,20 @@ func TestWithMode(t *testing.T) {
 			t.Error("Async mode: expected message not found")
 		}
 	})
-	t.Run("Sync mode", func(t *testing.T) {
+	t.Run("SetMode/Async", func(t *testing.T) {
+		writerBuf := &bytes.Buffer{}
+		logger := NewLogger()
+		logger.SetMode(ModeAsync, writerBuf, 1000)
+		logger.Info("test message")
+		logger.Sync()
+		if writerBuf.Len() == 0 {
+			t.Error("Async mode: expected output, got nothing")
+		}
+		if !strings.Contains(writerBuf.String(), "test message") {
+			t.Error("Async mode: expected message not found")
+		}
+	})
+	t.Run("WithMode/Sync", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
 		logger := NewLogger(
 			WithMode(ModeSync, writerBuf),
@@ -473,8 +540,21 @@ func TestWithMode(t *testing.T) {
 			t.Error("Sync mode: expected message not found")
 		}
 	})
+	t.Run("SetMode/Sync", func(t *testing.T) {
+		writerBuf := &bytes.Buffer{}
+		logger := NewLogger()
+		logger.SetMode(ModeSync, writerBuf)
+		logger.Info("test message")
+		logger.Sync()
+		if writerBuf.Len() == 0 {
+			t.Error("Sync mode: expected output, got nothing")
+		}
+		if !strings.Contains(writerBuf.String(), "test message") {
+			t.Error("Sync mode: expected message not found")
+		}
+	})
 }
-func TestWithTheme(t *testing.T) {
+func TestTheme(t *testing.T) {
 	array := []struct {
 		name         string
 		theme        TypeTheme
@@ -513,7 +593,7 @@ func TestWithTheme(t *testing.T) {
 		},
 	}
 	for _, elem := range array {
-		t.Run(elem.name, func(t *testing.T) {
+		t.Run("WithTheme/"+elem.name, func(t *testing.T) {
 			testLevel := func(level string, logFunc func(Logger), expectedPrefix string) {
 				t.Helper()
 				r, w, err := os.Pipe()
@@ -552,276 +632,7 @@ func TestWithTheme(t *testing.T) {
 			testLevel("Info", testInfo, elem.prefixInfo)
 			testLevel("Warn", testWarn, elem.prefixWarn)
 		})
-	}
-}
-func TestSetExtractor(t *testing.T) {
-	tests := []struct {
-		name      string
-		keys      []string
-		context   context.Context
-		wantKey   string
-		wantValue string
-		shouldAdd bool
-	}{
-		{
-			name:      "extractor with empty keys",
-			keys:      nil,
-			context:   context.WithValue(context.Background(), "trace_id", "abc-123"),
-			wantKey:   "",
-			wantValue: "",
-			shouldAdd: false,
-		},
-		{
-			name:      "extractor with empty field from context",
-			keys:      []string{"test_empty"},
-			context:   context.Background(),
-			wantKey:   "",
-			wantValue: "",
-			shouldAdd: false,
-		},
-		{
-			name:      "extract with bool field from context",
-			keys:      []string{"test_bool"},
-			context:   context.WithValue(context.Background(), "test_bool", true),
-			wantKey:   "test_bool",
-			wantValue: "true",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with duration field from context",
-			keys:      []string{"test_duration"},
-			context:   context.WithValue(context.Background(), "test_duration", 5*time.Second),
-			wantKey:   "test_duration",
-			wantValue: "5s",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with float64 field from context",
-			keys:      []string{"test_float64"},
-			context:   context.WithValue(context.Background(), "test_float64", 3.14159),
-			wantKey:   "test_float64",
-			wantValue: "3.14159",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with int field from context",
-			keys:      []string{"test_int"},
-			context:   context.WithValue(context.Background(), "test_int", int(12345)),
-			wantKey:   "test_int",
-			wantValue: "12345",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with int64 field from context",
-			keys:      []string{"test_int64"},
-			context:   context.WithValue(context.Background(), "test_int64", int64(12345)),
-			wantKey:   "test_int64",
-			wantValue: "12345",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with string field from context",
-			keys:      []string{"test_string"},
-			context:   context.WithValue(context.Background(), "test_string", "abc-123"),
-			wantKey:   "test_string",
-			wantValue: "abc-123",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with time field from context",
-			keys:      []string{"test_time"},
-			context:   context.WithValue(context.Background(), "test_time", time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)),
-			wantKey:   "test_time",
-			wantValue: "2026-04-10T12:00:00.000000+00:00",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with multiple fields",
-			keys:      []string{"trace_id", "user_id"},
-			context:   context.WithValue(context.WithValue(context.Background(), "trace_id", "abc-123"), "user_id", int64(12345)),
-			wantKey:   "trace_id",
-			wantValue: "abc-123",
-			shouldAdd: true,
-		},
-	}
-	for _, elem := range tests {
-		t.Run(elem.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			logger := NewLogger()
-			logger.SetExtractor(elem.keys...)
-			logger.SetFormat(FormatJson)
-			logger.SetMode(ModeSync, buf)
-			logger.InfoWithContext(elem.context, "test message")
-			logger.Sync()
-			output := buf.String()
-			if elem.shouldAdd {
-				if !strings.Contains(output, elem.wantKey) {
-					t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
-						elem.keys, elem.wantKey, output)
-				}
-				if !strings.Contains(output, elem.wantValue) {
-					t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
-						elem.keys, elem.wantValue, elem.wantKey, output)
-				}
-			} else {
-				for _, key := range elem.keys {
-					if strings.Contains(output, key) {
-						t.Errorf("extractor with keys %v: unexpected field %q found in output: %s",
-							elem.keys, key, output)
-					}
-				}
-				if elem.keys == nil && strings.Contains(output, "trace_id") {
-					t.Errorf("extractor with nil keys: unexpected field 'trace_id' found in output: %s", output)
-				}
-			}
-		})
-	}
-}
-func TestSetFormat(t *testing.T) {
-	array := []struct {
-		name   string
-		format TypeFormat
-		expect string
-	}{
-		{"Json", FormatJson, `"message":"test"`},
-		{"Text", FormatText, "test"},
-	}
-	for _, elem := range array {
-		t.Run(elem.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			logger := NewLogger()
-			logger.SetFormat(elem.format)
-			logger.SetMode(ModeSync, buf, 0)
-			logger.Info("test")
-			output := buf.String()
-			if !strings.Contains(output, elem.expect) {
-				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
-			}
-		})
-	}
-}
-func TestSetLevel(t *testing.T) {
-	array := []struct {
-		name      string
-		level     TypeLevel
-		logFunc   func(Logger)
-		shouldLog bool
-	}{
-		// DEBUG
-		{"DEBUG->DEBUG", LevelDebug, testDebug, true},
-		{"DEBUG->INFO", LevelDebug, testInfo, true},
-		{"DEBUG->WARN", LevelDebug, testWarn, true},
-		{"DEBUG->ERROR", LevelDebug, testError, true},
-		{"DEBUG->FATAL", LevelDebug, testFatal, true},
-		// INFO
-		{"INFO->DEBUG", LevelInfo, testDebug, false},
-		{"INFO->INFO", LevelInfo, testInfo, true},
-		{"INFO->WARN", LevelInfo, testWarn, true},
-		{"INFO->ERROR", LevelInfo, testError, true},
-		{"INFO->FATAL", LevelInfo, testFatal, true},
-		// WARN
-		{"WARN->DEBUG", LevelWarn, testDebug, false},
-		{"WARN->INFO", LevelWarn, testInfo, false},
-		{"WARN->WARN", LevelWarn, testWarn, true},
-		{"WARN->ERROR", LevelWarn, testError, true},
-		{"WARN->FATAL", LevelWarn, testFatal, true},
-		// ERROR
-		{"ERROR->DEBUG", LevelError, testDebug, false},
-		{"ERROR->INFO", LevelError, testInfo, false},
-		{"ERROR->WARN", LevelError, testWarn, false},
-		{"ERROR->ERROR", LevelError, testError, true},
-		{"ERROR->FATAL", LevelError, testFatal, true},
-		// FATAL
-		{"FATAL->DEBUG", LevelFatal, testDebug, false},
-		{"FATAL->INFO", LevelFatal, testInfo, false},
-		{"FATAL->WARN", LevelFatal, testWarn, false},
-		{"FATAL->ERROR", LevelFatal, testError, false},
-		{"FATAL->FATAL", LevelFatal, testFatal, true},
-	}
-	for _, elem := range array {
-		t.Run(elem.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			logger := NewLogger()
-			logger.SetLevel(elem.level)
-			logger.SetMode(ModeSync, buf, 0)
-			elem.logFunc(logger)
-			if elem.shouldLog && buf.Len() == 0 {
-				t.Error("Expected log to be written, but got nothing")
-			}
-			if !elem.shouldLog && buf.Len() > 0 {
-				t.Error("Expected no log, but got output")
-			}
-		})
-	}
-}
-func TestSetMode(t *testing.T) {
-	t.Run("Async mode", func(t *testing.T) {
-		writerBuf := &bytes.Buffer{}
-		logger := NewLogger()
-		logger.SetMode(ModeAsync, writerBuf, 1000)
-		logger.Info("test message")
-		logger.Sync()
-		if writerBuf.Len() == 0 {
-			t.Error("Async mode: expected output, got nothing")
-		}
-		if !strings.Contains(writerBuf.String(), "test message") {
-			t.Error("Async mode: expected message not found")
-		}
-	})
-	t.Run("Sync mode", func(t *testing.T) {
-		writerBuf := &bytes.Buffer{}
-		logger := NewLogger()
-		logger.SetMode(ModeSync, writerBuf)
-		logger.Info("test message")
-		logger.Sync()
-		if writerBuf.Len() == 0 {
-			t.Error("Sync mode: expected output, got nothing")
-		}
-		if !strings.Contains(writerBuf.String(), "test message") {
-			t.Error("Sync mode: expected message not found")
-		}
-	})
-}
-func TestSetTheme(t *testing.T) {
-	array := []struct {
-		name         string
-		theme        TypeTheme
-		callerColor  string
-		messageColor string
-		prefixDebug  string
-		prefixError  string
-		prefixFatal  string
-		prefixInfo   string
-		prefixWarn   string
-		reset        string
-	}{
-		{
-			name:         "Dark theme",
-			theme:        ThemeDark,
-			callerColor:  colorDarkBlue,
-			messageColor: colorDarkWhite,
-			prefixDebug:  colorDarkCyan + "[DEBUG]",
-			prefixError:  colorDarkRed + "[ERROR]",
-			prefixFatal:  colorDarkPurple + "[FATAL]",
-			prefixInfo:   colorDarkGreen + "[INFO]",
-			prefixWarn:   colorDarkYellow + "[WARN]",
-			reset:        colorReset,
-		},
-		{
-			name:         "Light theme",
-			theme:        ThemeLight,
-			callerColor:  colorLightBlue,
-			messageColor: colorLightBlack,
-			prefixDebug:  colorLightCyan + "[DEBUG]",
-			prefixError:  colorLightRed + "[ERROR]",
-			prefixFatal:  colorLightPurple + "[FATAL]",
-			prefixInfo:   colorLightGreen + "[INFO]",
-			prefixWarn:   colorLightYellow + "[WARN]",
-			reset:        colorReset,
-		},
-	}
-	for _, elem := range array {
-		t.Run(elem.name, func(t *testing.T) {
+		t.Run("SetTheme/"+elem.name, func(t *testing.T) {
 			testLevel := func(level string, logFunc func(Logger), expectedPrefix string) {
 				t.Helper()
 				r, w, err := os.Pipe()
@@ -887,38 +698,38 @@ func TestIsIgnoredError(t *testing.T) {
 
 // Приватные функции
 func testDebug(l Logger) {
-	l.Debug("message")
+	l.Debug("test message")
 }
 func testDebugWithContext(l Logger) {
-	l.DebugWithContext(context.Background(), "message")
+	l.DebugWithContext(context.Background(), "test message")
 }
 func testError(l Logger) {
-	l.Error("message")
+	l.Error("test message")
 }
 func testErrorWithContext(l Logger) {
-	l.ErrorWithContext(context.Background(), "message")
+	l.ErrorWithContext(context.Background(), "test message")
 }
 func testFatal(l Logger) {
 	oldExit := osExit
 	osExit = func(int) {}
 	defer func() { osExit = oldExit }()
-	l.Fatal("message")
+	l.Fatal("test message")
 }
 func testFatalWithContext(l Logger) {
 	oldExit := osExit
 	osExit = func(int) {}
 	defer func() { osExit = oldExit }()
-	l.FatalWithContext(context.Background(), "message")
+	l.FatalWithContext(context.Background(), "test message")
 }
 func testInfo(l Logger) {
-	l.Info("message")
+	l.Info("test message")
 }
 func testInfoWithContext(l Logger) {
-	l.InfoWithContext(context.Background(), "message")
+	l.InfoWithContext(context.Background(), "test message")
 }
 func testWarn(l Logger) {
-	l.Warn("message")
+	l.Warn("test message")
 }
 func testWarnWithContext(l Logger) {
-	l.WarnWithContext(context.Background(), "message")
+	l.WarnWithContext(context.Background(), "test message")
 }
