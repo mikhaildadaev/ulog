@@ -18,7 +18,7 @@ func Bool(nameKey string, valueBool bool) Field {
 func Bools(nameKey string, valueBools []bool) Field {
 	return Field{
 		nameKey:    nameKey,
-		typeValue:  FieldBool,
+		typeValue:  FieldBools,
 		valueBools: valueBools,
 	}
 }
@@ -32,7 +32,7 @@ func Duration(nameKey string, valueDuration time.Duration) Field {
 func Durations(nameKey string, valueDurations []time.Duration) Field {
 	return Field{
 		nameKey:        nameKey,
-		typeValue:      FieldDuration,
+		typeValue:      FieldDurations,
 		valueDurations: valueDurations,
 	}
 }
@@ -51,18 +51,18 @@ func Err(err error) Field {
 	}
 }
 func Errs(errs []error) Field {
-	values := make([]string, len(errs))
+	valueStrings := make([]string, len(errs))
 	for i, err := range errs {
 		if err == nil {
-			values[i] = "nil"
+			valueStrings[i] = "nil"
 		} else {
-			values[i] = err.Error()
+			valueStrings[i] = err.Error()
 		}
 	}
 	return Field{
 		nameKey:      "errors",
-		typeValue:    FieldString,
-		valueStrings: values,
+		typeValue:    FieldStrings,
+		valueStrings: valueStrings,
 	}
 }
 func Float64(nameKey string, valueFloat64 float64) Field {
@@ -75,7 +75,7 @@ func Float64(nameKey string, valueFloat64 float64) Field {
 func Floats64(nameKey string, valueFloats64 []float64) Field {
 	return Field{
 		nameKey:       nameKey,
-		typeValue:     FieldFloat64,
+		typeValue:     FieldFloats64,
 		valueFloats64: valueFloats64,
 	}
 }
@@ -89,7 +89,7 @@ func Int(nameKey string, valueInt int) Field {
 func Ints(nameKey string, valueInts []int) Field {
 	return Field{
 		nameKey:   nameKey,
-		typeValue: FieldInt,
+		typeValue: FieldInts,
 		valueInts: valueInts,
 	}
 }
@@ -103,7 +103,7 @@ func Int64(nameKey string, valueInt64 int64) Field {
 func Ints64(nameKey string, valueInts64 []int64) Field {
 	return Field{
 		nameKey:     nameKey,
-		typeValue:   FieldInt64,
+		typeValue:   FieldInts64,
 		valueInts64: valueInts64,
 	}
 }
@@ -117,7 +117,7 @@ func String(nameKey string, valueString string) Field {
 func Strings(nameKey string, valueStrings []string) Field {
 	return Field{
 		nameKey:      nameKey,
-		typeValue:    FieldString,
+		typeValue:    FieldStrings,
 		valueStrings: valueStrings,
 	}
 }
@@ -131,7 +131,7 @@ func Time(nameKey string, valueTime time.Time) Field {
 func Times(nameKey string, valueTimes []time.Time) Field {
 	return Field{
 		nameKey:    nameKey,
-		typeValue:  FieldTime,
+		typeValue:  FieldTimes,
 		valueTimes: valueTimes,
 	}
 }
