@@ -486,6 +486,38 @@ func TestLevel(t *testing.T) {
 		})
 	}
 }
+func TestLogger(t *testing.T) {
+	buf := &bytes.Buffer{}
+	logger := NewLogger(
+		WithFormat(FormatText),
+		WithMode(ModeSync, buf),
+	)
+	if logger == nil {
+		t.Fatal("NewLogger returned nil")
+	}
+	logger.Info("test message")
+	if buf.Len() == 0 {
+		t.Error("Logger produced no buf")
+	}
+	if !strings.Contains(buf.String(), "test message") {
+		t.Errorf("Expected 'test message', got %q", buf.String())
+	}
+}
+func TestLoggerLog(t *testing.T) {
+	buf := &bytes.Buffer{}
+	logger := NewLogger(
+		WithFormat(FormatText),
+		WithMode(ModeSync, buf),
+	)
+	loggerLog := NewLoggerLog(LevelInfo, logger)
+	loggerLog.Print("test message")
+	if buf.Len() == 0 {
+		t.Error("Logger produced no buf")
+	}
+	if !strings.Contains(buf.String(), "test message") {
+		t.Errorf("Expected 'test message', got %q", buf.String())
+	}
+}
 func TestMethod(t *testing.T) {
 	array := []struct {
 		name      string
