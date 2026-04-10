@@ -79,6 +79,7 @@ go get github.com/mikhaildadaev/ulog
 ### Single Thread
 
 | Level	|  Mode | Format | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|-------|--------|--------------|---------------|--------|
 | Debug | Async | Simple |     	   0.56 |             0 |      0 |
 | Debug	| Async | Format |          119 |	        576 |      1 |
 | Debug	|  Sync | Simple |         0.57 |	          0 |      0 |
@@ -99,6 +100,7 @@ go get github.com/mikhaildadaev/ulog
 ### Multi Thread
 
 | Level |  Mode | Format | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|-------|--------|--------------|---------------|--------|
 | Debug | Async | Simple |	       0.56 |	          0 |      0 |
 | Debug | Async | Format |    	    119 |           576 |      1 |
 | Debug |  Sync | Simple |    	   0.57 |	          0 |      0 |
@@ -115,7 +117,6 @@ go get github.com/mikhaildadaev/ulog
 | Error | Async | Format |    	    363 |        	733 |      4 |
 | Error |  Sync | Simple |    	    107 |        	 24 |      1 |
 | Error |  Sync | Format |    	    198 |        	605 |      3 |
-...
 
 *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
