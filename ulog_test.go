@@ -140,26 +140,7 @@ func TestExtractor(t *testing.T) {
 			logger.InfoWithContext(elem.context, "test message")
 			logger.Sync()
 			output := buf.String()
-			if elem.shouldAdd {
-				if !strings.Contains(output, elem.wantKey) {
-					t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
-						elem.keys, elem.wantKey, output)
-				}
-				if !strings.Contains(output, elem.wantValue) {
-					t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
-						elem.keys, elem.wantValue, elem.wantKey, output)
-				}
-			} else {
-				for _, key := range elem.keys {
-					if strings.Contains(output, key) {
-						t.Errorf("extractor with keys %v: unexpected field %q found in output: %s",
-							elem.keys, key, output)
-					}
-				}
-				if elem.keys == nil && strings.Contains(output, "trace_id") {
-					t.Errorf("extractor with nil keys: unexpected field 'trace_id' found in output: %s", output)
-				}
-			}
+			checkExtractor(t, elem, output)
 		})
 		t.Run("SetExtractor/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
@@ -170,26 +151,7 @@ func TestExtractor(t *testing.T) {
 			logger.InfoWithContext(elem.context, "test message")
 			logger.Sync()
 			output := buf.String()
-			if elem.shouldAdd {
-				if !strings.Contains(output, elem.wantKey) {
-					t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
-						elem.keys, elem.wantKey, output)
-				}
-				if !strings.Contains(output, elem.wantValue) {
-					t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
-						elem.keys, elem.wantValue, elem.wantKey, output)
-				}
-			} else {
-				for _, key := range elem.keys {
-					if strings.Contains(output, key) {
-						t.Errorf("extractor with keys %v: unexpected field %q found in output: %s",
-							elem.keys, key, output)
-					}
-				}
-				if elem.keys == nil && strings.Contains(output, "trace_id") {
-					t.Errorf("extractor with nil keys: unexpected field 'trace_id' found in output: %s", output)
-				}
-			}
+			checkExtractor(t, elem, output)
 		})
 	}
 }
@@ -702,18 +664,7 @@ func TestTheme(t *testing.T) {
 					t.Fatal(err)
 				}
 				outputStr := string(output)
-				if !strings.Contains(outputStr, elem.callerColor) && level == "DEBUG" {
-					t.Errorf("%s: expected prefix %q not found in %q", level, elem.callerColor, outputStr)
-				}
-				if !strings.Contains(outputStr, expectedPrefix) {
-					t.Errorf("%s: expected prefix %q not found in %q", level, expectedPrefix, outputStr)
-				}
-				if !strings.Contains(outputStr, elem.messageColor) {
-					t.Errorf("%s: expected message color %q not found", level, elem.messageColor)
-				}
-				if !strings.Contains(outputStr, elem.reset) {
-					t.Errorf("%s: expected message color %q not found", level, elem.reset)
-				}
+				checkTheme(t, level, expectedPrefix, elem, outputStr)
 			}
 			testLevel("Debug", testDebug, elem.prefixDebug)
 			testLevel("Error", testError, elem.prefixError)
@@ -786,6 +737,61 @@ func TestIsIgnoredError(t *testing.T) {
 }
 
 // Приватные функции
+func checkExtractor(t *testing.T, elem struct {
+	name      string
+	keys      []string
+	context   context.Context
+	wantKey   string
+	wantValue string
+	shouldAdd bool
+}, output string) {
+	t.Helper()
+	if elem.shouldAdd {
+		if !strings.Contains(output, elem.wantKey) {
+			t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
+				elem.keys, elem.wantKey, output)
+		}
+		if !strings.Contains(output, elem.wantValue) {
+			t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
+				elem.keys, elem.wantValue, elem.wantKey, output)
+		}
+	} else {
+		for _, key := range elem.keys {
+			if strings.Contains(output, key) {
+				t.Errorf("extractor with keys %v: unexpected field %q found in output: %s",
+					elem.keys, key, output)
+			}
+		}
+		if elem.keys == nil && strings.Contains(output, "trace_id") {
+			t.Errorf("extractor with nil keys: unexpected field 'trace_id' found in output: %s", output)
+		}
+	}
+}
+func checkTheme(t *testing.T, level, expectedPrefix string, elem struct {
+	name         string
+	theme        TypeTheme
+	callerColor  string
+	messageColor string
+	prefixDebug  string
+	prefixError  string
+	prefixFatal  string
+	prefixInfo   string
+	prefixWarn   string
+	reset        string
+}, output string) {
+	if !strings.Contains(output, elem.callerColor) && level == "DEBUG" {
+		t.Errorf("%s: expected prefix %q not found in %q", level, elem.callerColor, output)
+	}
+	if !strings.Contains(output, expectedPrefix) {
+		t.Errorf("%s: expected prefix %q not found in %q", level, expectedPrefix, output)
+	}
+	if !strings.Contains(output, elem.messageColor) {
+		t.Errorf("%s: expected message color %q not found", level, elem.messageColor)
+	}
+	if !strings.Contains(output, elem.reset) {
+		t.Errorf("%s: expected message color %q not found", level, elem.reset)
+	}
+}
 func testDebug(l Logger) {
 	l.Debug("test message")
 }
