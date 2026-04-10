@@ -12,7 +12,161 @@ import (
 )
 
 // Тесты публичных копонентов
-func TestFields(t *testing.T) {
+func TestExtractor(t *testing.T) {
+	tests := []struct {
+		name      string
+		keys      []string
+		context   context.Context
+		wantKey   string
+		wantValue string
+		shouldAdd bool
+	}{
+		{
+			name:      "extractor with empty keys",
+			keys:      nil,
+			context:   context.WithValue(context.Background(), "trace_id", "abc-123"),
+			wantKey:   "",
+			wantValue: "",
+			shouldAdd: false,
+		},
+		{
+			name:      "extractor with empty field from context",
+			keys:      []string{"test_empty"},
+			context:   context.Background(),
+			wantKey:   "",
+			wantValue: "",
+			shouldAdd: false,
+		},
+		{
+			name:      "extract with bool field from context",
+			keys:      []string{"test_bool"},
+			context:   context.WithValue(context.Background(), "test_bool", true),
+			wantKey:   "test_bool",
+			wantValue: "true",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with duration field from context",
+			keys:      []string{"test_duration"},
+			context:   context.WithValue(context.Background(), "test_duration", 5*time.Second),
+			wantKey:   "test_duration",
+			wantValue: "5s",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with float64 field from context",
+			keys:      []string{"test_float64"},
+			context:   context.WithValue(context.Background(), "test_float64", 3.14159),
+			wantKey:   "test_float64",
+			wantValue: "3.14159",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with int field from context",
+			keys:      []string{"test_int"},
+			context:   context.WithValue(context.Background(), "test_int", int(12345)),
+			wantKey:   "test_int",
+			wantValue: "12345",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with int64 field from context",
+			keys:      []string{"test_int64"},
+			context:   context.WithValue(context.Background(), "test_int64", int64(12345)),
+			wantKey:   "test_int64",
+			wantValue: "12345",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with string field from context",
+			keys:      []string{"test_string"},
+			context:   context.WithValue(context.Background(), "test_string", "abc-123"),
+			wantKey:   "test_string",
+			wantValue: "abc-123",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with time field from context",
+			keys:      []string{"test_time"},
+			context:   context.WithValue(context.Background(), "test_time", time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)),
+			wantKey:   "test_time",
+			wantValue: "2026-04-10T12:00:00.000000+00:00",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with multiple fields",
+			keys:      []string{"trace_id", "user_id"},
+			context:   context.WithValue(context.WithValue(context.Background(), "trace_id", "abc-123"), "user_id", int64(12345)),
+			wantKey:   "trace_id",
+			wantValue: "abc-123",
+			shouldAdd: true,
+		},
+	}
+	for _, elem := range tests {
+		t.Run("WithExtractor/"+elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger(
+				WithExtractor(elem.keys...),
+				WithFormat(FormatJson),
+				WithMode(ModeSync, buf),
+			)
+			logger.InfoWithContext(elem.context, "test message")
+			logger.Sync()
+			output := buf.String()
+			if elem.shouldAdd {
+				if !strings.Contains(output, elem.wantKey) {
+					t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
+						elem.keys, elem.wantKey, output)
+				}
+				if !strings.Contains(output, elem.wantValue) {
+					t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
+						elem.keys, elem.wantValue, elem.wantKey, output)
+				}
+			} else {
+				for _, key := range elem.keys {
+					if strings.Contains(output, key) {
+						t.Errorf("extractor with keys %v: unexpected field %q found in output: %s",
+							elem.keys, key, output)
+					}
+				}
+				if elem.keys == nil && strings.Contains(output, "trace_id") {
+					t.Errorf("extractor with nil keys: unexpected field 'trace_id' found in output: %s", output)
+				}
+			}
+		})
+		t.Run("SetExtractor/"+elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger()
+			logger.SetExtractor(elem.keys...)
+			logger.SetFormat(FormatJson)
+			logger.SetMode(ModeSync, buf)
+			logger.InfoWithContext(elem.context, "test message")
+			logger.Sync()
+			output := buf.String()
+			if elem.shouldAdd {
+				if !strings.Contains(output, elem.wantKey) {
+					t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
+						elem.keys, elem.wantKey, output)
+				}
+				if !strings.Contains(output, elem.wantValue) {
+					t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
+						elem.keys, elem.wantValue, elem.wantKey, output)
+				}
+			} else {
+				for _, key := range elem.keys {
+					if strings.Contains(output, key) {
+						t.Errorf("extractor with keys %v: unexpected field %q found in output: %s",
+							elem.keys, key, output)
+					}
+				}
+				if elem.keys == nil && strings.Contains(output, "trace_id") {
+					t.Errorf("extractor with nil keys: unexpected field 'trace_id' found in output: %s", output)
+				}
+			}
+		})
+	}
+}
+func TestField(t *testing.T) {
 	t.Run("Bool", func(t *testing.T) {
 		f := Bool("active", true)
 		if f.nameKey != "active" {
@@ -202,199 +356,6 @@ func TestFields(t *testing.T) {
 		}
 	})
 }
-func TestMethods(t *testing.T) {
-	array := []struct {
-		name      string
-		logFunc   func(Logger)
-		level     TypeLevel
-		shouldLog bool
-	}{
-		// DEBUG
-		{"DEBUG", testDebug, LevelDebug, true},
-		{"DEBUG/WithContext", testDebugWithContext, LevelDebug, true},
-		// ERROR
-		{"ERROR", testError, LevelError, true},
-		{"ERROR/WithContext", testErrorWithContext, LevelError, true},
-		// FATAL
-		{"FATAL", testFatal, LevelFatal, true},
-		{"FATAL/WithContext", testFatalWithContext, LevelFatal, true},
-		// INFO
-		{"INFO", testInfo, LevelInfo, true},
-		{"INFO/WithContext", testInfoWithContext, LevelInfo, true},
-		// WARN
-		{"WARN", testWarn, LevelWarn, true},
-		{"WARN/WithContext", testWarnWithContext, LevelWarn, true},
-	}
-	for _, elem := range array {
-		t.Run(elem.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			logger := NewLogger(
-				WithMode(ModeSync, buf),
-				WithLevel(elem.level),
-			)
-			elem.logFunc(logger)
-			logger.Sync()
-			output := buf.String()
-			if elem.shouldLog && !strings.Contains(output, "test message") {
-				t.Errorf("Expected message not found in output: %q", output)
-			}
-		})
-	}
-}
-func TestExtractor(t *testing.T) {
-	tests := []struct {
-		name      string
-		keys      []string
-		context   context.Context
-		wantKey   string
-		wantValue string
-		shouldAdd bool
-	}{
-		{
-			name:      "extractor with empty keys",
-			keys:      nil,
-			context:   context.WithValue(context.Background(), "trace_id", "abc-123"),
-			wantKey:   "",
-			wantValue: "",
-			shouldAdd: false,
-		},
-		{
-			name:      "extractor with empty field from context",
-			keys:      []string{"test_empty"},
-			context:   context.Background(),
-			wantKey:   "",
-			wantValue: "",
-			shouldAdd: false,
-		},
-		{
-			name:      "extract with bool field from context",
-			keys:      []string{"test_bool"},
-			context:   context.WithValue(context.Background(), "test_bool", true),
-			wantKey:   "test_bool",
-			wantValue: "true",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with duration field from context",
-			keys:      []string{"test_duration"},
-			context:   context.WithValue(context.Background(), "test_duration", 5*time.Second),
-			wantKey:   "test_duration",
-			wantValue: "5s",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with float64 field from context",
-			keys:      []string{"test_float64"},
-			context:   context.WithValue(context.Background(), "test_float64", 3.14159),
-			wantKey:   "test_float64",
-			wantValue: "3.14159",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with int field from context",
-			keys:      []string{"test_int"},
-			context:   context.WithValue(context.Background(), "test_int", int(12345)),
-			wantKey:   "test_int",
-			wantValue: "12345",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with int64 field from context",
-			keys:      []string{"test_int64"},
-			context:   context.WithValue(context.Background(), "test_int64", int64(12345)),
-			wantKey:   "test_int64",
-			wantValue: "12345",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with string field from context",
-			keys:      []string{"test_string"},
-			context:   context.WithValue(context.Background(), "test_string", "abc-123"),
-			wantKey:   "test_string",
-			wantValue: "abc-123",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with time field from context",
-			keys:      []string{"test_time"},
-			context:   context.WithValue(context.Background(), "test_time", time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)),
-			wantKey:   "test_time",
-			wantValue: "2026-04-10T12:00:00.000000+00:00",
-			shouldAdd: true,
-		},
-		{
-			name:      "extract with multiple fields",
-			keys:      []string{"trace_id", "user_id"},
-			context:   context.WithValue(context.WithValue(context.Background(), "trace_id", "abc-123"), "user_id", int64(12345)),
-			wantKey:   "trace_id",
-			wantValue: "abc-123",
-			shouldAdd: true,
-		},
-	}
-	for _, elem := range tests {
-		t.Run("WithExtractor/"+elem.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			logger := NewLogger(
-				WithExtractor(elem.keys...),
-				WithFormat(FormatJson),
-				WithMode(ModeSync, buf),
-			)
-			logger.InfoWithContext(elem.context, "test message")
-			logger.Sync()
-			output := buf.String()
-			if elem.shouldAdd {
-				if !strings.Contains(output, elem.wantKey) {
-					t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
-						elem.keys, elem.wantKey, output)
-				}
-				if !strings.Contains(output, elem.wantValue) {
-					t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
-						elem.keys, elem.wantValue, elem.wantKey, output)
-				}
-			} else {
-				for _, key := range elem.keys {
-					if strings.Contains(output, key) {
-						t.Errorf("extractor with keys %v: unexpected field %q found in output: %s",
-							elem.keys, key, output)
-					}
-				}
-				if elem.keys == nil && strings.Contains(output, "trace_id") {
-					t.Errorf("extractor with nil keys: unexpected field 'trace_id' found in output: %s", output)
-				}
-			}
-		})
-		t.Run("SetExtractor/"+elem.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			logger := NewLogger()
-			logger.SetExtractor(elem.keys...)
-			logger.SetFormat(FormatJson)
-			logger.SetMode(ModeSync, buf)
-			logger.InfoWithContext(elem.context, "test message")
-			logger.Sync()
-			output := buf.String()
-			if elem.shouldAdd {
-				if !strings.Contains(output, elem.wantKey) {
-					t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
-						elem.keys, elem.wantKey, output)
-				}
-				if !strings.Contains(output, elem.wantValue) {
-					t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
-						elem.keys, elem.wantValue, elem.wantKey, output)
-				}
-			} else {
-				for _, key := range elem.keys {
-					if strings.Contains(output, key) {
-						t.Errorf("extractor with keys %v: unexpected field %q found in output: %s",
-							elem.keys, key, output)
-					}
-				}
-				if elem.keys == nil && strings.Contains(output, "trace_id") {
-					t.Errorf("extractor with nil keys: unexpected field 'trace_id' found in output: %s", output)
-				}
-			}
-		})
-	}
-}
 func TestFormat(t *testing.T) {
 	array := []struct {
 		name   string
@@ -494,6 +455,45 @@ func TestLevel(t *testing.T) {
 			}
 			if !elem.shouldLog && buf.Len() > 0 {
 				t.Error("Expected no log, but got output")
+			}
+		})
+	}
+}
+func TestMethod(t *testing.T) {
+	array := []struct {
+		name      string
+		logFunc   func(Logger)
+		level     TypeLevel
+		shouldLog bool
+	}{
+		// DEBUG
+		{"DEBUG", testDebug, LevelDebug, true},
+		{"DEBUG/WithContext", testDebugWithContext, LevelDebug, true},
+		// ERROR
+		{"ERROR", testError, LevelError, true},
+		{"ERROR/WithContext", testErrorWithContext, LevelError, true},
+		// FATAL
+		{"FATAL", testFatal, LevelFatal, true},
+		{"FATAL/WithContext", testFatalWithContext, LevelFatal, true},
+		// INFO
+		{"INFO", testInfo, LevelInfo, true},
+		{"INFO/WithContext", testInfoWithContext, LevelInfo, true},
+		// WARN
+		{"WARN", testWarn, LevelWarn, true},
+		{"WARN/WithContext", testWarnWithContext, LevelWarn, true},
+	}
+	for _, elem := range array {
+		t.Run(elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger(
+				WithMode(ModeSync, buf),
+				WithLevel(elem.level),
+			)
+			elem.logFunc(logger)
+			logger.Sync()
+			output := buf.String()
+			if elem.shouldLog && !strings.Contains(output, "test message") {
+				t.Errorf("Expected message not found in output: %q", output)
 			}
 		})
 	}
