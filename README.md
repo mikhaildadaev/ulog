@@ -76,27 +76,6 @@ go get github.com/mikhaildadaev/ulog
 
 ## Performance
 
-### Single Thread
-
-| Level	|  Mode | Format | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|-------|--------|--------------|---------------|--------|
-| Debug | Async | Simple |     	   0.56 |             0 |      0 |
-| Debug	| Async | Format |          119 |	        576 |      1 |
-| Debug	|  Sync | Simple |         0.57 |	          0 |      0 |
-| Debug	|  Sync | Format |          113 |	        576 |      1 |
-|  Info	| Async | Simple |          167 |	        104 |      2 |
-|  Info	| Async | Format |          255 |	        733 |      4 |
-|  Info	|  Sync | Simple |          101 |	         24 |      1 |
-|  Info	|  Sync | Format |          175 |	        605 |      3 |
-|  Warn	| Async | Simple |          161 |	        104 |      2 |
-|  Warn	| Async | Format |          267 |	        733 |      4 |
-|  Warn	|  Sync | Simple |          109 |	         24 |      1 |
-|  Warn	|  Sync | Format |          166 |	        605 |      3 |
-| Error	| Async | Simple |          187 |	        120 |      2 |
-| Error	| Async | Format |          363 |	        733 |      4 |
-| Error	|  Sync | Simple |          107 |	         24 |      1 |
-| Error	|  Sync | Format |          198 |	        605 |	   3 |
-
 ### Multi Thread
 
 | Level |  Mode | Format | Time (ns/op) | Memory (B/op) | Allocs |
@@ -117,6 +96,27 @@ go get github.com/mikhaildadaev/ulog
 | Error | Async | Format |    	    363 |        	733 |      4 |
 | Error |  Sync | Simple |    	    107 |        	 24 |      1 |
 | Error |  Sync | Format |    	    198 |        	605 |      3 |
+
+### Single Thread
+
+| Level	|  Mode | Format | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|-------|--------|--------------|---------------|--------|
+| Debug | Async | Simple |     	   0.56 |             0 |      0 |
+| Debug	| Async | Format |          119 |	        576 |      1 |
+| Debug	|  Sync | Simple |         0.57 |	          0 |      0 |
+| Debug	|  Sync | Format |          113 |	        576 |      1 |
+|  Info	| Async | Simple |          167 |	        104 |      2 |
+|  Info	| Async | Format |          255 |	        733 |      4 |
+|  Info	|  Sync | Simple |          101 |	         24 |      1 |
+|  Info	|  Sync | Format |          175 |	        605 |      3 |
+|  Warn	| Async | Simple |          161 |	        104 |      2 |
+|  Warn	| Async | Format |          267 |	        733 |      4 |
+|  Warn	|  Sync | Simple |          109 |	         24 |      1 |
+|  Warn	|  Sync | Format |          166 |	        605 |      3 |
+| Error	| Async | Simple |          187 |	        120 |      2 |
+| Error	| Async | Format |          363 |	        733 |      4 |
+| Error	|  Sync | Simple |          107 |	         24 |      1 |
+| Error	|  Sync | Format |          198 |	        605 |	   3 |
 
 *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
