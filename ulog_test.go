@@ -12,6 +12,33 @@ import (
 )
 
 // Тесты публичных копонентов
+func TestClose(t *testing.T) {
+	t.Run("Close/Async", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		logger := NewLogger(WithMode(ModeAsync, buf, 100))
+		logger.Info("test message")
+		err := logger.Close()
+		if err != nil {
+			t.Errorf("Close() returned error: %v", err)
+		}
+		output := buf.String()
+		if !strings.Contains(output, "test message") {
+			t.Error("Message not written after Close")
+		}
+	})
+	t.Run("Close/Sync", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		logger := NewLogger(WithMode(ModeSync, buf))
+		err := logger.Close()
+		if err != nil {
+			t.Errorf("Close() returned error: %v", err)
+		}
+		logger.Info("after close")
+		if buf.Len() == 0 {
+			t.Error("Logger stopped working after Close in sync mode")
+		}
+	})
+}
 func TestExtractor(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -551,6 +578,36 @@ func TestMode(t *testing.T) {
 		}
 		if !strings.Contains(writerBuf.String(), "test message") {
 			t.Error("Sync mode: expected message not found")
+		}
+	})
+}
+func TestSync(t *testing.T) {
+	t.Run("Sync/Async", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		logger := NewLogger(WithMode(ModeAsync, buf, 1000))
+		defer logger.Close()
+		logger.Info("test message")
+		err := logger.Sync()
+		if err != nil {
+			t.Errorf("Sync() returned error: %v", err)
+		}
+		output := buf.String()
+		if !strings.Contains(output, "test message") {
+			t.Error("Message not written after Sync")
+		}
+	})
+	t.Run("Sync/Sync", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		logger := NewLogger(WithMode(ModeSync, buf))
+		defer logger.Close()
+		logger.Info("test message")
+		err := logger.Sync()
+		if err != nil {
+			t.Errorf("Sync() returned error: %v", err)
+		}
+		output := buf.String()
+		if !strings.Contains(output, "test message") {
+			t.Error("Message not written after Sync")
 		}
 	})
 }
