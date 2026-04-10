@@ -14,8 +14,8 @@ A high-performance, zero-dependency structured logger for Go with JSON and Text 
 - **Two output formats** – JSON (machine) and TEXT (human) with colors;
 - **Async writer** – non‑blocking logging with configurable buffer;
 - **Context‑aware** – automatic field extraction (trace_id, user_id, etc.);
-- **Structured fields** – type‑safe fields: `String()`, `Int()`, `Time()`, `Err()`, etc.;
-- **Fully configurable** – functional options (`WithLevel`, `WithTheme`, `WithMode`, …);
+- **Structured fields** – type‑safe fields: `String()`, `Int()`, `Time()`, `Error()`, etc.;
+- **Fully configurable** – functional options: `WithLevel`, `WithTheme`, `WithMode`, etc.;
 - **Zero dependencies** – only standard library;
 - **Tested** – race‑free, high coverage, benchmarks included.
 
@@ -33,8 +33,8 @@ go get github.com/mikhaildadaev/ulog
 - ulog.Bools(key string, value []bool) Field
 - ulog.Duration(key string, value time.Duration) Field
 - ulog.Durations(key string, value []time.Duration) Field
-- ulog.Err(err error) Field
-- ulog.Errs(errs []error) Field
+- ulog.Error(err error) Field
+- ulog.Errors(errs []error) Field
 - ulog.Float64(key string, value float64) Field
 - ulog.Floats64(key string, value []float64) Field
 - ulog.Int(key string, value int) Field
@@ -76,6 +76,43 @@ go get github.com/mikhaildadaev/ulog
 
 ## Performance
 
+Single Thread
+| Level	|  Mode | Format | Time (ns/op) | Memory (B/op) | Allocs |
+| Debug | Async | Simple |     	   0.56 |             0 |      0 |
+| Debug	| Async | Format |          119 |	        576 |      1 |
+| Debug	|  Sync | Simple |         0.57 |	          0 |      0 |
+| Debug	|  Sync | Format |          113 |	        576 |      1 |
+|  Info	| Async | Simple |          167 |	        104 |      2 |
+|  Info	| Async | Format |          255 |	        733 |      4 |
+|  Info	|  Sync | Simple |          101 |	         24 |      1 |
+|  Info	|  Sync | Format |          175 |	        605 |      3 |
+|  Warn	| Async | Simple |          161 |	        104 |      2 |
+|  Warn	| Async | Format |          267 |	        733 |      4 |
+|  Warn	|  Sync | Simple |          109 |	         24 |      1 |
+|  Warn	|  Sync | Format |          166 |	        605 |      3 |
+| Error	| Async | Simple |          187 |	        120 |      2 |
+| Error	| Async | Format |          363 |	        733 |      4 |
+| Error	|  Sync | Simple |          107 |	         24 |      1 |
+| Error	|  Sync | Format |          198 |	        605 |	   3 |
+
+Multi Thread
+| Level |  Mode | Format | Time (ns/op) | Memory (B/op) | Allocs |
+| Debug | Async | Simple |	       0.56 |	          0 |      0 |
+| Debug | Async | Format |    	    119 |           576 |      1 |
+| Debug |  Sync | Simple |    	   0.57 |	          0 |      0 |
+| Debug |  Sync | Format |    	    113 |	        576 |      1 |
+|  Info | Async | Simple |    	    167 |	        104 |      2 |
+|  Info | Async | Format |    	    255 |	        733 |      4 |
+|  Info |  Sync | Simple |    	    101 | 	       	 24 |      1 |
+|  Info |  Sync | Format |    	    175 |	        605 |      3 |
+|  Warn | Async | Simple |    	    161 |        	104 |      2 |
+|  Warn | Async | Format |    	    267 |        	733 |      4 |
+|  Warn |  Sync | Simple |    	    109 |        	 24 |      1 |
+|  Warn |  Sync | Format |    	    166 |        	605 |      3 |
+| Error | Async | Simple |    	    187 |        	120 |      2 |
+| Error | Async | Format |    	    363 |        	733 |      4 |
+| Error |  Sync | Simple |    	    107 |        	 24 |      1 |
+| Error |  Sync | Format |    	    198 |        	605 |      3 |
 ...
 
 *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
