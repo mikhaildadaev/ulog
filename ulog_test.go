@@ -242,7 +242,128 @@ func TestMethods(t *testing.T) {
 	}
 }
 func TestWithExtractor(t *testing.T) {
-	// Дописать
+	tests := []struct {
+		name      string
+		keys      []string
+		context   context.Context
+		wantKey   string
+		wantValue string
+		shouldAdd bool
+	}{
+		{
+			name:      "extractor with empty keys",
+			keys:      nil,
+			context:   context.WithValue(context.Background(), "trace_id", "abc-123"),
+			wantKey:   "",
+			wantValue: "",
+			shouldAdd: false,
+		},
+		{
+			name:      "extractor with empty field from context",
+			keys:      []string{"test_empty"},
+			context:   context.Background(),
+			wantKey:   "",
+			wantValue: "",
+			shouldAdd: false,
+		},
+		{
+			name:      "extract with bool field from context",
+			keys:      []string{"test_bool"},
+			context:   context.WithValue(context.Background(), "test_bool", true),
+			wantKey:   "test_bool",
+			wantValue: "true",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with duration field from context",
+			keys:      []string{"test_duration"},
+			context:   context.WithValue(context.Background(), "test_duration", 5*time.Second),
+			wantKey:   "test_duration",
+			wantValue: "5s",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with float64 field from context",
+			keys:      []string{"test_float64"},
+			context:   context.WithValue(context.Background(), "test_float64", 3.14159),
+			wantKey:   "test_float64",
+			wantValue: "3.14159",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with int field from context",
+			keys:      []string{"test_int"},
+			context:   context.WithValue(context.Background(), "test_int", int(12345)),
+			wantKey:   "test_int",
+			wantValue: "12345",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with int64 field from context",
+			keys:      []string{"test_int64"},
+			context:   context.WithValue(context.Background(), "test_int64", int64(12345)),
+			wantKey:   "test_int64",
+			wantValue: "12345",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with string field from context",
+			keys:      []string{"test_string"},
+			context:   context.WithValue(context.Background(), "test_string", "abc-123"),
+			wantKey:   "test_string",
+			wantValue: "abc-123",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with time field from context",
+			keys:      []string{"test_time"},
+			context:   context.WithValue(context.Background(), "test_time", time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)),
+			wantKey:   "test_time",
+			wantValue: "2026-04-10T12:00:00.000000+00:00",
+			shouldAdd: true,
+		},
+		{
+			name:      "extract with multiple fields",
+			keys:      []string{"trace_id", "user_id"},
+			context:   context.WithValue(context.WithValue(context.Background(), "trace_id", "abc-123"), "user_id", int64(12345)),
+			wantKey:   "trace_id",
+			wantValue: "abc-123",
+			shouldAdd: true,
+		},
+	}
+	for _, elem := range tests {
+		t.Run(elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger(
+				WithExtractor(elem.keys...),
+				WithFormat(FormatJson),
+				WithMode(ModeSync, buf),
+			)
+			logger.InfoWithContext(elem.context, "test message")
+			logger.Sync()
+			output := buf.String()
+			if elem.shouldAdd {
+				if !strings.Contains(output, elem.wantKey) {
+					t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
+						elem.keys, elem.wantKey, output)
+				}
+				if !strings.Contains(output, elem.wantValue) {
+					t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
+						elem.keys, elem.wantValue, elem.wantKey, output)
+				}
+			} else {
+				for _, key := range elem.keys {
+					if strings.Contains(output, key) {
+						t.Errorf("extractor with keys %v: unexpected field %q found in output: %s",
+							elem.keys, key, output)
+					}
+				}
+				if elem.keys == nil && strings.Contains(output, "trace_id") {
+					t.Errorf("extractor with nil keys: unexpected field 'trace_id' found in output: %s", output)
+				}
+			}
+		})
+	}
 }
 func TestWithFormat(t *testing.T) {
 	array := []struct {

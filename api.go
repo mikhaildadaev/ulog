@@ -23,7 +23,7 @@ func WithExtractor(keys ...string) OptionLogger {
 					case int:
 						fields = append(fields, Int(key, v))
 					case int64:
-						fields = append(fields, Int64(key, int64(v)))
+						fields = append(fields, Int64(key, v))
 					case float32:
 						fields = append(fields, Float64(key, float64(v)))
 					case float64:

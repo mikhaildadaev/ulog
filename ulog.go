@@ -201,14 +201,14 @@ func Ints(nameKey string, valueInts []int) Field {
 func Int64(nameKey string, valueInt64 int64) Field {
 	return Field{
 		nameKey:    nameKey,
-		typeValue:  FieldInt,
+		typeValue:  FieldInt64,
 		valueInt64: valueInt64,
 	}
 }
 func Ints64(nameKey string, valueInts64 []int64) Field {
 	return Field{
 		nameKey:     nameKey,
-		typeValue:   FieldInt,
+		typeValue:   FieldInt64,
 		valueInts64: valueInts64,
 	}
 }
