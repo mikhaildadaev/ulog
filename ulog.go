@@ -81,7 +81,7 @@ type Logger interface {
 	InfoWithContext(ctx context.Context, msg string, fields ...Field)
 	Warn(message string, fields ...Field)
 	WarnWithContext(ctx context.Context, msg string, fields ...Field)
-	SetExtractor(extractor ContextExtractor)
+	SetExtractor(keys ...string)
 	SetFormat(format TypeFormat)
 	SetLevel(level TypeLevel)
 	SetMode(mode TypeMode, writer io.Writer, bufferSize ...int)

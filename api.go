@@ -2,14 +2,41 @@ package ulog
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"time"
 )
 
 // Публичные функции
-func WithExtractor(extractor ContextExtractor) OptionLogger {
+func WithExtractor(keys ...string) OptionLogger {
 	return func(universalLogger *universalLogger) {
-		universalLogger.extractor = extractor
+		universalLogger.extractor = func(ctx context.Context) []Field {
+			if ctx == nil {
+				return nil
+			}
+			fields := make([]Field, 0, len(keys))
+			for _, key := range keys {
+				if val := ctx.Value(key); val != nil {
+					switch v := val.(type) {
+					case string:
+						fields = append(fields, String(key, v))
+					case int:
+						fields = append(fields, Int(key, v))
+					case int64:
+						fields = append(fields, Int64(key, int64(v)))
+					case float32:
+						fields = append(fields, Float64(key, float64(v)))
+					case float64:
+						fields = append(fields, Float64(key, v))
+					case bool:
+						fields = append(fields, Bool(key, v))
+					default:
+						fields = append(fields, String(key, fmt.Sprintf("%v", v)))
+					}
+				}
+			}
+			return fields
+		}
 	}
 }
 func WithFormat(format TypeFormat) OptionLogger {
@@ -175,10 +202,36 @@ func (universalLogger *universalLogger) WarnWithContext(context context.Context,
 		universalLogger.writeText(LevelWarn, context, message, fields)
 	}
 }
-func (universalLogger *universalLogger) SetExtractor(extractor ContextExtractor) {
+func (universalLogger *universalLogger) SetExtractor(keys ...string) {
 	universalLogger.mutex.Lock()
 	defer universalLogger.mutex.Unlock()
-	universalLogger.extractor = extractor
+	universalLogger.extractor = func(ctx context.Context) []Field {
+		if ctx == nil {
+			return nil
+		}
+		fields := make([]Field, 0, len(keys))
+		for _, key := range keys {
+			if val := ctx.Value(key); val != nil {
+				switch v := val.(type) {
+				case string:
+					fields = append(fields, String(key, v))
+				case int:
+					fields = append(fields, Int(key, v))
+				case int64:
+					fields = append(fields, Int64(key, v))
+				case float32:
+					fields = append(fields, Float64(key, float64(v)))
+				case float64:
+					fields = append(fields, Float64(key, v))
+				case bool:
+					fields = append(fields, Bool(key, v))
+				default:
+					fields = append(fields, String(key, fmt.Sprintf("%v", v)))
+				}
+			}
+		}
+		return fields
+	}
 }
 func (universalLogger *universalLogger) SetFormat(format TypeFormat) {
 	universalLogger.format.Store(int32(format))
