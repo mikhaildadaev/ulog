@@ -147,7 +147,7 @@ func TestFields(t *testing.T) {
 	})
 	t.Run("Int64", func(t *testing.T) {
 		f := Int64("big", 1<<62)
-		if f.typeValue != FieldInt {
+		if f.typeValue != FieldInt64 {
 			t.Errorf("Expected typeValue FieldInt, got %d", f.typeValue)
 		}
 		if f.valueInt64 != 1<<62 {
