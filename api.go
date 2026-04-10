@@ -30,6 +30,10 @@ func WithExtractor(keys ...string) OptionLogger {
 						fields = append(fields, Float64(key, v))
 					case bool:
 						fields = append(fields, Bool(key, v))
+					case time.Time:
+						fields = append(fields, Time(key, v))
+					case time.Duration:
+						fields = append(fields, Duration(key, v))
 					default:
 						fields = append(fields, String(key, fmt.Sprintf("%v", v)))
 					}
@@ -225,6 +229,10 @@ func (universalLogger *universalLogger) SetExtractor(keys ...string) {
 					fields = append(fields, Float64(key, v))
 				case bool:
 					fields = append(fields, Bool(key, v))
+				case time.Time:
+					fields = append(fields, Time(key, v))
+				case time.Duration:
+					fields = append(fields, Duration(key, v))
 				default:
 					fields = append(fields, String(key, fmt.Sprintf("%v", v)))
 				}

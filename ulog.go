@@ -488,37 +488,19 @@ func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, theme
 }
 func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 	switch field.typeValue {
-	case FieldBool:
-		dataBuf.WriteString(strconv.FormatBool(field.valueBool))
-	case FieldBools:
+	case FieldString:
+		dataBuf.WriteByte('"')
+		dataBuf.WriteString(field.valueString)
+		dataBuf.WriteByte('"')
+	case FieldStrings:
 		dataBuf.WriteByte('[')
-		for i, value := range field.valueBools {
+		for i, value := range field.valueStrings {
 			if i > 0 {
 				dataBuf.WriteByte(',')
 			}
-			dataBuf.WriteString(strconv.FormatBool(value))
-		}
-		dataBuf.WriteByte(']')
-	case FieldDuration:
-		dataBuf.WriteString(field.valueDuration.String())
-	case FieldDurations:
-		dataBuf.WriteByte('[')
-		for i, value := range field.valueDurations {
-			if i > 0 {
-				dataBuf.WriteByte(',')
-			}
-			dataBuf.WriteString(value.String())
-		}
-		dataBuf.WriteByte(']')
-	case FieldFloat64:
-		dataBuf.WriteString(strconv.FormatFloat(field.valueFloat64, 'f', -1, 64))
-	case FieldFloats64:
-		dataBuf.WriteByte('[')
-		for i, value := range field.valueFloats64 {
-			if i > 0 {
-				dataBuf.WriteByte(',')
-			}
-			dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
+			dataBuf.WriteByte('"')
+			dataBuf.WriteString(value)
+			dataBuf.WriteByte('"')
 		}
 		dataBuf.WriteByte(']')
 	case FieldInt:
@@ -543,19 +525,26 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 			dataBuf.WriteString(strconv.FormatInt(value, 10))
 		}
 		dataBuf.WriteByte(']')
-	case FieldString:
-		dataBuf.WriteByte('"')
-		dataBuf.WriteString(field.valueString)
-		dataBuf.WriteByte('"')
-	case FieldStrings:
+	case FieldFloat64:
+		dataBuf.WriteString(strconv.FormatFloat(field.valueFloat64, 'f', -1, 64))
+	case FieldFloats64:
 		dataBuf.WriteByte('[')
-		for i, value := range field.valueStrings {
+		for i, value := range field.valueFloats64 {
 			if i > 0 {
 				dataBuf.WriteByte(',')
 			}
-			dataBuf.WriteByte('"')
-			dataBuf.WriteString(value)
-			dataBuf.WriteByte('"')
+			dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
+		}
+		dataBuf.WriteByte(']')
+	case FieldBool:
+		dataBuf.WriteString(strconv.FormatBool(field.valueBool))
+	case FieldBools:
+		dataBuf.WriteByte('[')
+		for i, value := range field.valueBools {
+			if i > 0 {
+				dataBuf.WriteByte(',')
+			}
+			dataBuf.WriteString(strconv.FormatBool(value))
 		}
 		dataBuf.WriteByte(']')
 	case FieldTime:
@@ -567,6 +556,17 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 				dataBuf.WriteByte(',')
 			}
 			dataBuf.Write(value.AppendFormat(nil, "2006-01-02T15:04:05.000000-07:00"))
+		}
+		dataBuf.WriteByte(']')
+	case FieldDuration:
+		dataBuf.WriteString(field.valueDuration.String())
+	case FieldDurations:
+		dataBuf.WriteByte('[')
+		for i, value := range field.valueDurations {
+			if i > 0 {
+				dataBuf.WriteByte(',')
+			}
+			dataBuf.WriteString(value.String())
 		}
 		dataBuf.WriteByte(']')
 	}
