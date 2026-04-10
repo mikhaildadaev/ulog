@@ -362,86 +362,33 @@ func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, theme
 func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 	switch field.typeValue {
 	case FieldString:
-		dataBuf.WriteByte('"')
-		dataBuf.WriteString(field.valueString)
-		dataBuf.WriteByte('"')
+		formatValueString(dataBuf, field.valueString)
 	case FieldStrings:
-		dataBuf.WriteByte('[')
-		for i, value := range field.valueStrings {
-			if i > 0 {
-				dataBuf.WriteByte(',')
-			}
-			dataBuf.WriteByte('"')
-			dataBuf.WriteString(value)
-			dataBuf.WriteByte('"')
-		}
-		dataBuf.WriteByte(']')
+		formatValueStrings(dataBuf, field.valueStrings)
 	case FieldInt:
-		dataBuf.WriteString(strconv.Itoa(field.valueInt))
+		formatValueInt(dataBuf, field.valueInt)
 	case FieldInts:
-		dataBuf.WriteByte('[')
-		for i, value := range field.valueInts {
-			if i > 0 {
-				dataBuf.WriteByte(',')
-			}
-			dataBuf.WriteString(strconv.Itoa(value))
-		}
-		dataBuf.WriteByte(']')
+		formatValueInts(dataBuf, field.valueInts)
 	case FieldInt64:
-		dataBuf.WriteString(strconv.FormatInt(field.valueInt64, 10))
+		formatValueInt64(dataBuf, field.valueInt64)
 	case FieldInts64:
-		dataBuf.WriteByte('[')
-		for i, value := range field.valueInts64 {
-			if i > 0 {
-				dataBuf.WriteByte(',')
-			}
-			dataBuf.WriteString(strconv.FormatInt(value, 10))
-		}
-		dataBuf.WriteByte(']')
+		formatValueInts64(dataBuf, field.valueInts64)
 	case FieldFloat64:
-		dataBuf.WriteString(strconv.FormatFloat(field.valueFloat64, 'f', -1, 64))
+		formatValueFloat64(dataBuf, field.valueFloat64)
 	case FieldFloats64:
-		dataBuf.WriteByte('[')
-		for i, value := range field.valueFloats64 {
-			if i > 0 {
-				dataBuf.WriteByte(',')
-			}
-			dataBuf.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
-		}
-		dataBuf.WriteByte(']')
+		formatValueFloats64(dataBuf, field.valueFloats64)
 	case FieldBool:
-		dataBuf.WriteString(strconv.FormatBool(field.valueBool))
+		formatValueBool(dataBuf, field.valueBool)
 	case FieldBools:
-		dataBuf.WriteByte('[')
-		for i, value := range field.valueBools {
-			if i > 0 {
-				dataBuf.WriteByte(',')
-			}
-			dataBuf.WriteString(strconv.FormatBool(value))
-		}
-		dataBuf.WriteByte(']')
+		formatValueBools(dataBuf, field.valueBools)
 	case FieldTime:
-		dataBuf.Write(field.valueTime.AppendFormat(nil, "2006-01-02T15:04:05.000000-07:00"))
+		formatValueTime(dataBuf, field.valueTime)
 	case FieldTimes:
-		dataBuf.WriteByte('[')
-		for i, value := range field.valueTimes {
-			if i > 0 {
-				dataBuf.WriteByte(',')
-			}
-			dataBuf.Write(value.AppendFormat(nil, "2006-01-02T15:04:05.000000-07:00"))
-		}
-		dataBuf.WriteByte(']')
+		formatValueTimes(dataBuf, field.valueTimes)
 	case FieldDuration:
-		dataBuf.WriteString(field.valueDuration.String())
+		formatValueDuration(dataBuf, field.valueDuration)
 	case FieldDurations:
-		dataBuf.WriteByte('[')
-		for i, value := range field.valueDurations {
-			if i > 0 {
-				dataBuf.WriteByte(',')
-			}
-			dataBuf.WriteString(value.String())
-		}
-		dataBuf.WriteByte(']')
+		formatValueDurations(dataBuf, field.valueDurations)
 	}
 }
 func formatPrefixJson(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
@@ -497,6 +444,101 @@ func formatTimeText(dataBuf *bytes.Buffer, timestamp time.Time) {
 	timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05.000000-07:00")
 	dataBuf.Write(timeBuf)
 	timePool.Put(timeBuf)
+}
+func formatValueBool(dataBuf *bytes.Buffer, v bool) {
+	dataBuf.WriteString(strconv.FormatBool(v))
+}
+func formatValueBools(dataBuf *bytes.Buffer, v []bool) {
+	dataBuf.WriteByte('[')
+	for i, b := range v {
+		if i > 0 {
+			dataBuf.WriteByte(',')
+		}
+		dataBuf.WriteString(strconv.FormatBool(b))
+	}
+	dataBuf.WriteByte(']')
+}
+func formatValueDuration(dataBuf *bytes.Buffer, v time.Duration) {
+	dataBuf.WriteString(v.String())
+}
+func formatValueDurations(dataBuf *bytes.Buffer, v []time.Duration) {
+	dataBuf.WriteByte('[')
+	for i, d := range v {
+		if i > 0 {
+			dataBuf.WriteByte(',')
+		}
+		dataBuf.WriteString(d.String())
+	}
+	dataBuf.WriteByte(']')
+}
+func formatValueFloat64(dataBuf *bytes.Buffer, v float64) {
+	dataBuf.WriteString(strconv.FormatFloat(v, 'f', -1, 64))
+}
+func formatValueFloats64(dataBuf *bytes.Buffer, v []float64) {
+	dataBuf.WriteByte('[')
+	for i, f := range v {
+		if i > 0 {
+			dataBuf.WriteByte(',')
+		}
+		dataBuf.WriteString(strconv.FormatFloat(f, 'f', -1, 64))
+	}
+	dataBuf.WriteByte(']')
+}
+func formatValueInt(dataBuf *bytes.Buffer, v int) {
+	dataBuf.WriteString(strconv.Itoa(v))
+}
+func formatValueInts(dataBuf *bytes.Buffer, v []int) {
+	dataBuf.WriteByte('[')
+	for i, n := range v {
+		if i > 0 {
+			dataBuf.WriteByte(',')
+		}
+		dataBuf.WriteString(strconv.Itoa(n))
+	}
+	dataBuf.WriteByte(']')
+}
+func formatValueInt64(dataBuf *bytes.Buffer, v int64) {
+	dataBuf.WriteString(strconv.FormatInt(v, 10))
+}
+func formatValueInts64(dataBuf *bytes.Buffer, v []int64) {
+	dataBuf.WriteByte('[')
+	for i, n := range v {
+		if i > 0 {
+			dataBuf.WriteByte(',')
+		}
+		dataBuf.WriteString(strconv.FormatInt(n, 10))
+	}
+	dataBuf.WriteByte(']')
+}
+func formatValueString(dataBuf *bytes.Buffer, v string) {
+	dataBuf.WriteByte('"')
+	dataBuf.WriteString(v)
+	dataBuf.WriteByte('"')
+}
+func formatValueStrings(dataBuf *bytes.Buffer, v []string) {
+	dataBuf.WriteByte('[')
+	for i, s := range v {
+		if i > 0 {
+			dataBuf.WriteByte(',')
+		}
+		dataBuf.WriteByte('"')
+		dataBuf.WriteString(s)
+		dataBuf.WriteByte('"')
+	}
+	dataBuf.WriteByte(']')
+}
+func formatValueTime(dataBuf *bytes.Buffer, v time.Time) {
+	dataBuf.Write(v.AppendFormat(nil, "2006-01-02T15:04:05.000000-07:00"))
+}
+func formatValueTimes(dataBuf *bytes.Buffer, v []time.Time) {
+	dataBuf.WriteByte('[')
+	for i, t := range v {
+		if i > 0 {
+			dataBuf.WriteByte(',')
+		}
+		dataBuf.Write(t.AppendFormat(nil, "2006-01-02T15:04:05.000000-07:00"))
+	}
+	dataBuf.WriteByte(']')
 }
 func getLoggerCaller(path string) string {
 	for i := len(path) - 1; i >= 0; i-- {
