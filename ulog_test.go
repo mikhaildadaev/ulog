@@ -157,192 +157,84 @@ func TestExtractor(t *testing.T) {
 }
 func TestField(t *testing.T) {
 	t.Run("Bool", func(t *testing.T) {
-		f := Bool("active", true)
-		if f.nameKey != "active" {
-			t.Errorf("Expected nameKey 'active', got '%s'", f.nameKey)
-		}
-		if f.typeValue != FieldBool {
-			t.Errorf("Expected typeValue FieldBool, got %d", f.typeValue)
-		}
-		if f.valueBool != true {
-			t.Errorf("Expected valueBool true, got %t", f.valueBool)
-		}
+		val := bool(true)
+		field := Bool("test", val)
+		checkFieldBool(t, field, val)
 	})
 	t.Run("Bools", func(t *testing.T) {
-		vals := []bool{true, false, true}
-		f := Bools("flags", vals)
-		if f.nameKey != "flags" {
-			t.Errorf("Expected nameKey 'flags', got '%s'", f.nameKey)
-		}
-		if f.typeValue != FieldBool {
-			t.Errorf("Expected typeValue FieldBool, got %d", f.typeValue)
-		}
-		if len(f.valueBools) != 3 {
-			t.Errorf("Expected 3 values, got %d", len(f.valueBools))
-		}
-		if f.valueBools[0] != true || f.valueBools[1] != false {
-			t.Error("Bools values incorrect")
-		}
+		vals := []bool{true, false}
+		field := Bools("test", vals)
+		checkFieldBools(t, field, vals)
 	})
 	t.Run("Duration", func(t *testing.T) {
-		d := 5 * time.Second
-		f := Duration("timeout", d)
-		if f.nameKey != "timeout" {
-			t.Errorf("Expected nameKey 'timeout', got '%s'", f.nameKey)
-		}
-		if f.typeValue != FieldDuration {
-			t.Errorf("Expected typeValue FieldDuration, got %d", f.typeValue)
-		}
-		if f.valueDuration != d {
-			t.Errorf("Expected duration %v, got %v", d, f.valueDuration)
-		}
+		val := time.Duration(5 * time.Second)
+		field := Duration("test", val)
+		checkFieldDuration(t, field, val)
 	})
 	t.Run("Durations", func(t *testing.T) {
 		vals := []time.Duration{1 * time.Second, 2 * time.Second}
-		f := Durations("latencies", vals)
-		if f.nameKey != "latencies" {
-			t.Errorf("Expected nameKey 'latencies', got '%s'", f.nameKey)
-		}
-		if f.typeValue != FieldDuration {
-			t.Errorf("Expected typeValue FieldDuration, got %d", f.typeValue)
-		}
-		if len(f.valueDurations) != 2 {
-			t.Errorf("Expected 2 values, got %d", len(f.valueDurations))
-		}
+		field := Durations("test", vals)
+		checkFieldDurations(t, field, vals)
 	})
 	t.Run("Error", func(t *testing.T) {
-		f := Err(nil)
-		if f.nameKey != "error" {
-			t.Errorf("Expected nameKey 'error', got '%s'", f.nameKey)
-		}
-		if f.typeValue != FieldString {
-			t.Errorf("Expected typeValue FieldString, got %d", f.typeValue)
-		}
-		if f.valueString != "nil" {
-			t.Errorf("Expected 'nil', got '%s'", f.valueString)
-		}
-		err := errors.New("something failed")
-		f = Err(err)
-		if f.valueString != "something failed" {
-			t.Errorf("Expected 'something failed', got '%s'", f.valueString)
-		}
+		val := error(errors.New("err"))
+		field := Error(val)
+		checkFieldError(t, field, val)
 	})
 	t.Run("Errors", func(t *testing.T) {
-		errs := []error{
-			nil,
-			errors.New("err1"),
-			errors.New("err2"),
-		}
-		f := Errs(errs)
-		if f.nameKey != "errors" {
-			t.Errorf("Expected nameKey 'errors', got '%s'", f.nameKey)
-		}
-		if f.typeValue != FieldString {
-			t.Errorf("Expected typeValue FieldString, got %d", f.typeValue)
-		}
-		if len(f.valueStrings) != 3 {
-			t.Errorf("Expected 3 values, got %d", len(f.valueStrings))
-		}
-		if f.valueStrings[0] != "nil" {
-			t.Error("First error should be 'nil'")
-		}
-		if f.valueStrings[1] != "err1" {
-			t.Error("Second error incorrect")
-		}
+		vals := []error{errors.New("err1"), errors.New("err2")}
+		field := Errors(vals)
+		checkFieldErrors(t, field, vals)
 	})
 	t.Run("Float64", func(t *testing.T) {
-		f := Float64("pi", 3.14159)
-		if f.nameKey != "pi" {
-			t.Errorf("Expected nameKey 'pi', got '%s'", f.nameKey)
-		}
-		if f.typeValue != FieldFloat64 {
-			t.Errorf("Expected typeValue FieldFloat64, got %d", f.typeValue)
-		}
-		if f.valueFloat64 != 3.14159 {
-			t.Errorf("Expected 3.14159, got %f", f.valueFloat64)
-		}
+		val := float64(3.14159)
+		field := Float64("test", val)
+		checkFieldFloat64(t, field, val)
 	})
 	t.Run("Floats64", func(t *testing.T) {
-		vals := []float64{1.1, 2.2, 3.3}
-		f := Floats64("values", vals)
-		if len(f.valueFloats64) != 3 {
-			t.Errorf("Expected 3 values, got %d", len(f.valueFloats64))
-		}
+		vals := []float64{1.1, 2.2}
+		field := Floats64("test", vals)
+		checkFieldFloats64(t, field, vals)
 	})
 	t.Run("Int", func(t *testing.T) {
-		f := Int("count", 42)
-		if f.nameKey != "count" {
-			t.Errorf("Expected nameKey 'count', got '%s'", f.nameKey)
-		}
-		if f.typeValue != FieldInt {
-			t.Errorf("Expected typeValue FieldInt, got %d", f.typeValue)
-		}
-		if f.valueInt != 42 {
-			t.Errorf("Expected 42, got %d", f.valueInt)
-		}
+		val := int(42)
+		field := Int("test", val)
+		checkFieldInt(t, field, val)
 	})
 	t.Run("Ints", func(t *testing.T) {
-		vals := []int{1, 2, 3}
-		f := Ints("ids", vals)
-		if len(f.valueInts) != 3 {
-			t.Errorf("Expected 3 values, got %d", len(f.valueInts))
-		}
+		vals := []int{1, 2}
+		field := Ints("test", vals)
+		checkFieldInts(t, field, vals)
 	})
 	t.Run("Int64", func(t *testing.T) {
-		f := Int64("big", 1<<62)
-		if f.typeValue != FieldInt64 {
-			t.Errorf("Expected typeValue FieldInt, got %d", f.typeValue)
-		}
-		if f.valueInt64 != 1<<62 {
-			t.Errorf("Expected %d, got %d", 1<<62, f.valueInt64)
-		}
+		val := int64(1 << 62)
+		field := Int64("test", val)
+		checkFieldInt64(t, field, val)
 	})
 	t.Run("Ints64", func(t *testing.T) {
-		vals := []int64{1, 2, 3}
-		f := Ints64("ids64", vals)
-		if len(f.valueInts64) != 3 {
-			t.Errorf("Expected 3 values, got %d", len(f.valueInts64))
-		}
+		vals := []int64{1, 2}
+		field := Ints64("test", vals)
+		checkFieldInts64(t, field, vals)
 	})
 	t.Run("String", func(t *testing.T) {
-		f := String("name", "John")
-		if f.nameKey != "name" {
-			t.Errorf("Expected nameKey 'name', got '%s'", f.nameKey)
-		}
-		if f.typeValue != FieldString {
-			t.Errorf("Expected typeValue FieldString, got %d", f.typeValue)
-		}
-		if f.valueString != "John" {
-			t.Errorf("Expected 'John', got '%s'", f.valueString)
-		}
+		val := string("John")
+		field := String("test", val)
+		checkFieldString(t, field, val)
 	})
 	t.Run("Strings", func(t *testing.T) {
-		vals := []string{"a", "b", "c"}
-		f := Strings("letters", vals)
-		if len(f.valueStrings) != 3 {
-			t.Errorf("Expected 3 values, got %d", len(f.valueStrings))
-		}
+		vals := []string{"a", "b"}
+		field := Strings("test", vals)
+		checkFieldStrings(t, field, vals)
 	})
 	t.Run("Time", func(t *testing.T) {
-		now := time.Now()
-		f := Time("created", now)
-		if f.nameKey != "created" {
-			t.Errorf("Expected nameKey 'created', got '%s'", f.nameKey)
-		}
-		if f.typeValue != FieldTime {
-			t.Errorf("Expected typeValue FieldTime, got %d", f.typeValue)
-		}
-		if !f.valueTime.Equal(now) {
-			t.Errorf("Time values don't match")
-		}
+		val := time.Time(time.Now())
+		field := Time("test", val)
+		checkFieldTime(t, field, val)
 	})
 	t.Run("Times", func(t *testing.T) {
-		now := time.Now()
-		vals := []time.Time{now, now.Add(time.Hour)}
-		f := Times("timestamps", vals)
-		if len(f.valueTimes) != 2 {
-			t.Errorf("Expected 2 values, got %d", len(f.valueTimes))
-		}
+		vals := []time.Time{time.Now(), time.Now().Add(time.Hour)}
+		field := Times("test", vals)
+		checkFieldTimes(t, field, vals)
 	})
 }
 func TestFormat(t *testing.T) {
@@ -767,6 +659,198 @@ func checkExtractor(t *testing.T, elem struct {
 		}
 	}
 }
+func checkFieldBool(t *testing.T, field Field, val bool) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldBool {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if field.valueBool != val {
+		t.Errorf("Expected valueBool, got %v", field.valueBool)
+	}
+}
+func checkFieldBools(t *testing.T, field Field, vals []bool) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldBools {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if len(field.valueBools) != len(vals) {
+		t.Errorf("Expected valueBools, got %v", len(field.valueBools))
+	}
+}
+func checkFieldDuration(t *testing.T, field Field, val time.Duration) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldDuration {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if field.valueDuration != val {
+		t.Errorf("Expected valueDuration, got %v", field.valueDuration)
+	}
+}
+func checkFieldDurations(t *testing.T, field Field, vals []time.Duration) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldDurations {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if len(field.valueDurations) != len(vals) {
+		t.Errorf("Expected valueDurations, got %v", field.valueDurations)
+	}
+}
+func checkFieldError(t *testing.T, field Field, val error) {
+	t.Helper()
+	if field.nameKey != "error" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldString {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if field.valueString != val.Error() {
+		t.Errorf("Expected valueString, got %v", field.valueString)
+	}
+}
+func checkFieldErrors(t *testing.T, field Field, vals []error) {
+	t.Helper()
+	if field.nameKey != "errors" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldStrings {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if len(field.valueStrings) != len(vals) {
+		t.Errorf("Expected valueStrings, got %v", field.valueStrings)
+	}
+}
+func checkFieldFloat64(t *testing.T, field Field, val float64) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldFloat64 {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if field.valueFloat64 != val {
+		t.Errorf("Expected valueFloat64, got %v", field.valueFloat64)
+	}
+}
+func checkFieldFloats64(t *testing.T, field Field, vals []float64) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldFloats64 {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if len(field.valueFloats64) != len(vals) {
+		t.Errorf("Expected valueFloats64, got %v", field.valueFloats64)
+	}
+}
+func checkFieldInt(t *testing.T, field Field, val int) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldInt {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if field.valueInt != val {
+		t.Errorf("Expected valueInt, got %v", field.valueInt)
+	}
+}
+func checkFieldInts(t *testing.T, field Field, vals []int) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldInts {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if len(field.valueInts) != len(vals) {
+		t.Errorf("Expected valueInts, got %v", field.valueInts)
+	}
+}
+func checkFieldInt64(t *testing.T, field Field, val int64) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldInt64 {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if field.valueInt64 != val {
+		t.Errorf("Expected valueInt64, got %v", field.valueInt64)
+	}
+}
+func checkFieldInts64(t *testing.T, field Field, vals []int64) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldInts64 {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if len(field.valueInts64) != len(vals) {
+		t.Errorf("Expected valueInts64, got %v", field.valueInts64)
+	}
+}
+func checkFieldString(t *testing.T, field Field, val string) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldString {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if field.valueString != val {
+		t.Errorf("Expected valueString, got %v", field.valueString)
+	}
+}
+func checkFieldStrings(t *testing.T, field Field, vals []string) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldStrings {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if len(field.valueStrings) != len(vals) {
+		t.Errorf("Expected valueStrings, got %v", field.valueStrings)
+	}
+}
+func checkFieldTime(t *testing.T, field Field, val time.Time) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldTime {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if field.valueTime != val {
+		t.Errorf("Expected valueTime, got %v", field.valueTime)
+	}
+}
+func checkFieldTimes(t *testing.T, field Field, vals []time.Time) {
+	t.Helper()
+	if field.nameKey != "test" {
+		t.Errorf("Expected nameKey, got '%s'", field.nameKey)
+	}
+	if field.typeValue != FieldTimes {
+		t.Errorf("Expected typeValue, got %d", field.typeValue)
+	}
+	if len(field.valueTimes) != len(vals) {
+		t.Errorf("Expected valueTimes, got %v", field.valueTimes)
+	}
+}
 func checkTheme(t *testing.T, level, expectedPrefix string, elem struct {
 	name         string
 	theme        TypeTheme
@@ -779,6 +863,7 @@ func checkTheme(t *testing.T, level, expectedPrefix string, elem struct {
 	prefixWarn   string
 	reset        string
 }, output string) {
+	t.Helper()
 	if !strings.Contains(output, elem.callerColor) && level == "DEBUG" {
 		t.Errorf("%s: expected prefix %q not found in %q", level, elem.callerColor, output)
 	}

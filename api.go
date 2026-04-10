@@ -36,8 +36,8 @@ func Durations(nameKey string, valueDurations []time.Duration) Field {
 		valueDurations: valueDurations,
 	}
 }
-func Err(err error) Field {
-	if err == nil {
+func Error(valueError error) Field {
+	if valueError == nil {
 		return Field{
 			nameKey:     "error",
 			typeValue:   FieldString,
@@ -47,12 +47,12 @@ func Err(err error) Field {
 	return Field{
 		nameKey:     "error",
 		typeValue:   FieldString,
-		valueString: err.Error(),
+		valueString: valueError.Error(),
 	}
 }
-func Errs(errs []error) Field {
-	valueStrings := make([]string, len(errs))
-	for i, err := range errs {
+func Errors(valueErrors []error) Field {
+	valueStrings := make([]string, len(valueErrors))
+	for i, err := range valueErrors {
 		if err == nil {
 			valueStrings[i] = "nil"
 		} else {
