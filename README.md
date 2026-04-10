@@ -76,7 +76,8 @@ go get github.com/mikhaildadaev/ulog
 
 ## Performance
 
-Single Thread
+### Single Thread
+
 | Level	|  Mode | Format | Time (ns/op) | Memory (B/op) | Allocs |
 | Debug | Async | Simple |     	   0.56 |             0 |      0 |
 | Debug	| Async | Format |          119 |	        576 |      1 |
@@ -95,7 +96,8 @@ Single Thread
 | Error	|  Sync | Simple |          107 |	         24 |      1 |
 | Error	|  Sync | Format |          198 |	        605 |	   3 |
 
-Multi Thread
+### Multi Thread
+
 | Level |  Mode | Format | Time (ns/op) | Memory (B/op) | Allocs |
 | Debug | Async | Simple |	       0.56 |	          0 |      0 |
 | Debug | Async | Format |    	    119 |           576 |      1 |
