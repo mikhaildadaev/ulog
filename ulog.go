@@ -30,7 +30,7 @@ type TypeTheme int
 // Публичные константы
 const (
 	Author  = "Mikhail Dadaev"
-	Version = "1.26.5"
+	Version = "1.26.6"
 )
 const (
 	FieldBool TypeField = iota
