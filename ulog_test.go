@@ -49,15 +49,7 @@ func TestExtractor(t *testing.T) {
 		shouldAdd bool
 	}{
 		{
-			name:      "extractor with empty keys",
-			keys:      nil,
-			context:   context.WithValue(context.Background(), "trace_id", "abc-123"),
-			wantKey:   "",
-			wantValue: "",
-			shouldAdd: false,
-		},
-		{
-			name:      "extractor with empty field from context",
+			name:      "NullContext",
 			keys:      []string{"test_empty"},
 			context:   context.Background(),
 			wantKey:   "",
@@ -65,7 +57,15 @@ func TestExtractor(t *testing.T) {
 			shouldAdd: false,
 		},
 		{
-			name:      "extract with bool field from context",
+			name:      "NullKeys",
+			keys:      nil,
+			context:   context.WithValue(context.Background(), "trace_id", "abc-123"),
+			wantKey:   "",
+			wantValue: "",
+			shouldAdd: false,
+		},
+		{
+			name:      "Bool",
 			keys:      []string{"test_bool"},
 			context:   context.WithValue(context.Background(), "test_bool", true),
 			wantKey:   "test_bool",
@@ -73,7 +73,7 @@ func TestExtractor(t *testing.T) {
 			shouldAdd: true,
 		},
 		{
-			name:      "extract with duration field from context",
+			name:      "Duration",
 			keys:      []string{"test_duration"},
 			context:   context.WithValue(context.Background(), "test_duration", 5*time.Second),
 			wantKey:   "test_duration",
@@ -81,7 +81,7 @@ func TestExtractor(t *testing.T) {
 			shouldAdd: true,
 		},
 		{
-			name:      "extract with float64 field from context",
+			name:      "Float64",
 			keys:      []string{"test_float64"},
 			context:   context.WithValue(context.Background(), "test_float64", 3.14159),
 			wantKey:   "test_float64",
@@ -89,7 +89,7 @@ func TestExtractor(t *testing.T) {
 			shouldAdd: true,
 		},
 		{
-			name:      "extract with int field from context",
+			name:      "Int",
 			keys:      []string{"test_int"},
 			context:   context.WithValue(context.Background(), "test_int", int(12345)),
 			wantKey:   "test_int",
@@ -97,7 +97,7 @@ func TestExtractor(t *testing.T) {
 			shouldAdd: true,
 		},
 		{
-			name:      "extract with int64 field from context",
+			name:      "Int64",
 			keys:      []string{"test_int64"},
 			context:   context.WithValue(context.Background(), "test_int64", int64(12345)),
 			wantKey:   "test_int64",
@@ -105,7 +105,7 @@ func TestExtractor(t *testing.T) {
 			shouldAdd: true,
 		},
 		{
-			name:      "extract with string field from context",
+			name:      "String",
 			keys:      []string{"test_string"},
 			context:   context.WithValue(context.Background(), "test_string", "abc-123"),
 			wantKey:   "test_string",
@@ -113,7 +113,7 @@ func TestExtractor(t *testing.T) {
 			shouldAdd: true,
 		},
 		{
-			name:      "extract with time field from context",
+			name:      "Time",
 			keys:      []string{"test_time"},
 			context:   context.WithValue(context.Background(), "test_time", time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)),
 			wantKey:   "test_time",
@@ -121,7 +121,7 @@ func TestExtractor(t *testing.T) {
 			shouldAdd: true,
 		},
 		{
-			name:      "extract with multiple fields",
+			name:      "Multiple",
 			keys:      []string{"trace_id", "user_id"},
 			context:   context.WithValue(context.WithValue(context.Background(), "trace_id", "abc-123"), "user_id", int64(12345)),
 			wantKey:   "trace_id",
@@ -657,7 +657,7 @@ func TestTheme(t *testing.T) {
 		reset        string
 	}{
 		{
-			name:         "Dark theme",
+			name:         "Dark",
 			theme:        ThemeDark,
 			callerColor:  colorDarkBlue,
 			messageColor: colorDarkWhite,
@@ -669,7 +669,7 @@ func TestTheme(t *testing.T) {
 			reset:        colorReset,
 		},
 		{
-			name:         "Light theme",
+			name:         "Light",
 			theme:        ThemeLight,
 			callerColor:  colorLightBlue,
 			messageColor: colorLightBlack,
@@ -771,10 +771,10 @@ func TestIsIgnoredError(t *testing.T) {
 	}{
 		{"EOF", []byte("read: EOF"), true},
 		{"TLS handshake", []byte("TLS handshake error"), true},
-		{"connection refused", []byte("dial: connection refused"), true},
-		{"timeout", []byte("i/o timeout"), true},
-		{"normal message", []byte("user logged in"), false},
-		{"empty", []byte{}, false},
+		{"Connection refused", []byte("dial: connection refused"), true},
+		{"Timeout", []byte("i/o timeout"), true},
+		{"Normal message", []byte("user logged in"), false},
+		{"Empty", []byte{}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
