@@ -20,13 +20,13 @@ type SlackSink struct {
 type SlackOption func(*SlackSink)
 
 // Публичные конструкторы
-func NewSlackSink(webhookURL string, opts ...SlackOption) *SlackSink {
+func NewSlackSink(webhookURL string, options ...SlackOption) *SlackSink {
 	sink := &SlackSink{
 		webhookURL: webhookURL,
 		client:     &http.Client{Timeout: 10 * time.Second},
 	}
-	for _, opt := range opts {
-		opt(sink)
+	for _, option := range options {
+		option(sink)
 	}
 	return sink
 }

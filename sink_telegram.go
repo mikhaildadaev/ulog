@@ -21,15 +21,15 @@ type TelegramSink struct {
 type TelegramOption func(*TelegramSink)
 
 // Публичные конструкторы
-func NewTelegramSink(botToken, chatID string, opts ...TelegramOption) *TelegramSink {
+func NewTelegramSink(botToken, chatID string, options ...TelegramOption) *TelegramSink {
 	sink := &TelegramSink{
 		botToken:  botToken,
 		chatID:    chatID,
 		parseMode: "HTML",
 		client:    &http.Client{Timeout: 10 * time.Second},
 	}
-	for _, opt := range opts {
-		opt(sink)
+	for _, option := range options {
+		option(sink)
 	}
 	return sink
 }

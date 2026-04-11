@@ -20,13 +20,13 @@ type DiscordSink struct {
 type DiscordOption func(*DiscordSink)
 
 // Публичные конструкторы
-func NewDiscordSink(webhookURL string, opts ...DiscordOption) *DiscordSink {
+func NewDiscordSink(webhookURL string, options ...DiscordOption) *DiscordSink {
 	sink := &DiscordSink{
 		webhookURL: webhookURL,
 		client:     &http.Client{Timeout: 10 * time.Second},
 	}
-	for _, opt := range opts {
-		opt(sink)
+	for _, option := range options {
+		option(sink)
 	}
 	return sink
 }
