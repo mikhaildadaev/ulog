@@ -121,9 +121,9 @@ go get github.com/mikhaildadaev/ulog
 | **Error**	|  Sync | Simple |       3.0M |       395.90 |	          24 |      1 |
 | **Error**	|  Sync | Format |       1.8M |       647.10 |	         616 |	    4 |
 
-*Benchmarked on Intel Core i9-9880H (2.30 GHz)*
-
 > **Note:** `Format` benchmarks use `WithExtractor("trace_id")` to automatically extract from context.
+
+*Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
 ## Usage
 
