@@ -132,3 +132,8 @@ const (
 	maxTelegramMessageLen = 4096
 	maxTimeout            = 10 * time.Second
 )
+
+// Данный файл находится в стадии разработки
+// Batch [пакетировнаия]
+// Circuit Breaker [защита от перегрузки]
+// Retry [повторных попыток]
