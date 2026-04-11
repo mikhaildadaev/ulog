@@ -194,5 +194,4 @@ go test -race ./...
 
 ## Roadmap
 
-- [ ] **More `io.Writer` implementations** – Discord, Telegram, Slack, Loki, Elasticsearch, OpenTelemetry
-- [ ] **Built-in log rotation** (`lumberjack` integration)
+- [ ] **More `io.Writer` implementations** – Discord, File, Telegram, Slack, Loki, Elasticsearch, OpenTelemetry
