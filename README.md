@@ -28,6 +28,7 @@ go get github.com/mikhaildadaev/ulog
 ## Quick API
 
 ### Сonstructors
+
 #### API
 - ulog.Bool(key string, value bool) Field
 - ulog.Bools(key string, value []bool) Field
@@ -47,6 +48,7 @@ go get github.com/mikhaildadaev/ulog
 - ulog.Times(key string, value []time.Time) Field
 
 ### Functions
+
 #### API
 - ulog.Close() error
 - ulog.Debug(message string, fields ...Field)
@@ -67,6 +69,7 @@ go get github.com/mikhaildadaev/ulog
 - ulog.Sync() error
 
 ### Methods
+
 #### API
 - ulog.WithExtractor(keys ...string)
 - ulog.WithFormat(format TypeFormat)
@@ -130,30 +133,43 @@ import (
 )
 
 func main() {
-    // Basic logger
-    logger := ulog.NewLogger(
+    ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+    // Universal logger [Async] with JSON output
+    loggerAsync := ulog.NewLogger(
+        ulog.WithMode(ulog.ModeAsync, os.Stdout, 10000),
+        ulog.WithFormat(ulog.FormatJson),
+    )
+    defer loggerAsync.Close()
+    loggerAsync.Debug("debugging request", ulog.String("path", "/api/user"))
+    loggerAsync.DebugWithContext(ctx, "debugging request", ulog.String("path", "/api/user"))
+    loggerAsync.Info("server started", ulog.Int("port", 8080))
+    loggerAsync.InfoWithContext(ctx, "server started", ulog.Int("port", 8080))
+    loggerAsync.Warn("high latency", ulog.Duration("latency", 150*time.Millisecond))
+    loggerAsync.WarnWithContext(ctx, "high latency", ulog.Duration("latency", 150*time.Millisecond))
+    loggerAsync.Error("database error", ulog.Error(nil))
+    loggerAsync.ErrorWithContext(ctx, "database error", ulog.Error(nil))
+    loggerAsync.Sync()
+    // Universal logger [Sync] with colored text output
+    loggerSync := ulog.NewLogger(
         ulog.WithMode(ulog.ModeSync, os.Stdout),
         ulog.WithFormat(ulog.FormatText),
         ulog.WithTheme(ulog.ThemeDark),
     )
-    logger.Debug("debugging connection")
-    logger.Info("server started", ulog.Int("port", 8080))
-    logger.Warn("high latency", ulog.Duration("latency", 150*time.Millisecond))
-    logger.Error("database error", ulog.Err(nil))
-    // Logger with context (auto‑extract trace_id)
-    ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-    logger.InfoWithContext(ctx, "request processed", ulog.String("path", "/api/user"))
-    // Async logger
-    async := ulog.NewLogger(
-        ulog.WithMode(ulog.ModeAsync, os.Stdout, 10000),
+    loggerSync.Debug("debugging request", ulog.String("path", "/api/user"))
+    loggerSync.DebugWithContext(ctx, "debugging request", ulog.String("path", "/api/user"))
+    loggerSync.Info("server started", ulog.Int("port", 8080))
+    loggerSync.InfoWithContext(ctx, "server started", ulog.Int("port", 8080))
+    loggerSync.Warn("high latency", ulog.Duration("latency", 150*time.Millisecond))
+    loggerSync.WarnWithContext(ctx, "high latency", ulog.Duration("latency", 150*time.Millisecond))
+    loggerSync.Error("database error", ulog.Error(nil))
+    loggerSync.ErrorWithContext(ctx, "database error", ulog.Error(nil))
+    // Standard logger adapter (writes only errors)
+    logger := ulog.NewLogger(
+        ulog.WithMode(ulog.ModeSync, os.Stdout),
         ulog.WithFormat(ulog.FormatJson),
     )
-    defer async.Close()
-    async.Info("async message")
-    async.Sync() // wait for flush
-    // Standard log.Logger adapter
-    std := ulog.NewLoggerLog(ulog.LevelError, logger)
-    std.Print("error from standard logger")
+    loggerLog := ulog.NewLoggerLog(ulog.LevelError, logger)
+    loggerLog.Print("error from standard logger")
 }
 ```
 
