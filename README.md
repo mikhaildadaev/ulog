@@ -79,7 +79,7 @@ go get github.com/mikhaildadaev/ulog
 
 ## Performance
 
-### Universal Multi Thread
+### Multi Thread
 
 |   Level   |  Mode | Format | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-----------|-------|--------|------------|--------------|---------------|--------|
@@ -100,7 +100,7 @@ go get github.com/mikhaildadaev/ulog
 | **Error** |  Sync | Simple |      11.4M |       104.90 |        	  24 |      1 |
 | **Error** |  Sync | Format |       6.0M |       200.20 |        	 616 |      4 |
 
-### Universal Single Thread
+### Single Thread
 
 |   Level   |  Mode | Format | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-----------|-------|--------|------------|--------------|---------------|--------|
