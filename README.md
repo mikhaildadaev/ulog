@@ -84,42 +84,42 @@ go get github.com/mikhaildadaev/ulog
 |   Level   |  Mode | Format | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-----------|-------|--------|------------|--------------|---------------|--------|
 | **Debug** | Async | Simple |       1.8B |	        0.56 |	           0 |      0 |
-| **Debug** | Async | Format |       8.4M |    	  119.00 |           576 |      1 |
+| **Debug** | Async | Format |       8.7M |    	  114.40 |           576 |      1 |
 | **Debug** |  Sync | Simple |       1.8B |    	    0.57 |	           0 |      0 |
-| **Debug** |  Sync | Format |       8.8M |    	  113.00 |	         576 |      1 |
-|  **Info** | Async | Simple |       6.0M |       167.00 |	         104 |      2 |
-|  **Info** | Async | Format |       3.9M |       255.00 |	         733 |      4 |
-|  **Info** |  Sync | Simple |       9.9M |    	  101.00 | 	       	  24 |      1 |
-|  **Info** |  Sync | Format |       5.7M |       175.00 |	         605 |      3 |
-|  **Warn** | Async | Simple |       6.2M |    	  161.00 |        	 104 |      2 |
-|  **Warn** | Async | Format |       3.7M |       267.00 |        	 733 |      4 |
-|  **Warn** |  Sync | Simple |       9.2M |       109.00 |        	  24 |      1 |
-|  **Warn** |  Sync | Format |       6.0M |    	  166.00 |        	 605 |      3 |
-| **Error** | Async | Simple |       5.3M |       187.00 |        	 120 |      2 |
-| **Error** | Async | Format |       2.8M |       363.00 |        	 733 |      4 |
-| **Error** |  Sync | Simple |       9.3M |       107.00 |        	  24 |      1 |
-| **Error** |  Sync | Format |       5.1M |       198.00 |        	 605 |      3 |
+| **Debug** |  Sync | Format |       8.2M |    	  121.70 |	         576 |      1 |
+|  **Info** | Async | Simple |       4.1M |       245.60 |	         104 |      2 |
+|  **Info** | Async | Format |       3.0M |       328.20 |	         734 |      4 |
+|  **Info** |  Sync | Simple |       9.0M |    	  111.40 | 	       	  24 |      1 |
+|  **Info** |  Sync | Format |       4.0M |       249.40 |	         606 |      3 |
+|  **Warn** | Async | Simple |       5.1M |    	  196.60 |        	 104 |      2 |
+|  **Warn** | Async | Format |       2.8M |       354.10 |        	 734 |      4 |
+|  **Warn** |  Sync | Simple |       9.3M |       107.10 |        	  24 |      1 |
+|  **Warn** |  Sync | Format |       3.7M |    	  270.30 |        	 606 |      3 |
+| **Error** | Async | Simple |       4.7M |       213.60 |        	 120 |      2 |
+| **Error** | Async | Format |       2.4M |       409.80 |        	 734 |      4 |
+| **Error** |  Sync | Simple |       9.0M |       111.80 |        	  24 |      1 |
+| **Error** |  Sync | Format |       3.8M |       265.70 |        	 606 |      3 |
 
 ### Single Thread
 
 |   Level   |  Mode | Format | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-----------|-------|--------|------------|--------------|---------------|--------|
-| **Debug** | Async | Simple |       1.8B |         0.56 |             0 |      0 |
-| **Debug**	| Async | Format |       8.4M |       119.00 |	         576 |      1 |
-| **Debug**	|  Sync | Simple |       1.8B |         0.57 |	           0 |      0 |
-| **Debug**	|  Sync | Format |       8.8M |       113.00 |	         576 |      1 |
-|  **Info**	| Async | Simple |       6.0M |       167.00 |	         104 |      2 |
-|  **Info**	| Async | Format |       3.9M |       255.00 |	         733 |      4 |
-|  **Info**	|  Sync | Simple |       9.9M |       101.00 |	          24 |      1 |
-|  **Info**	|  Sync | Format |       5.7M |       175.00 |	         605 |      3 |
-|  **Warn**	| Async | Simple |       6.2M |       161.00 |	         104 |      2 |
-|  **Warn**	| Async | Format |       3.7M |       267.00 |	         733 |      4 |
-|  **Warn**	|  Sync | Simple |       9.2M |       109.00 |	          24 |      1 |
-|  **Warn**	|  Sync | Format |       6.0M |       166.00 |	         605 |      3 |
-| **Error**	| Async | Simple |       5.3M |       187.00 |	         120 |      2 |
-| **Error**	| Async | Format |       2.8M |       363.00 |	         733 |      4 |
-| **Error**	|  Sync | Simple |       9.3M |       107.00 |	          24 |      1 |
-| **Error**	|  Sync | Format |       5.1M |       198.00 |	         605 |	    3 |
+| **Debug** | Async | Simple |     317.8M |         3.78 |             0 |      0 |
+| **Debug**	| Async | Format |       8.6M |       136.80 |	         576 |      1 |
+| **Debug**	|  Sync | Simple |     315.0M |         3.87 |	           0 |      0 |
+| **Debug**	|  Sync | Format |       8.4M |       143.10 |	         576 |      1 |
+|  **Info**	| Async | Simple |       1.8M |       641.30 |	         104 |      2 |
+|  **Info**	| Async | Format |       1.3M |       940.60 |	         734 |      4 |
+|  **Info**	|  Sync | Simple |       2.8M |       443.80 |	          24 |      1 |
+|  **Info**	|  Sync | Format |       1.6M |       711.80 |	         606 |      3 |
+|  **Warn**	| Async | Simple |       1.8M |       644.80 |	         104 |      2 |
+|  **Warn**	| Async | Format |       1.3M |       938.10 |	         734 |      4 |
+|  **Warn**	|  Sync | Simple |       2.8M |       444.30 |	          24 |      1 |
+|  **Warn**	|  Sync | Format |       1.6M |       709.90 |	         606 |      3 |
+| **Error**	| Async | Simple |       1.8M |       664.30 |	         120 |      2 |
+| **Error**	| Async | Format |       1.3M |       925.90 |	         734 |      4 |
+| **Error**	|  Sync | Simple |       2.8M |       424.30 |	          24 |      1 |
+| **Error**	|  Sync | Format |       1.6M |       767.00 |	         606 |	    3 |
 
 *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
