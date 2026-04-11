@@ -79,7 +79,7 @@ go get github.com/mikhaildadaev/ulog
 
 ## Performance
 
-### Multi Thread
+### Universal Multi Thread
 
 |   Level   |  Mode | Format | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-----------|-------|--------|------------|--------------|---------------|--------|
@@ -100,7 +100,7 @@ go get github.com/mikhaildadaev/ulog
 | **Error** |  Sync | Simple |      11.4M |       104.90 |        	  24 |      1 |
 | **Error** |  Sync | Format |       6.0M |       200.20 |        	 616 |      4 |
 
-### Single Thread
+### Universal Single Thread
 
 |   Level   |  Mode | Format | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-----------|-------|--------|------------|--------------|---------------|--------|
@@ -122,6 +122,8 @@ go get github.com/mikhaildadaev/ulog
 | **Error**	|  Sync | Format |       1.8M |       647.10 |	         616 |	    4 |
 
 *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
+
+> **Note:** `Format` benchmarks use `WithExtractor("trace_id")` to automatically extract `trace_id` from context.
 
 ## Usage
 
