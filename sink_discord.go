@@ -13,19 +13,19 @@ import (
 
 // Публичные структуры
 type DiscordSink struct {
-	webhookURL string
-	username   string
 	avatarURL  string
-	tts        bool
 	client     *http.Client
+	tts        bool
+	username   string
+	webhookURL string
 }
 type DiscordOption func(*DiscordSink)
 
 // Публичные конструкторы
 func NewDiscordSink(webhookURL string, options ...DiscordOption) *DiscordSink {
 	sink := &DiscordSink{
-		webhookURL: webhookURL,
 		client:     &http.Client{Timeout: 10 * time.Second},
+		webhookURL: webhookURL,
 	}
 	for _, option := range options {
 		option(sink)

@@ -15,10 +15,10 @@ import (
 type TelegramSink struct {
 	botToken              string
 	chatID                string
-	parseMode             string
-	disableWebPagePreview bool
-	disableNotification   bool
 	client                *http.Client
+	disableNotification   bool
+	disableWebPagePreview bool
+	parseMode             string
 }
 type TelegramOption func(*TelegramSink)
 

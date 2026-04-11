@@ -12,20 +12,20 @@ import (
 
 // Публичные структуры
 type SlackSink struct {
-	webhookURL string
-	username   string
-	iconEmoji  string
-	iconURL    string
 	channel    string
 	client     *http.Client
+	iconEmoji  string
+	iconURL    string
+	username   string
+	webhookURL string
 }
 type SlackOption func(*SlackSink)
 
 // Публичные конструкторы
 func NewSlackSink(webhookURL string, options ...SlackOption) *SlackSink {
 	sink := &SlackSink{
-		webhookURL: webhookURL,
 		client:     &http.Client{Timeout: 10 * time.Second},
+		webhookURL: webhookURL,
 	}
 	for _, option := range options {
 		option(sink)
