@@ -1,126 +1,82 @@
+// Этот файл (sink.go) находится в стадии активной разработки.
+// API может изменяться до выхода версии v1.0.0.
+//
+// Планируется добавить:
+// - Batch [пакетирование]
+// - Circuit Breaker [защита от перегрузки]
+// - Retry [повторные отправки]
 package ulog
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"time"
+	"io"
+	"sync"
 )
 
 // Публичные структуры
-type SinkSlack struct {
-	WebhookURL string
-	Username   string
-	IconEmoji  string
-	IconURL    string
-	Channel    string
-	Client     *http.Client
+type MultiSink struct {
+	mutex   sync.RWMutex
+	writers []io.Writer
 }
-type SinkTelegram struct {
-	BotToken string
-	ChatID   string
-	Client   *http.Client
-}
-type WebhookSlack struct {
-	Text      string `json:"text"`
-	Username  string `json:"username,omitempty"`
-	IconEmoji string `json:"icon_emoji,omitempty"`
-	IconURL   string `json:"icon_url,omitempty"`
-	Channel   string `json:"channel,omitempty"`
-}
-type WebhookDiscord struct {
-	Content   string `json:"content"`
-	Username  string `json:"username,omitempty"`
-	AvatarURL string `json:"avatar_url,omitempty"`
-	TTS       bool   `json:"tts,omitempty"`
-}
-type SinkDiscord struct {
-	WebhookURL string
-	Username   string
-	AvatarURL  string
-	Client     *http.Client
+type Sink = io.Writer
+
+// Публичные конструкторы
+func NewMultiSink(writers ...io.Writer) *MultiSink {
+	return &MultiSink{
+		writers: writers,
+	}
 }
 
 // Публичные методы
-func (sinkDiscord *SinkDiscord) Write(p []byte) (n int, err error) {
-	if sinkDiscord.Client == nil {
-		sinkDiscord.Client = &http.Client{Timeout: maxTimeout}
-	}
-	msg := string(p)
-	if len(msg) > maxDiscordMessageLen {
-		msg = msg[:maxDiscordMessageLen-3] + "..."
-	}
-	webhook := WebhookDiscord{
-		Content:   msg,
-		Username:  sinkDiscord.Username,
-		AvatarURL: sinkDiscord.AvatarURL,
-		TTS:       false,
-	}
-	jsonBody, err := json.Marshal(webhook)
-	if err != nil {
-		return 0, fmt.Errorf("telegram marshal: %w", err)
-	}
-	resp, err := sinkDiscord.Client.Post(sinkDiscord.WebhookURL, "application/json", bytes.NewReader(jsonBody))
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return 0, fmt.Errorf("discord webhook returned status: %s", resp.Status)
-	}
-	return len(p), nil
+func (multiSink *MultiSink) Add(w io.Writer) {
+	multiSink.mutex.Lock()
+	defer multiSink.mutex.Unlock()
+	multiSink.writers = append(multiSink.writers, w)
 }
-func (sinkSlack *SinkSlack) Write(p []byte) (n int, err error) {
-	if sinkSlack.Client == nil {
-		sinkSlack.Client = &http.Client{Timeout: maxTimeout}
+func (multiSink *MultiSink) Close() error {
+	multiSink.mutex.Lock()
+	defer multiSink.mutex.Unlock()
+	var errors []error
+	for i, w := range multiSink.writers {
+		if closer, ok := w.(io.Closer); ok {
+			if err := closer.Close(); err != nil {
+				errors = append(errors, fmt.Errorf("writer[%d]: %w", i, err))
+			}
+		}
 	}
-	msg := string(p)
-	if len(msg) > maxSlackMessageLen {
-		msg = msg[:maxSlackMessageLen-3] + "..."
+	if len(errors) > 0 {
+		return fmt.Errorf("close errors: %v", errors)
 	}
-	webhook := WebhookSlack{
-		Text:      msg,
-		Username:  sinkSlack.Username,
-		IconEmoji: sinkSlack.IconEmoji,
-		IconURL:   sinkSlack.IconURL,
-		Channel:   sinkSlack.Channel,
-	}
-	jsonBody, err := json.Marshal(webhook)
-	if err != nil {
-		return 0, err
-	}
-	resp, err := sinkSlack.Client.Post(sinkSlack.WebhookURL, "application/json", bytes.NewReader(jsonBody))
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("slack webhook returned status: %s", resp.Status)
-	}
-	return len(p), nil
+	return nil
 }
-func (sinkTelegram *SinkTelegram) Write(p []byte) (n int, err error) {
-	if sinkTelegram.Client == nil {
-		sinkTelegram.Client = &http.Client{Timeout: maxTimeout}
+func (multiSink *MultiSink) Len() int {
+	multiSink.mutex.RLock()
+	defer multiSink.mutex.RUnlock()
+	return len(multiSink.writers)
+}
+func (multiSink *MultiSink) Remove(index int) error {
+	multiSink.mutex.Lock()
+	defer multiSink.mutex.Unlock()
+	if index < 0 || index >= len(multiSink.writers) {
+		return fmt.Errorf("index out of range: %d", index)
 	}
-	msg := string(p)
-	if len(msg) > maxTelegramMessageLen {
-		msg = msg[:maxTelegramMessageLen-3] + "..."
+	multiSink.writers = append(multiSink.writers[:index], multiSink.writers[index+1:]...)
+	return nil
+}
+func (multiSink *MultiSink) Write(p []byte) (n int, err error) {
+	multiSink.mutex.RLock()
+	defer multiSink.mutex.RUnlock()
+	if len(multiSink.writers) == 0 {
+		return 0, nil
 	}
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", sinkTelegram.BotToken)
-	body := map[string]string{
-		"chat_id": sinkTelegram.ChatID,
-		"text":    msg,
+	var errors []error
+	for _, w := range multiSink.writers {
+		if _, err := w.Write(p); err != nil {
+			errors = append(errors, err)
+		}
 	}
-	jsonBody, _ := json.Marshal(body)
-	resp, err := sinkTelegram.Client.Post(url, "application/json", bytes.NewReader(jsonBody))
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("telegram API returned status: %s", resp.Status)
+	if len(errors) > 0 {
+		return len(p), fmt.Errorf("multi sink errors: %v", errors)
 	}
 	return len(p), nil
 }
@@ -130,10 +86,4 @@ const (
 	maxDiscordMessageLen  = 2000
 	maxSlackMessageLen    = 4000
 	maxTelegramMessageLen = 4096
-	maxTimeout            = 10 * time.Second
 )
-
-// Данный файл находится в стадии разработки
-// Batch [пакетировнаия]
-// Circuit Breaker [защита от перегрузки]
-// Retry [повторных попыток]

@@ -1,0 +1,97 @@
+package ulog
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+)
+
+// Публичные структуры
+type SlackSink struct {
+	webhookURL string
+	username   string
+	iconEmoji  string
+	iconURL    string
+	channel    string
+	client     *http.Client
+}
+type SlackOption func(*SlackSink)
+
+// Публичные конструкторы
+func NewSlackSink(webhookURL string, opts ...SlackOption) *SlackSink {
+	sink := &SlackSink{
+		webhookURL: webhookURL,
+		client:     &http.Client{Timeout: 10 * time.Second},
+	}
+	for _, opt := range opts {
+		opt(sink)
+	}
+	return sink
+}
+
+// Публичные функции
+func WithSlackChannel(channel string) SlackOption {
+	return func(slackSink *SlackSink) {
+		slackSink.channel = channel
+	}
+}
+func WithSlackIconEmoji(emoji string) SlackOption {
+	return func(slackSink *SlackSink) {
+		slackSink.iconEmoji = emoji
+	}
+}
+func WithSlackIconURL(url string) SlackOption {
+	return func(slackSink *SlackSink) {
+		slackSink.iconURL = url
+	}
+}
+func WithSlackTimeout(timeout time.Duration) SlackOption {
+	return func(slackSink *SlackSink) {
+		slackSink.client.Timeout = timeout
+	}
+}
+func WithSlackUsername(username string) SlackOption {
+	return func(slackSink *SlackSink) {
+		slackSink.username = username
+	}
+}
+
+// Публичные методы
+func (slackSink *SlackSink) Close() error {
+	slackSink.client.CloseIdleConnections()
+	return nil
+}
+func (slackSink *SlackSink) Write(p []byte) (n int, err error) {
+	msg := string(p)
+	if len(msg) > maxSlackMessageLen {
+		msg = msg[:maxSlackMessageLen-3] + "..."
+	}
+	webhook := struct {
+		Text      string `json:"text"`
+		Username  string `json:"username,omitempty"`
+		IconEmoji string `json:"icon_emoji,omitempty"`
+		IconURL   string `json:"icon_url,omitempty"`
+		Channel   string `json:"channel,omitempty"`
+	}{
+		Text:      msg,
+		Username:  slackSink.username,
+		IconEmoji: slackSink.iconEmoji,
+		IconURL:   slackSink.iconURL,
+		Channel:   slackSink.channel,
+	}
+	jsonBody, err := json.Marshal(webhook)
+	if err != nil {
+		return 0, fmt.Errorf("slack marshal: %w", err)
+	}
+	resp, err := slackSink.client.Post(slackSink.webhookURL, "application/json", bytes.NewReader(jsonBody))
+	if err != nil {
+		return 0, fmt.Errorf("slack post: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return 0, fmt.Errorf("slack: %s", resp.Status)
+	}
+	return len(p), nil
+}
