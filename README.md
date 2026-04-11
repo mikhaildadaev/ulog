@@ -4,7 +4,7 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/mikhaildadaev/ulog)](https://github.com/mikhaildadaev/ulog)
 [![CI](https://github.com/mikhaildadaev/ulog/actions/workflows/ci.yml/badge.svg)](https://github.com/mikhaildadaev/ulog/actions/workflows/ci.yml)
 
-# ULOG Logger
+# ULOG Toolkit
 
 A high-performance, zero-dependency structured logger for Go with JSON and Text outputs, colored themes, async writer, and full context support.
 
