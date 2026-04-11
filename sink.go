@@ -5,9 +5,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // Публичные структуры
+type SinkSlack struct {
+	WebhookURL string
+	Username   string
+	IconEmoji  string
+	IconURL    string
+	Channel    string
+	Client     *http.Client
+}
+type SinkTelegram struct {
+	BotToken string
+	ChatID   string
+	Client   *http.Client
+}
 type WebhookSlack struct {
 	Text      string `json:"text"`
 	Username  string `json:"username,omitempty"`
@@ -21,67 +35,62 @@ type WebhookDiscord struct {
 	AvatarURL string `json:"avatar_url,omitempty"`
 	TTS       bool   `json:"tts,omitempty"`
 }
-type WriterDiscord struct {
+type SinkDiscord struct {
 	WebhookURL string
 	Username   string
 	AvatarURL  string
 	Client     *http.Client
 }
-type WriterSlack struct {
-	WebhookURL string
-	Username   string
-	IconEmoji  string
-	IconURL    string
-	Channel    string
-	Client     *http.Client
-}
-type WriterTelegram struct {
-	BotToken string
-	ChatID   string
-	Client   *http.Client
-}
 
 // Публичные методы
-func (writerDiscord *WriterDiscord) Write(p []byte) (n int, err error) {
-	if writerDiscord.Client == nil {
-		writerDiscord.Client = &http.Client{}
+func (sinkDiscord *SinkDiscord) Write(p []byte) (n int, err error) {
+	if sinkDiscord.Client == nil {
+		sinkDiscord.Client = &http.Client{Timeout: maxTimeout}
+	}
+	msg := string(p)
+	if len(msg) > maxDiscordMessageLen {
+		msg = msg[:maxDiscordMessageLen-3] + "..."
 	}
 	webhook := WebhookDiscord{
-		Content:   string(p),
-		Username:  writerDiscord.Username,
-		AvatarURL: writerDiscord.AvatarURL,
+		Content:   msg,
+		Username:  sinkDiscord.Username,
+		AvatarURL: sinkDiscord.AvatarURL,
 		TTS:       false,
 	}
 	jsonBody, err := json.Marshal(webhook)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("telegram marshal: %w", err)
 	}
-	resp, err := writerDiscord.Client.Post(writerDiscord.WebhookURL, "application/json", bytes.NewReader(jsonBody))
+	resp, err := sinkDiscord.Client.Post(sinkDiscord.WebhookURL, "application/json", bytes.NewReader(jsonBody))
 	if err != nil {
 		return 0, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return 0, fmt.Errorf("discord webhook returned status: %s", resp.Status)
 	}
 	return len(p), nil
 }
-func (writerSlack *WriterSlack) Write(p []byte) (n int, err error) {
-	if writerSlack.Client == nil {
-		writerSlack.Client = &http.Client{}
+func (sinkSlack *SinkSlack) Write(p []byte) (n int, err error) {
+	if sinkSlack.Client == nil {
+		sinkSlack.Client = &http.Client{Timeout: maxTimeout}
+	}
+	msg := string(p)
+	if len(msg) > maxSlackMessageLen {
+		msg = msg[:maxSlackMessageLen-3] + "..."
 	}
 	webhook := WebhookSlack{
-		Text:      string(p),
-		Username:  writerSlack.Username,
-		IconEmoji: writerSlack.IconEmoji,
-		IconURL:   writerSlack.IconURL,
-		Channel:   writerSlack.Channel,
+		Text:      msg,
+		Username:  sinkSlack.Username,
+		IconEmoji: sinkSlack.IconEmoji,
+		IconURL:   sinkSlack.IconURL,
+		Channel:   sinkSlack.Channel,
 	}
 	jsonBody, err := json.Marshal(webhook)
 	if err != nil {
 		return 0, err
 	}
-	resp, err := writerSlack.Client.Post(writerSlack.WebhookURL, "application/json", bytes.NewReader(jsonBody))
+	resp, err := sinkSlack.Client.Post(sinkSlack.WebhookURL, "application/json", bytes.NewReader(jsonBody))
 	if err != nil {
 		return 0, err
 	}
@@ -91,17 +100,21 @@ func (writerSlack *WriterSlack) Write(p []byte) (n int, err error) {
 	}
 	return len(p), nil
 }
-func (writerTelegram *WriterTelegram) Write(p []byte) (n int, err error) {
-	if writerTelegram.Client == nil {
-		writerTelegram.Client = &http.Client{}
+func (sinkTelegram *SinkTelegram) Write(p []byte) (n int, err error) {
+	if sinkTelegram.Client == nil {
+		sinkTelegram.Client = &http.Client{Timeout: maxTimeout}
 	}
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", writerTelegram.BotToken)
+	msg := string(p)
+	if len(msg) > maxTelegramMessageLen {
+		msg = msg[:maxTelegramMessageLen-3] + "..."
+	}
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", sinkTelegram.BotToken)
 	body := map[string]string{
-		"chat_id": writerTelegram.ChatID,
-		"text":    string(p),
+		"chat_id": sinkTelegram.ChatID,
+		"text":    msg,
 	}
 	jsonBody, _ := json.Marshal(body)
-	resp, err := writerTelegram.Client.Post(url, "application/json", bytes.NewReader(jsonBody))
+	resp, err := sinkTelegram.Client.Post(url, "application/json", bytes.NewReader(jsonBody))
 	if err != nil {
 		return 0, err
 	}
@@ -111,3 +124,11 @@ func (writerTelegram *WriterTelegram) Write(p []byte) (n int, err error) {
 	}
 	return len(p), nil
 }
+
+// Приватные константы
+const (
+	maxDiscordMessageLen  = 2000
+	maxSlackMessageLen    = 4000
+	maxTelegramMessageLen = 4096
+	maxTimeout            = 10 * time.Second
+)
