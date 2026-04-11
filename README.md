@@ -123,7 +123,7 @@ go get github.com/mikhaildadaev/ulog
 
 *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
-> **Note:** `Format` benchmarks use `WithExtractor("trace_id")` to automatically extract `trace_id` from context.
+> **Note:** `Format` benchmarks use `WithExtractor("trace_id")` to automatically extract from context.
 
 ## Usage
 
