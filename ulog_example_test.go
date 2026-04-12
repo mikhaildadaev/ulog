@@ -21,7 +21,6 @@ func ExampleNewLogger() {
 		ulog.WithTheme(ulog.ThemeDark),
 	)
 	defer logger.Close()
-	output := ""
 	logger.Debug("test message")
 	logger.Info("test message")
 	logger.Warn("test message")
@@ -35,7 +34,7 @@ func ExampleNewLogger() {
 	logger.InfoWithContext(ctx, "test message")
 	logger.WarnWithContext(ctx, "test message")
 	logger.ErrorWithContext(ctx, "test message")
-	output = formatOutput(buf.String())
+	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
 	// [DEBUG] test message
