@@ -126,8 +126,7 @@ go get github.com/mikhaildadaev/ulog
 > - All benchmarks write to `io.Discard` (equivalent to `/dev/null` on Unix or `NUL` on Windows).
 > - This measures only the logging overhead (field formatting, JSON encoding, context extraction) without disk or network I/O.
 > - Real-world performance will depend on your output destination (file, network, etc.).
-
-*Benchmarked on Intel Core i9-9880H (2.30 GHz)*
+> - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
 ## Usage
 
