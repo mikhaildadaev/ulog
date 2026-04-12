@@ -356,7 +356,6 @@ func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, theme
 		}
 	}
 	dataBuf.WriteString(theme.reset)
-	dataBuf.WriteByte('\n')
 }
 func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 	switch field.typeValue {
@@ -641,6 +640,7 @@ func (universalLogger *universalLogger) writeJson(level TypeLevel, context conte
 	dataBuf.WriteByte(',')
 	formatDataJson(dataBuf, message, fields)
 	dataBuf.WriteByte('}')
+	dataBuf.WriteByte('\n')
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
@@ -666,6 +666,7 @@ func (universalLogger *universalLogger) writeText(level TypeLevel, context conte
 	formatPrefixText(dataBuf, level, caller, theme)
 	dataBuf.WriteByte(' ')
 	formatDataText(dataBuf, message, fields, theme)
+	dataBuf.WriteByte('\n')
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
