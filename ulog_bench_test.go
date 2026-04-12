@@ -399,7 +399,7 @@ func BenchmarkTeeSink_Multi(b *testing.B) {
 	}
 	for _, format := range formats {
 		sinkFile, err := NewFileSink(logFile,
-			WithFileMaxSize(10),
+			WithFileMaxSize(50),
 		)
 		if err != nil {
 			b.Fatal(err)
@@ -408,7 +408,9 @@ func BenchmarkTeeSink_Multi(b *testing.B) {
 		teeSink := NewTeeSink(sinkFile)
 		defer teeSink.Close()
 		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
+			logger := NewLogger(
+				WithFormat(FormatJson),
+			)
 			if b.N == 1 {
 				logger.ErrorWithContext(ctx, "test error simple message")
 			}
@@ -423,6 +425,7 @@ func BenchmarkTeeSink_Multi(b *testing.B) {
 		b.Run("Format "+format.name, func(b *testing.B) {
 			logger := NewLogger(
 				WithExtractor("trace_id"),
+				WithFormat(FormatJson),
 			)
 			if b.N == 1 {
 				logger.ErrorWithContext(ctx, "test error format message")
@@ -459,7 +462,7 @@ func BenchmarkTeeSink_Single(b *testing.B) {
 	}
 	for _, format := range formats {
 		sinkFile, err := NewFileSink(logFile,
-			WithFileMaxSize(10),
+			WithFileMaxSize(50),
 		)
 		if err != nil {
 			b.Fatal(err)
@@ -468,7 +471,9 @@ func BenchmarkTeeSink_Single(b *testing.B) {
 		teeSink := NewTeeSink(sinkFile)
 		defer teeSink.Close()
 		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
+			logger := NewLogger(
+				WithFormat(FormatJson),
+			)
 			if b.N == 1 {
 				logger.ErrorWithContext(ctx, "test error simple message")
 			}
@@ -481,6 +486,7 @@ func BenchmarkTeeSink_Single(b *testing.B) {
 		b.Run("Format "+format.name, func(b *testing.B) {
 			logger := NewLogger(
 				WithExtractor("trace_id"),
+				WithFormat(FormatJson),
 			)
 			if b.N == 1 {
 				logger.ErrorWithContext(ctx, "test error format message")
