@@ -399,7 +399,7 @@ func BenchmarkTeeSink_Multi(b *testing.B) {
 	}
 	for _, format := range formats {
 		sinkFile, err := NewFileSink(logFile,
-			WithFileMaxSize(10000),
+			WithFileMaxSize(10),
 		)
 		if err != nil {
 			b.Fatal(err)
@@ -459,7 +459,7 @@ func BenchmarkTeeSink_Single(b *testing.B) {
 	}
 	for _, format := range formats {
 		sinkFile, err := NewFileSink(logFile,
-			WithFileMaxSize(10000),
+			WithFileMaxSize(10),
 		)
 		if err != nil {
 			b.Fatal(err)
