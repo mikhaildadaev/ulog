@@ -293,6 +293,9 @@ func (universalLogger *universalLogger) Fatal(message string, fields ...Field) {
 	case FormatText:
 		universalLogger.writeText(LevelFatal, context.Background(), message, fields)
 	}
+	if universalLogger.mode == ModeAsync {
+		universalLogger.Sync()
+	}
 	osExit(1)
 }
 func (universalLogger *universalLogger) FatalWithContext(context context.Context, message string, fields ...Field) {
@@ -301,6 +304,9 @@ func (universalLogger *universalLogger) FatalWithContext(context context.Context
 		universalLogger.writeJson(LevelFatal, context, message, fields)
 	case FormatText:
 		universalLogger.writeText(LevelFatal, context, message, fields)
+	}
+	if universalLogger.mode == ModeAsync {
+		universalLogger.Sync()
 	}
 	osExit(1)
 }
