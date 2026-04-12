@@ -331,7 +331,7 @@ func formatDataJson(dataBuf *bytes.Buffer, message string, fields []Field) {
 	escapeJSON(dataBuf, message)
 	dataBuf.WriteByte('"')
 	if len(fields) != 0 {
-		dataBuf.WriteString(`,"fields":{`)
+		dataBuf.WriteString(`,`)
 		for i, field := range fields {
 			if i > 0 {
 				dataBuf.WriteByte(',')
@@ -341,7 +341,6 @@ func formatDataJson(dataBuf *bytes.Buffer, message string, fields []Field) {
 			dataBuf.WriteString(`":`)
 			formatFieldValue(dataBuf, field)
 		}
-		dataBuf.WriteByte('}')
 	}
 }
 func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, theme colorTheme) {
