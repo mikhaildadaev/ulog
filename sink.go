@@ -63,6 +63,18 @@ func (multiSink *MultiSink) Remove(index int) error {
 	multiSink.writers = append(multiSink.writers[:index], multiSink.writers[index+1:]...)
 	return nil
 }
+func (multiSink *MultiSink) Replace(index int, w io.Writer) error {
+	multiSink.mutex.Lock()
+	defer multiSink.mutex.Unlock()
+	if index < 0 || index >= len(multiSink.writers) {
+		return fmt.Errorf("index out of range: %d", index)
+	}
+	if closer, ok := multiSink.writers[index].(io.Closer); ok {
+		_ = closer.Close()
+	}
+	multiSink.writers[index] = w
+	return nil
+}
 func (multiSink *MultiSink) Write(p []byte) (n int, err error) {
 	multiSink.mutex.RLock()
 	defer multiSink.mutex.RUnlock()
