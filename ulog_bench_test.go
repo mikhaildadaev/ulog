@@ -3,6 +3,8 @@ package ulog
 import (
 	"context"
 	"io"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -371,6 +373,122 @@ func Benchmark_LoggerLog_Error_Single(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				loggerLog.Print("test error message")
+			}
+		})
+	}
+}
+func BenchmarkTeeSink_Multi(b *testing.B) {
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	cwd, err := os.Getwd()
+	if err != nil {
+		b.Fatal(err)
+	}
+	tmpDir := filepath.Join(cwd, "tmp")
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		b.Fatal(err)
+	}
+	logFile := filepath.Join(tmpDir, "ulog_file.log")
+	formats := []struct {
+		name       string
+		mode       TypeMode
+		writer     io.Writer
+		bufferSize int
+	}{
+		{"Async", ModeAsync, nil, defaultBufferSize},
+		{"Sync", ModeSync, nil, 0},
+	}
+	for _, format := range formats {
+		sinkFile, err := NewFileSink(logFile,
+			WithFileMaxSize(10000),
+		)
+		if err != nil {
+			b.Fatal(err)
+		}
+		defer sinkFile.Close()
+		teeSink := NewTeeSink(sinkFile)
+		defer teeSink.Close()
+		b.Run("Simple "+format.name, func(b *testing.B) {
+			logger := NewLogger()
+			if b.N == 1 {
+				logger.ErrorWithContext(ctx, "test error simple message")
+			}
+			logger.SetMode(format.mode, teeSink, format.bufferSize)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					logger.ErrorWithContext(ctx, "test error simple message")
+				}
+			})
+		})
+		b.Run("Format "+format.name, func(b *testing.B) {
+			logger := NewLogger(
+				WithExtractor("trace_id"),
+			)
+			if b.N == 1 {
+				logger.ErrorWithContext(ctx, "test error format message")
+			}
+			logger.SetMode(format.mode, teeSink, format.bufferSize)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					logger.ErrorWithContext(ctx, "test error format message")
+				}
+			})
+		})
+	}
+}
+func BenchmarkTeeSink_Single(b *testing.B) {
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	cwd, err := os.Getwd()
+	if err != nil {
+		b.Fatal(err)
+	}
+	tmpDir := filepath.Join(cwd, "tmp")
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		b.Fatal(err)
+	}
+	logFile := filepath.Join(tmpDir, "ulog_file.log")
+	formats := []struct {
+		name       string
+		mode       TypeMode
+		writer     io.Writer
+		bufferSize int
+	}{
+		{"Async", ModeAsync, nil, defaultBufferSize},
+		{"Sync", ModeSync, nil, 0},
+	}
+	for _, format := range formats {
+		sinkFile, err := NewFileSink(logFile,
+			WithFileMaxSize(10000),
+		)
+		if err != nil {
+			b.Fatal(err)
+		}
+		defer sinkFile.Close()
+		teeSink := NewTeeSink(sinkFile)
+		defer teeSink.Close()
+		b.Run("Simple "+format.name, func(b *testing.B) {
+			logger := NewLogger()
+			if b.N == 1 {
+				logger.ErrorWithContext(ctx, "test error simple message")
+			}
+			logger.SetMode(format.mode, teeSink, format.bufferSize)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				logger.ErrorWithContext(ctx, "test error simple message")
+			}
+		})
+		b.Run("Format "+format.name, func(b *testing.B) {
+			logger := NewLogger(
+				WithExtractor("trace_id"),
+			)
+			if b.N == 1 {
+				logger.ErrorWithContext(ctx, "test error format message")
+			}
+			logger.SetMode(format.mode, teeSink, format.bufferSize)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				logger.ErrorWithContext(ctx, "test error format message")
 			}
 		})
 	}
