@@ -415,14 +415,19 @@ func (universalLogger *universalLogger) SetTheme(theme TypeTheme) {
 	}
 }
 func (universalLogger *universalLogger) Sync() error {
-	if universalLogger.mode != ModeAsync {
-		return nil
-	}
 	universalLogger.mutex.RLock()
 	currentWriter := universalLogger.writer
 	universalLogger.mutex.RUnlock()
-	if asyncWriter, ok := currentWriter.(*asyncWriter); ok {
-		return asyncWriter.Sync()
+	if universalLogger.mode == ModeAsync {
+		if asyncWriter, ok := currentWriter.(*asyncWriter); ok {
+			if err := asyncWriter.Sync(); err != nil {
+				return err
+			}
+			currentWriter = asyncWriter.writer
+		}
+	}
+	if syncer, ok := currentWriter.(interface{ Sync() error }); ok {
+		return syncer.Sync()
 	}
 	return nil
 }
