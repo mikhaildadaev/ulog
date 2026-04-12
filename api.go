@@ -187,7 +187,7 @@ func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) OptionLogger {
 		switch mode {
 		case ModeAsync:
 			size := defaultBufferSize
-			if len(bufferSize) > 0 && bufferSize[0] > 0 {
+			if len(bufferSize) > 0 && bufferSize[0] >= 0 {
 				size = bufferSize[0]
 			}
 			universalLogger.mode = ModeAsync
@@ -383,13 +383,12 @@ func (universalLogger *universalLogger) SetMode(mode TypeMode, writer io.Writer,
 	if universalLogger.mode == ModeAsync {
 		if asyncWriter, ok := universalLogger.writer.(*asyncWriter); ok {
 			asyncWriter.Close()
-			time.Sleep(time.Millisecond)
 		}
 	}
 	switch mode {
 	case ModeAsync:
 		size := defaultBufferSize
-		if len(bufferSize) > 0 && bufferSize[0] > 0 {
+		if len(bufferSize) > 0 && bufferSize[0] >= 0 {
 			size = bufferSize[0]
 		}
 		universalLogger.mode = ModeAsync
