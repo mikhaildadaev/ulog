@@ -121,7 +121,11 @@ go get github.com/mikhaildadaev/ulog
 | **Error**	|  Sync | Simple |       3.0M |       395.90 |	          24 |      1 |
 | **Error**	|  Sync | Format |       1.8M |       647.10 |	         616 |	    4 |
 
-> **Note:** `Format` benchmarks use `WithExtractor("trace_id")` to automatically extract from context.
+> **Note:**
+> - `Format` benchmarks use `WithExtractor("trace_id")` to automatically extract from context.
+> - All benchmarks write to `io.Discard` (equivalent to `/dev/null` on Unix or `NUL` on Windows).
+> - This measures only the logging overhead (field formatting, JSON encoding, context extraction) without disk or network I/O.
+> - Real-world performance will depend on your output destination (file, network, etc.).
 
 *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
