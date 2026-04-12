@@ -87,6 +87,10 @@ go get github.com/mikhaildadaev/ulog
 | **Debug** | Async | Format |       1.0B |    	    0.57 |             0 |      0 |
 | **Debug** |  Sync | Simple |       1.0B |    	    0.57 |	           0 |      0 |
 | **Debug** |  Sync | Format |       1.0B |    	    0.57 |	           0 |      0 |
+| **Error** | Async | Simple |       6.2M |       203.90 |        	 120 |      2 |
+| **Error** | Async | Format |       4.0M |       275.70 |        	 728 |      5 |
+| **Error** |  Sync | Simple |      11.4M |       104.90 |        	  24 |      1 |
+| **Error** |  Sync | Format |       6.0M |       200.20 |        	 616 |      4 |
 |  **Info** | Async | Simple |       6.8M |       165.80 |	         104 |      2 |
 |  **Info** | Async | Format |       4.1M |       273.70 |	         728 |      5 |
 |  **Info** |  Sync | Simple |      11.4M |    	  103.80 | 	       	  24 |      1 |
@@ -95,10 +99,6 @@ go get github.com/mikhaildadaev/ulog
 |  **Warn** | Async | Format |       4.4M |       242.50 |        	 728 |      5 |
 |  **Warn** |  Sync | Simple |      11.5M |       102.00 |        	  24 |      1 |
 |  **Warn** |  Sync | Format |       6.9M |    	  164.20 |        	 616 |      4 |
-| **Error** | Async | Simple |       6.2M |       203.90 |        	 120 |      2 |
-| **Error** | Async | Format |       4.0M |       275.70 |        	 728 |      5 |
-| **Error** |  Sync | Simple |      11.4M |       104.90 |        	  24 |      1 |
-| **Error** |  Sync | Format |       6.0M |       200.20 |        	 616 |      4 |
 
 ### Single Thread
 
@@ -108,6 +108,10 @@ go get github.com/mikhaildadaev/ulog
 | **Debug**	| Async | Format |     288.9M |         5.29 |	           0 |      0 |
 | **Debug**	|  Sync | Simple |     283.9M |         3.92 |	           0 |      0 |
 | **Debug**	|  Sync | Format |     307.7M |         3.85 |	           0 |      0 |
+| **Error**	| Async | Simple |       2.1M |       587.30 |	         120 |      2 |
+| **Error**	| Async | Format |       1.4M |       824.20 |	         728 |      5 |
+| **Error**	|  Sync | Simple |       3.0M |       395.90 |	          24 |      1 |
+| **Error**	|  Sync | Format |       1.8M |       647.10 |	         616 |	    4 |
 |  **Info**	| Async | Simple |       2.1M |       551.90 |	         104 |      2 |
 |  **Info**	| Async | Format |       1.4M |       826.50 |	         728 |      5 |
 |  **Info**	|  Sync | Simple |       3.0M |       388.70 |	          24 |      1 |
@@ -116,10 +120,6 @@ go get github.com/mikhaildadaev/ulog
 |  **Warn**	| Async | Format |       1.5M |       818.80 |	         728 |      5 |
 |  **Warn**	|  Sync | Simple |       3.0M |       394.30 |	          24 |      1 |
 |  **Warn**	|  Sync | Format |       1.9M |       627.70 |	         616 |      3 |
-| **Error**	| Async | Simple |       2.1M |       587.30 |	         120 |      2 |
-| **Error**	| Async | Format |       1.4M |       824.20 |	         728 |      5 |
-| **Error**	|  Sync | Simple |       3.0M |       395.90 |	          24 |      1 |
-| **Error**	|  Sync | Format |       1.8M |       647.10 |	         616 |	    4 |
 
 > **Note:**
 > - `Format` benchmarks use `WithExtractor("trace_id")` to automatically extract from context.
