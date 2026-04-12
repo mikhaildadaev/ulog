@@ -597,7 +597,7 @@ func isIgnoredError(data []byte) bool {
 func (asyncWriter *asyncWriter) run() {
 	for buf := range asyncWriter.ch {
 		if _, err := asyncWriter.writer.Write(buf); err != nil {
-			// Дописать место логирования ошибки
+			fmt.Fprintf(os.Stderr, "ulog: async write failed: %v\n", err)
 		}
 		asyncWriter.wg.Done()
 	}
