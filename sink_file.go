@@ -8,7 +8,9 @@
 package ulog
 
 import (
+	"compress/gzip"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -20,9 +22,9 @@ import (
 type FileSink struct {
 	file       *os.File
 	filename   string
-	maxAge     int   // сколько дней хранить (0 — не ограничено)
-	maxBackups int   // сколько старых файлов хранить
-	maxSize    int64 // максимальный размер файла в байтах
+	maxAge     int
+	maxBackups int
+	maxSize    int64
 	mutex      sync.Mutex
 }
 type FileOption func(*FileSink)
@@ -40,9 +42,9 @@ func NewFileSink(filename string, options ...FileOption) (*FileSink, error) {
 	fileSink := &FileSink{
 		file:       file,
 		filename:   filename,
-		maxAge:     30,                // 30 дней по умолчанию
-		maxBackups: 10,                // 10 бэкапов по умолчанию
-		maxSize:    100 * 1024 * 1024, // 100 MB по умолчанию
+		maxAge:     30,
+		maxBackups: 10,
+		maxSize:    100 * 1024 * 1024,
 	}
 	for _, option := range options {
 		option(fileSink)
@@ -119,36 +121,64 @@ func (fileSink *FileSink) cleanupBackups() error {
 	})
 	if fileSink.maxBackups > 0 && len(files) > fileSink.maxBackups {
 		for _, file := range files[fileSink.maxBackups:] {
-			os.Remove(file)
+			if err := os.Remove(file); err != nil {
+				fmt.Fprintf(os.Stderr, "failed to remove old backup %s: %v\n", file, err)
+			}
 		}
 		files = files[:fileSink.maxBackups]
 	}
 	if fileSink.maxAge > 0 {
 		cutoff := time.Now().AddDate(0, 0, -fileSink.maxAge)
 		for _, file := range files {
-			info, _ := os.Stat(file)
-			if info != nil && info.ModTime().Before(cutoff) {
-				os.Remove(file)
+			info, err := os.Stat(file)
+			if err != nil {
+				continue
+			}
+			if info.ModTime().Before(cutoff) {
+				if err := os.Remove(file); err != nil {
+					fmt.Fprintf(os.Stderr, "failed to remove old backup %s: %v\n", file, err)
+				}
 			}
 		}
 	}
 	return nil
 }
 func (fileSink *FileSink) compress(filename string) error {
-	// Здесь нужно реализовать gzip compression
-	// Это потребует импорта "compress/gzip" — это стандартная библиотека, не внешняя зависимость!
-	// Но код будет около 30 строк
-	return nil
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	gzFilename := filename + ".gz"
+	gzFile, err := os.Create(gzFilename)
+	if err != nil {
+		return err
+	}
+	defer gzFile.Close()
+	gzWriter := gzip.NewWriter(gzFile)
+	defer gzWriter.Close()
+	if _, err := io.Copy(gzWriter, file); err != nil {
+		return err
+	}
+	return os.Remove(filename)
 }
 func (fileSink *FileSink) getBackupName(timestamp string) string {
 	ext := filepath.Ext(fileSink.filename)
+	if ext == "" {
+		return fmt.Sprintf("%s-%s.log", fileSink.filename, timestamp)
+	}
 	nameWithoutExt := fileSink.filename[:len(fileSink.filename)-len(ext)]
 	return fmt.Sprintf("%s-%s%s", nameWithoutExt, timestamp, ext)
 }
 func (fileSink *FileSink) getBackupPattern() string {
+	base := filepath.Base(fileSink.filename)
+	dir := filepath.Dir(fileSink.filename)
 	ext := filepath.Ext(fileSink.filename)
-	nameWithoutExt := fileSink.filename[:len(fileSink.filename)-len(ext)]
-	return filepath.Join(filepath.Dir(fileSink.filename), nameWithoutExt+"-*.log*")
+	if ext == "" {
+		return filepath.Join(dir, base+"-*.log*")
+	}
+	nameWithoutExt := base[:len(base)-len(ext)]
+	return filepath.Join(dir, nameWithoutExt+"-*.log*")
 }
 func (fileSink *FileSink) rotate() error {
 	if err := fileSink.file.Close(); err != nil {
