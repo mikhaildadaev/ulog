@@ -7,30 +7,30 @@ import (
 )
 
 // Публичные структуры
-type MultiSink struct {
+type TeeSink struct {
 	mutex   sync.RWMutex
 	writers []io.Writer
 }
 type Sink = io.Writer
 
 // Публичные конструкторы
-func NewMultiSink(writers ...io.Writer) *MultiSink {
-	return &MultiSink{
+func NewTeeSink(writers ...io.Writer) *TeeSink {
+	return &TeeSink{
 		writers: writers,
 	}
 }
 
 // Публичные методы
-func (multiSink *MultiSink) Add(w io.Writer) {
-	multiSink.mutex.Lock()
-	defer multiSink.mutex.Unlock()
-	multiSink.writers = append(multiSink.writers, w)
+func (teeSink *TeeSink) Add(w io.Writer) {
+	teeSink.mutex.Lock()
+	defer teeSink.mutex.Unlock()
+	teeSink.writers = append(teeSink.writers, w)
 }
-func (multiSink *MultiSink) Close() error {
-	multiSink.mutex.Lock()
-	defer multiSink.mutex.Unlock()
+func (teeSink *TeeSink) Close() error {
+	teeSink.mutex.Lock()
+	defer teeSink.mutex.Unlock()
 	var errors []error
-	for i, w := range multiSink.writers {
+	for i, w := range teeSink.writers {
 		if closer, ok := w.(io.Closer); ok {
 			if err := closer.Close(); err != nil {
 				errors = append(errors, fmt.Errorf("writer[%d]: %w", i, err))
@@ -42,40 +42,40 @@ func (multiSink *MultiSink) Close() error {
 	}
 	return nil
 }
-func (multiSink *MultiSink) Len() int {
-	multiSink.mutex.RLock()
-	defer multiSink.mutex.RUnlock()
-	return len(multiSink.writers)
+func (teeSink *TeeSink) Len() int {
+	teeSink.mutex.RLock()
+	defer teeSink.mutex.RUnlock()
+	return len(teeSink.writers)
 }
-func (multiSink *MultiSink) Remove(index int) error {
-	multiSink.mutex.Lock()
-	defer multiSink.mutex.Unlock()
-	if index < 0 || index >= len(multiSink.writers) {
+func (teeSink *TeeSink) Remove(index int) error {
+	teeSink.mutex.Lock()
+	defer teeSink.mutex.Unlock()
+	if index < 0 || index >= len(teeSink.writers) {
 		return fmt.Errorf("index out of range: %d", index)
 	}
-	multiSink.writers = append(multiSink.writers[:index], multiSink.writers[index+1:]...)
+	teeSink.writers = append(teeSink.writers[:index], teeSink.writers[index+1:]...)
 	return nil
 }
-func (multiSink *MultiSink) Replace(index int, w io.Writer) error {
-	multiSink.mutex.Lock()
-	defer multiSink.mutex.Unlock()
-	if index < 0 || index >= len(multiSink.writers) {
+func (teeSink *TeeSink) Replace(index int, w io.Writer) error {
+	teeSink.mutex.Lock()
+	defer teeSink.mutex.Unlock()
+	if index < 0 || index >= len(teeSink.writers) {
 		return fmt.Errorf("index out of range: %d", index)
 	}
-	if closer, ok := multiSink.writers[index].(io.Closer); ok {
+	if closer, ok := teeSink.writers[index].(io.Closer); ok {
 		_ = closer.Close()
 	}
-	multiSink.writers[index] = w
+	teeSink.writers[index] = w
 	return nil
 }
-func (multiSink *MultiSink) Write(p []byte) (n int, err error) {
-	multiSink.mutex.RLock()
-	defer multiSink.mutex.RUnlock()
-	if len(multiSink.writers) == 0 {
+func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
+	teeSink.mutex.RLock()
+	defer teeSink.mutex.RUnlock()
+	if len(teeSink.writers) == 0 {
 		return 0, nil
 	}
 	var errors []error
-	for _, w := range multiSink.writers {
+	for _, w := range teeSink.writers {
 		if _, err := w.Write(p); err != nil {
 			errors = append(errors, err)
 		}
