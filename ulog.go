@@ -174,12 +174,6 @@ func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 
 // Приватные константы
 const (
-	defaultBufferSize = 10000
-	defaultFormat     = FormatText
-	defaultLevel      = LevelInfo
-	defaultMode       = ModeSync
-)
-const (
 	colorReset = "\033[0m"
 	// Темная тема (ANSI коды 90-97)
 	colorDarkRed    = "\033[91m"
@@ -200,6 +194,13 @@ const (
 )
 
 // Приватные переменные
+var (
+	defaultBufferSize = 10000
+	defaultFormat     = FormatText
+	defaultLevel      = LevelInfo
+	defaultMode       = ModeSync
+	defaultWriter     = os.Stderr
+)
 var ignoredErrors = [][]byte{
 	[]byte("EOF"),
 	[]byte("TLS handshake error"),
@@ -238,9 +239,6 @@ type universalLogger struct {
 }
 
 // Приватные переменные
-var (
-	defaultWriter = os.Stderr
-)
 var (
 	dataPool = sync.Pool{
 		New: func() any {
