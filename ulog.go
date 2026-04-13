@@ -588,14 +588,6 @@ func getLoggerTheme() colorTheme {
 	}
 	return themeDark
 }
-func isIgnoredError(data []byte) bool {
-	for _, err := range ignoredErrors {
-		if bytes.Contains(data, err) {
-			return true
-		}
-	}
-	return false
-}
 
 // Приватные методы
 func (asyncWriter *asyncWriter) run() {
@@ -605,6 +597,14 @@ func (asyncWriter *asyncWriter) run() {
 		}
 		asyncWriter.wg.Done()
 	}
+}
+func (standardLogger *standardLogger) isIgnored(data []byte) bool {
+	for _, err := range ignoredErrors {
+		if bytes.Contains(data, err) {
+			return true
+		}
+	}
+	return false
 }
 func (universalLogger *universalLogger) getCaller(level TypeLevel) string {
 	if level != LevelDebug {
