@@ -375,6 +375,43 @@ func TestLoggerLog(t *testing.T) {
 		t.Errorf("Expected 'test message', got %q", buf.String())
 	}
 }
+func TestLoggerLogIgnore(t *testing.T) {
+	array := []struct {
+		name     string
+		message  string
+		expected bool
+	}{
+		{"EOF", "read: EOF", true},
+		{"TLS handshake", "TLS handshake error", true},
+		{"Connection refused", "dial: connection refused", true},
+		{"Timeout", "i/o timeout", true},
+		{"Normal message", "user logged in", false},
+	}
+	for _, elem := range array {
+		t.Run(elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			logger := NewLogger(
+				WithFormat(FormatText),
+				WithMode(ModeSync, buf),
+			)
+			loggerLog := NewLoggerLog(LevelError, logger)
+			loggerLog.Print(elem.message)
+			output := buf.String()
+			if elem.expected {
+				if output != "" {
+					t.Errorf("Expected log to be ignored, but got output: %q", output)
+				}
+			} else {
+				if output == "" {
+					t.Error("Expected log to be written, but got nothing")
+				}
+				if !strings.Contains(output, elem.message) {
+					t.Errorf("Expected message %q not found in output: %q", elem.message, output)
+				}
+			}
+		})
+	}
+}
 func TestMethod(t *testing.T) {
 	array := []struct {
 		name      string
@@ -575,29 +612,6 @@ func TestTheme(t *testing.T) {
 			testLevel("Fatal", testFatal, elem.prefixFatal)
 			testLevel("Info", testInfo, elem.prefixInfo)
 			testLevel("Warn", testWarn, elem.prefixWarn)
-		})
-	}
-}
-
-// Тесты приватных копонентов
-func TestIsIgnoredError(t *testing.T) {
-	tests := []struct {
-		name     string
-		data     []byte
-		expected bool
-	}{
-		{"EOF", []byte("read: EOF"), true},
-		{"TLS handshake", []byte("TLS handshake error"), true},
-		{"Connection refused", []byte("dial: connection refused"), true},
-		{"Timeout", []byte("i/o timeout"), true},
-		{"Normal message", []byte("user logged in"), false},
-		{"Empty", []byte{}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isIgnoredError(tt.data); got != tt.expected {
-				t.Errorf("isIgnoredError(%q) = %v, want %v", tt.data, got, tt.expected)
-			}
 		})
 	}
 }
