@@ -99,6 +99,12 @@ func (discordSink *DiscordSink) Write(p []byte) (n int, err error) {
 	}
 	return len(p), nil
 }
+func (discordSink *DiscordSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err error) {
+	if level < discordSink.minLevel {
+		return len(p), nil
+	}
+	return discordSink.Write(p)
+}
 
 // Приватные функции
 func escapeDiscordMarkdown(text string) string {

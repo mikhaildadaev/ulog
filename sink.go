@@ -101,6 +101,26 @@ func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 	}
 	return len(p), nil
 }
+func (teeSink *TeeSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err error) {
+	teeSink.mutex.RLock()
+	defer teeSink.mutex.RUnlock()
+	var errors []error
+	for i, w := range teeSink.writers {
+		if leveled, ok := w.(SinkWriter); ok {
+			if _, err := leveled.WriteWithLevel(level, p); err != nil {
+				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
+			}
+		} else {
+			if _, err := w.Write(p); err != nil {
+				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
+			}
+		}
+	}
+	if len(errors) > 0 {
+		return len(p), fmt.Errorf("write errors: %v", errors)
+	}
+	return len(p), nil
+}
 
 // Приватные константы
 const (

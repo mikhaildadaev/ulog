@@ -104,3 +104,9 @@ func (slackSink *SlackSink) Write(p []byte) (n int, err error) {
 	}
 	return len(p), nil
 }
+func (slackSink *SlackSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err error) {
+	if level < slackSink.minLevel {
+		return len(p), nil
+	}
+	return slackSink.Write(p)
+}

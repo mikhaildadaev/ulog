@@ -107,6 +107,12 @@ func (telegramSink *TelegramSink) Write(p []byte) (n int, err error) {
 	}
 	return len(p), nil
 }
+func (telegramSink *TelegramSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err error) {
+	if level < telegramSink.minLevel {
+		return len(p), nil
+	}
+	return telegramSink.Write(p)
+}
 
 // Приватные функции
 func escapeTelegramMarkdownV2(text string) string {
