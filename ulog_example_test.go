@@ -34,6 +34,7 @@ func ExampleNewLogger() {
 	logger.InfoWithContext(ctx, "test message")
 	logger.WarnWithContext(ctx, "test message")
 	logger.ErrorWithContext(ctx, "test message")
+	logger.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:

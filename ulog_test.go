@@ -254,6 +254,7 @@ func TestFormat(t *testing.T) {
 				WithMode(ModeSync, buf, 0),
 			)
 			logger.Info("test message")
+			logger.Sync()
 			output := buf.String()
 			if !strings.Contains(output, elem.expect) {
 				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
@@ -265,6 +266,7 @@ func TestFormat(t *testing.T) {
 			logger.SetFormat(elem.format)
 			logger.SetMode(ModeSync, buf, 0)
 			logger.Info("test message")
+			logger.Sync()
 			output := buf.String()
 			if !strings.Contains(output, elem.expect) {
 				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
@@ -318,6 +320,7 @@ func TestLevel(t *testing.T) {
 				WithMode(ModeSync, buf, 0),
 			)
 			elem.logFunc(logger)
+			logger.Sync()
 			if elem.shouldLog && buf.Len() == 0 {
 				t.Error("Expected log to be written, but got nothing")
 			}
@@ -331,6 +334,7 @@ func TestLevel(t *testing.T) {
 			logger.SetLevel(elem.level)
 			logger.SetMode(ModeSync, buf, 0)
 			elem.logFunc(logger)
+			logger.Sync()
 			if elem.shouldLog && buf.Len() == 0 {
 				t.Error("Expected log to be written, but got nothing")
 			}
@@ -350,6 +354,7 @@ func TestLogger(t *testing.T) {
 		t.Fatal("NewLogger returned nil")
 	}
 	logger.Info("test message")
+	logger.Sync()
 	if buf.Len() == 0 {
 		t.Error("Logger produced no buf")
 	}
@@ -550,6 +555,7 @@ func TestTheme(t *testing.T) {
 					WithTheme(elem.theme),
 				)
 				logFunc(logger)
+				logger.Sync()
 				w.Close()
 				output, err := io.ReadAll(r)
 				if err != nil {
@@ -577,6 +583,7 @@ func TestTheme(t *testing.T) {
 				logger.SetMode(ModeSync, w)
 				logger.SetTheme(elem.theme)
 				logFunc(logger)
+				logger.Sync()
 				w.Close()
 				output, err := io.ReadAll(r)
 				if err != nil {
