@@ -89,7 +89,7 @@ func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 	fileSink.mutex.Lock()
 	defer fileSink.mutex.Unlock()
 	if fileSink.currentSize+int64(len(p)) > fileSink.maxSize {
-		if err := fileSink.rotate(); err != nil {
+		if err := fileSink.getRotateFile(); err != nil {
 			return 0, err
 		}
 	}
@@ -145,25 +145,6 @@ func (fileSink *FileSink) cleanupBackups() error {
 	}
 	return nil
 }
-func (fileSink *FileSink) compress(filename string) error {
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	gzFilename := filename + ".gz"
-	gzFile, err := os.Create(gzFilename)
-	if err != nil {
-		return err
-	}
-	defer gzFile.Close()
-	gzWriter := gzip.NewWriter(gzFile)
-	defer gzWriter.Close()
-	if _, err := io.Copy(gzWriter, file); err != nil {
-		return err
-	}
-	return os.Remove(filename)
-}
 func (fileSink *FileSink) getBackupName(timestamp string) string {
 	ext := filepath.Ext(fileSink.filename)
 	if ext == "" {
@@ -182,7 +163,26 @@ func (fileSink *FileSink) getBackupPattern() string {
 	nameWithoutExt := base[:len(base)-len(ext)]
 	return filepath.Join(dir, nameWithoutExt+"-*.log*")
 }
-func (fileSink *FileSink) rotate() error {
+func (fileSink *FileSink) getCompressFile(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	gzFilename := filename + ".gz"
+	gzFile, err := os.Create(gzFilename)
+	if err != nil {
+		return err
+	}
+	defer gzFile.Close()
+	gzWriter := gzip.NewWriter(gzFile)
+	defer gzWriter.Close()
+	if _, err := io.Copy(gzWriter, file); err != nil {
+		return err
+	}
+	return os.Remove(filename)
+}
+func (fileSink *FileSink) getRotateFile() error {
 	if err := fileSink.file.Close(); err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func (fileSink *FileSink) rotate() error {
 		return err
 	}
 	go func() {
-		if err := fileSink.compress(backupName); err != nil {
+		if err := fileSink.getCompressFile(backupName); err != nil {
 			fmt.Fprintf(defaultWriter, "failed to compress %s: %v\n", backupName, err)
 		}
 	}()
