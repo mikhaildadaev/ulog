@@ -97,7 +97,7 @@ func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 		}
 	}
 	if len(errors) > 0 {
-		return len(p), fmt.Errorf("multi sink errors: %v", errors)
+		return len(p), fmt.Errorf("write errors: %v", errors)
 	}
 	return len(p), nil
 }
