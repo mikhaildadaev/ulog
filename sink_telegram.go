@@ -23,15 +23,17 @@ type TelegramSink struct {
 	client                *http.Client
 	disableNotification   bool
 	disableWebPagePreview bool
+	minLevel              TypeLevel
 	parseMode             string
 }
 type TelegramOption func(*TelegramSink)
 
 // Публичные конструкторы
-func NewTelegramSink(botToken, chatID string, options ...TelegramOption) *TelegramSink {
+func NewTelegramSink(minLevel TypeLevel, botToken, chatID string, options ...TelegramOption) *TelegramSink {
 	sink := &TelegramSink{
 		botToken:  botToken,
 		chatID:    chatID,
+		minLevel:  minLevel,
 		parseMode: "HTML",
 		client:    &http.Client{Timeout: 10 * time.Second},
 	}
@@ -43,23 +45,23 @@ func NewTelegramSink(botToken, chatID string, options ...TelegramOption) *Telegr
 
 // Публичные функции
 func WithTelegramDisableNotification(disable bool) TelegramOption {
-	return func(t *TelegramSink) {
-		t.disableNotification = disable
+	return func(telegramSink *TelegramSink) {
+		telegramSink.disableNotification = disable
 	}
 }
 func WithTelegramDisableWebPagePreview(disable bool) TelegramOption {
-	return func(t *TelegramSink) {
-		t.disableWebPagePreview = disable
+	return func(telegramSink *TelegramSink) {
+		telegramSink.disableWebPagePreview = disable
 	}
 }
 func WithTelegramParseMode(mode string) TelegramOption {
-	return func(t *TelegramSink) {
-		t.parseMode = mode
+	return func(telegramSink *TelegramSink) {
+		telegramSink.parseMode = mode
 	}
 }
 func WithTelegramTimeout(timeout time.Duration) TelegramOption {
-	return func(t *TelegramSink) {
-		t.client.Timeout = timeout
+	return func(telegramSink *TelegramSink) {
+		telegramSink.client.Timeout = timeout
 	}
 }
 

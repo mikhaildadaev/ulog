@@ -21,15 +21,17 @@ type SlackSink struct {
 	client     *http.Client
 	iconEmoji  string
 	iconURL    string
+	minLevel   TypeLevel
 	username   string
 	webhookURL string
 }
 type SlackOption func(*SlackSink)
 
 // Публичные конструкторы
-func NewSlackSink(webhookURL string, options ...SlackOption) *SlackSink {
+func NewSlackSink(minLevel TypeLevel, webhookURL string, options ...SlackOption) *SlackSink {
 	sink := &SlackSink{
 		client:     &http.Client{Timeout: 10 * time.Second},
+		minLevel:   minLevel,
 		webhookURL: webhookURL,
 	}
 	for _, option := range options {

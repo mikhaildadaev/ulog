@@ -20,6 +20,7 @@ import (
 type DiscordSink struct {
 	avatarURL  string
 	client     *http.Client
+	minLevel   TypeLevel
 	tts        bool
 	username   string
 	webhookURL string
@@ -27,9 +28,10 @@ type DiscordSink struct {
 type DiscordOption func(*DiscordSink)
 
 // Публичные конструкторы
-func NewDiscordSink(webhookURL string, options ...DiscordOption) *DiscordSink {
+func NewDiscordSink(minLevel TypeLevel, webhookURL string, options ...DiscordOption) *DiscordSink {
 	sink := &DiscordSink{
 		client:     &http.Client{Timeout: 10 * time.Second},
+		minLevel:   minLevel,
 		webhookURL: webhookURL,
 	}
 	for _, option := range options {
