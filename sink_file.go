@@ -13,12 +13,13 @@ import (
 
 // Публичные структуры
 type FileSink struct {
-	file       *os.File
-	filename   string
-	maxAge     int
-	maxBackups int
-	maxSize    int64
-	mutex      sync.Mutex
+	currentSize int64
+	file        *os.File
+	filename    string
+	maxAge      int
+	maxBackups  int
+	maxSize     int64
+	mutex       sync.Mutex
 }
 type FileOption func(*FileSink)
 
@@ -32,12 +33,17 @@ func NewFileSink(filename string, options ...FileOption) (*FileSink, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
+	info, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file info: %w", err)
+	}
 	fileSink := &FileSink{
-		file:       file,
-		filename:   filename,
-		maxAge:     30,
-		maxBackups: 10,
-		maxSize:    100 * 1024 * 1024,
+		currentSize: info.Size(),
+		file:        file,
+		filename:    filename,
+		maxAge:      30,
+		maxBackups:  10,
+		maxSize:     100 * 1024 * 1024,
 	}
 	for _, option := range options {
 		option(fileSink)
@@ -82,16 +88,16 @@ func (fileSink *FileSink) Sync() error {
 func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 	fileSink.mutex.Lock()
 	defer fileSink.mutex.Unlock()
-	info, err := fileSink.file.Stat()
-	if err != nil {
-		return 0, err
-	}
-	if info.Size()+int64(len(p)) > fileSink.maxSize {
+	if fileSink.currentSize+int64(len(p)) > fileSink.maxSize {
 		if err := fileSink.rotate(); err != nil {
 			return 0, err
 		}
 	}
-	return fileSink.file.Write(p)
+	n, err = fileSink.file.Write(p)
+	if err == nil {
+		fileSink.currentSize += int64(n)
+	}
+	return n, err
 }
 func (fileSink *FileSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err error) {
 	return fileSink.Write(p)
@@ -195,6 +201,7 @@ func (fileSink *FileSink) rotate() error {
 		return err
 	}
 	fileSink.file = file
+	fileSink.currentSize = 0
 	go func() {
 		if err := fileSink.cleanupBackups(); err != nil {
 			fmt.Fprintf(defaultWriter, "failed to cleanup backups: %v\n", err)
