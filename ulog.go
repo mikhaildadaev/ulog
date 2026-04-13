@@ -121,7 +121,7 @@ func NewLogger(options ...OptionLogger) Logger {
 	universalLogger := &universalLogger{
 		mode:   defaultMode,
 		theme:  getLoggerTheme(),
-		writer: defaultWriter,
+		writer: defaultWriterOut,
 	}
 	universalLogger.format.Store(int32(defaultFormat))
 	universalLogger.level.Store(int32(getLoggerLevel()))
@@ -202,7 +202,8 @@ var (
 	defaultFormat     = FormatText
 	defaultLevel      = LevelInfo
 	defaultMode       = ModeSync
-	defaultWriter     = os.Stderr
+	defaultWriterErr  = os.Stderr
+	defaultWriterOut  = os.Stdout
 )
 var ignoredErrors = [][]byte{
 	[]byte("EOF"),
@@ -596,7 +597,7 @@ func getLoggerTheme() colorTheme {
 func (asyncWriter *asyncWriter) run() {
 	for buf := range asyncWriter.ch {
 		if _, err := asyncWriter.writer.Write(buf); err != nil {
-			fmt.Fprintf(defaultWriter, "ulog: async write failed: %v\n", err)
+			fmt.Fprintf(defaultWriterErr, "ulog: async write failed: %v\n", err)
 		}
 		asyncWriter.wg.Done()
 	}
@@ -655,12 +656,12 @@ func (universalLogger *universalLogger) writeJson(level TypeLevel, context conte
 	if sinks, ok := writer.(SinkWriter); ok {
 		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
 		if err != nil {
-			fmt.Fprintf(defaultWriter, "ulog: failed to write log: %v\n", err)
+			fmt.Fprintf(defaultWriterErr, "ulog: failed to write log: %v\n", err)
 		}
 		return
 	}
 	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
-		fmt.Fprintf(defaultWriter, "ulog: failed to write log: %v\n", err)
+		fmt.Fprintf(defaultWriterErr, "ulog: failed to write log: %v\n", err)
 	}
 }
 func (universalLogger *universalLogger) writeText(level TypeLevel, context context.Context, message string, fields []Field) {
@@ -688,11 +689,11 @@ func (universalLogger *universalLogger) writeText(level TypeLevel, context conte
 	if sinks, ok := writer.(SinkWriter); ok {
 		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
 		if err != nil {
-			fmt.Fprintf(defaultWriter, "ulog: failed to write log: %v\n", err)
+			fmt.Fprintf(defaultWriterErr, "ulog: failed to write log: %v\n", err)
 		}
 		return
 	}
 	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
-		fmt.Fprintf(defaultWriter, "ulog: failed to write log: %v\n", err)
+		fmt.Fprintf(defaultWriterErr, "ulog: failed to write log: %v\n", err)
 	}
 }

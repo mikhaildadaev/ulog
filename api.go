@@ -243,16 +243,18 @@ func (standardLogger *standardLogger) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 func (universalLogger *universalLogger) Close() error {
-	if universalLogger.mode != ModeAsync {
-		return nil
-	}
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
-	if asyncWriter, ok := writer.(*asyncWriter); ok {
-		return asyncWriter.Close()
+	if universalLogger.mode == ModeAsync {
+		if asyncWriter, ok := writer.(*asyncWriter); ok {
+			return asyncWriter.Close()
+		}
 	}
 	if closer, ok := writer.(io.Closer); ok {
+		if writer == defaultWriterErr || writer == defaultWriterOut {
+			return nil
+		}
 		return closer.Close()
 	}
 	return nil
