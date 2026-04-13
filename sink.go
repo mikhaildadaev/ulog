@@ -14,17 +14,17 @@ type TeeSink struct {
 type Sink = io.Writer
 
 // Публичные конструкторы
-func NewTeeSink(writers ...io.Writer) *TeeSink {
+func NewTeeSink(writers ...Sink) *TeeSink {
 	return &TeeSink{
 		writers: writers,
 	}
 }
 
 // Публичные методы
-func (teeSink *TeeSink) Add(w io.Writer) {
+func (teeSink *TeeSink) Add(sink Sink) {
 	teeSink.mutex.Lock()
 	defer teeSink.mutex.Unlock()
-	teeSink.writers = append(teeSink.writers, w)
+	teeSink.writers = append(teeSink.writers, sink)
 }
 func (teeSink *TeeSink) Close() error {
 	teeSink.mutex.Lock()
@@ -56,7 +56,7 @@ func (teeSink *TeeSink) Remove(index int) error {
 	teeSink.writers = append(teeSink.writers[:index], teeSink.writers[index+1:]...)
 	return nil
 }
-func (teeSink *TeeSink) Replace(index int, w io.Writer) error {
+func (teeSink *TeeSink) Replace(index int, sink Sink) error {
 	teeSink.mutex.Lock()
 	defer teeSink.mutex.Unlock()
 	if index < 0 || index >= len(teeSink.writers) {
@@ -65,7 +65,7 @@ func (teeSink *TeeSink) Replace(index int, w io.Writer) error {
 	if closer, ok := teeSink.writers[index].(io.Closer); ok {
 		_ = closer.Close()
 	}
-	teeSink.writers[index] = w
+	teeSink.writers[index] = sink
 	return nil
 }
 func (teeSink *TeeSink) Sync() error {
