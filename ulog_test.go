@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -543,26 +541,16 @@ func TestTheme(t *testing.T) {
 	for _, elem := range array {
 		t.Run("WithTheme/"+elem.name, func(t *testing.T) {
 			testLevel := func(level string, logFunc func(Logger), expectedPrefix string) {
-				t.Helper()
-				r, w, err := os.Pipe()
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer r.Close()
+				buf := &bytes.Buffer{}
 				logger := NewLogger(
 					WithLevel(LevelDebug),
-					WithMode(ModeSync, w),
+					WithMode(ModeSync, buf),
 					WithTheme(elem.theme),
 				)
 				logFunc(logger)
 				logger.Sync()
-				w.Close()
-				output, err := io.ReadAll(r)
-				if err != nil {
-					t.Fatal(err)
-				}
-				outputStr := string(output)
-				checkTheme(t, level, expectedPrefix, elem, outputStr)
+				output := buf.String()
+				checkTheme(t, level, expectedPrefix, elem, output)
 			}
 			testLevel("Debug", testDebug, elem.prefixDebug)
 			testLevel("Error", testError, elem.prefixError)
@@ -572,36 +560,15 @@ func TestTheme(t *testing.T) {
 		})
 		t.Run("SetTheme/"+elem.name, func(t *testing.T) {
 			testLevel := func(level string, logFunc func(Logger), expectedPrefix string) {
-				t.Helper()
-				r, w, err := os.Pipe()
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer r.Close()
+				buf := &bytes.Buffer{}
 				logger := NewLogger()
 				logger.SetLevel(LevelDebug)
-				logger.SetMode(ModeSync, w)
+				logger.SetMode(ModeSync, buf)
 				logger.SetTheme(elem.theme)
 				logFunc(logger)
 				logger.Sync()
-				w.Close()
-				output, err := io.ReadAll(r)
-				if err != nil {
-					t.Fatal(err)
-				}
-				outputStr := string(output)
-				if !strings.Contains(outputStr, elem.callerColor) && level == "DEBUG" {
-					t.Errorf("%s: expected prefix %q not found in %q", level, elem.callerColor, outputStr)
-				}
-				if !strings.Contains(outputStr, expectedPrefix) {
-					t.Errorf("%s: expected prefix %q not found in %q", level, expectedPrefix, outputStr)
-				}
-				if !strings.Contains(outputStr, elem.messageColor) {
-					t.Errorf("%s: expected message color %q not found", level, elem.messageColor)
-				}
-				if !strings.Contains(outputStr, elem.reset) {
-					t.Errorf("%s: expected message color %q not found", level, elem.reset)
-				}
+				output := buf.String()
+				checkTheme(t, level, expectedPrefix, elem, output)
 			}
 			testLevel("Debug", testDebug, elem.prefixDebug)
 			testLevel("Error", testError, elem.prefixError)
