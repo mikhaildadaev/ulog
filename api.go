@@ -202,9 +202,9 @@ func WithTheme(theme TypeTheme) OptionLogger {
 	return func(universalLogger *universalLogger) {
 		switch theme {
 		case ThemeDark:
-			universalLogger.theme = darkTheme
+			universalLogger.theme = themeDark
 		case ThemeLight:
-			universalLogger.theme = lightTheme
+			universalLogger.theme = themeLight
 		}
 	}
 }
@@ -409,9 +409,9 @@ func (universalLogger *universalLogger) SetTheme(theme TypeTheme) {
 	defer universalLogger.mutex.Unlock()
 	switch theme {
 	case ThemeDark:
-		universalLogger.theme = darkTheme
+		universalLogger.theme = themeDark
 	case ThemeLight:
-		universalLogger.theme = lightTheme
+		universalLogger.theme = themeLight
 	}
 }
 func (universalLogger *universalLogger) Sync() error {

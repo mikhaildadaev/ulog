@@ -121,7 +121,7 @@ func NewLogger(options ...OptionLogger) Logger {
 	universalLogger := &universalLogger{
 		mode:   defaultMode,
 		theme:  getLoggerTheme(),
-		writer: os.Stderr,
+		writer: defaultWriter,
 	}
 	universalLogger.format.Store(int32(defaultFormat))
 	universalLogger.level.Store(int32(getLoggerLevel()))
@@ -239,12 +239,16 @@ type universalLogger struct {
 
 // Приватные переменные
 var (
+	defaultWriter = os.Stderr
+)
+var (
 	dataPool = sync.Pool{
 		New: func() any {
 			return new(bytes.Buffer)
 		},
 	}
-	darkTheme = colorTheme{
+	osExit    = os.Exit
+	themeDark = colorTheme{
 		caller:      colorDarkBlue,
 		message:     colorDarkWhite,
 		prefixDebug: colorDarkCyan + "[DEBUG]",
@@ -254,7 +258,7 @@ var (
 		prefixWarn:  colorDarkYellow + "[WARN]",
 		reset:       colorReset,
 	}
-	lightTheme = colorTheme{
+	themeLight = colorTheme{
 		caller:      colorLightBlue,
 		message:     colorLightBlack,
 		prefixDebug: colorLightCyan + "[DEBUG]",
@@ -264,7 +268,6 @@ var (
 		prefixWarn:  colorLightYellow + "[WARN]",
 		reset:       colorReset,
 	}
-	osExit   = os.Exit
 	timePool = sync.Pool{
 		New: func() any {
 			return make([]byte, 0, 26)
@@ -571,21 +574,21 @@ func getLoggerLevel() TypeLevel {
 func getLoggerTheme() colorTheme {
 	switch strings.ToLower(os.Getenv("TERM_THEME")) {
 	case "dark":
-		return darkTheme
+		return themeDark
 	case "light":
-		return lightTheme
+		return themeLight
 	}
 	if os.Getenv("COLORFGBG") != "" {
 		parts := strings.Split(os.Getenv("COLORFGBG"), ";")
 		if len(parts) >= 2 {
 			bg, _ := strconv.Atoi(parts[1])
 			if bg < 8 {
-				return darkTheme
+				return themeDark
 			}
-			return lightTheme
+			return themeLight
 		}
 	}
-	return darkTheme
+	return themeDark
 }
 func isIgnoredError(data []byte) bool {
 	for _, err := range ignoredErrors {
@@ -600,7 +603,7 @@ func isIgnoredError(data []byte) bool {
 func (asyncWriter *asyncWriter) run() {
 	for buf := range asyncWriter.ch {
 		if _, err := asyncWriter.writer.Write(buf); err != nil {
-			fmt.Fprintf(os.Stderr, "ulog: async write failed: %v\n", err)
+			fmt.Fprintf(defaultWriter, "ulog: async write failed: %v\n", err)
 		}
 		asyncWriter.wg.Done()
 	}
@@ -651,12 +654,12 @@ func (universalLogger *universalLogger) writeJson(level TypeLevel, context conte
 	if sinks, ok := writer.(SinkWriter); ok {
 		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ulog: failed to write log: %v\n", err)
+			fmt.Fprintf(defaultWriter, "ulog: failed to write log: %v\n", err)
 		}
 		return
 	}
 	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
-		fmt.Fprintf(os.Stderr, "ulog: failed to write log: %v\n", err)
+		fmt.Fprintf(defaultWriter, "ulog: failed to write log: %v\n", err)
 	}
 }
 func (universalLogger *universalLogger) writeText(level TypeLevel, context context.Context, message string, fields []Field) {
@@ -684,11 +687,11 @@ func (universalLogger *universalLogger) writeText(level TypeLevel, context conte
 	if sinks, ok := writer.(SinkWriter); ok {
 		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ulog: failed to write log: %v\n", err)
+			fmt.Fprintf(defaultWriter, "ulog: failed to write log: %v\n", err)
 		}
 		return
 	}
 	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
-		fmt.Fprintf(os.Stderr, "ulog: failed to write log: %v\n", err)
+		fmt.Fprintf(defaultWriter, "ulog: failed to write log: %v\n", err)
 	}
 }
