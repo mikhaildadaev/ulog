@@ -387,7 +387,6 @@ func BenchmarkTeeSink_Multi(b *testing.B) {
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		b.Fatal(err)
 	}
-	logFile := filepath.Join(tmpDir, "ulog_file.log")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -398,16 +397,15 @@ func BenchmarkTeeSink_Multi(b *testing.B) {
 		{"Sync", ModeSync, nil, 0},
 	}
 	for _, format := range formats {
-		sinkFile, err := NewFileSink(logFile,
-			WithFileMaxSize(15),
-		)
-		if err != nil {
-			b.Fatal(err)
-		}
-		defer sinkFile.Close()
-		teeSink := NewTeeSink(sinkFile)
-		defer teeSink.Close()
 		b.Run("Simple "+format.name, func(b *testing.B) {
+			logFile := filepath.Join(tmpDir, "ulog_file.log")
+			sinkFile, err := NewFileSink(logFile,
+				WithFileMaxSize(15),
+			)
+			if err != nil {
+				b.Fatal(err)
+			}
+			teeSink := NewTeeSink(sinkFile)
 			logger := NewLogger(
 				WithFormat(FormatJson),
 			)
@@ -423,6 +421,14 @@ func BenchmarkTeeSink_Multi(b *testing.B) {
 			})
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
+			logFile := filepath.Join(tmpDir, "ulog_file.log")
+			sinkFile, err := NewFileSink(logFile,
+				WithFileMaxSize(15),
+			)
+			if err != nil {
+				b.Fatal(err)
+			}
+			teeSink := NewTeeSink(sinkFile)
 			logger := NewLogger(
 				WithExtractor("trace_id"),
 				WithFormat(FormatJson),
@@ -450,7 +456,6 @@ func BenchmarkTeeSink_Single(b *testing.B) {
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		b.Fatal(err)
 	}
-	logFile := filepath.Join(tmpDir, "ulog_file.log")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -461,16 +466,15 @@ func BenchmarkTeeSink_Single(b *testing.B) {
 		{"Sync", ModeSync, nil, 0},
 	}
 	for _, format := range formats {
-		sinkFile, err := NewFileSink(logFile,
-			WithFileMaxSize(15),
-		)
-		if err != nil {
-			b.Fatal(err)
-		}
-		defer sinkFile.Close()
-		teeSink := NewTeeSink(sinkFile)
-		defer teeSink.Close()
 		b.Run("Simple "+format.name, func(b *testing.B) {
+			logFile := filepath.Join(tmpDir, "ulog_file.log")
+			sinkFile, err := NewFileSink(logFile,
+				WithFileMaxSize(15),
+			)
+			if err != nil {
+				b.Fatal(err)
+			}
+			teeSink := NewTeeSink(sinkFile)
 			logger := NewLogger(
 				WithFormat(FormatJson),
 			)
@@ -484,6 +488,14 @@ func BenchmarkTeeSink_Single(b *testing.B) {
 			}
 		})
 		b.Run("Format "+format.name, func(b *testing.B) {
+			logFile := filepath.Join(tmpDir, "ulog_file.log")
+			sinkFile, err := NewFileSink(logFile,
+				WithFileMaxSize(15),
+			)
+			if err != nil {
+				b.Fatal(err)
+			}
+			teeSink := NewTeeSink(sinkFile)
 			logger := NewLogger(
 				WithExtractor("trace_id"),
 				WithFormat(FormatJson),
