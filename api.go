@@ -247,10 +247,13 @@ func (universalLogger *universalLogger) Close() error {
 		return nil
 	}
 	universalLogger.mutex.RLock()
-	currentWriter := universalLogger.writer
+	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
-	if asyncWriter, ok := currentWriter.(*asyncWriter); ok {
+	if asyncWriter, ok := writer.(*asyncWriter); ok {
 		return asyncWriter.Close()
+	}
+	if closer, ok := writer.(io.Closer); ok {
+		return closer.Close()
 	}
 	return nil
 }
