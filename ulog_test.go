@@ -385,6 +385,8 @@ func TestLoggerLogIgnore(t *testing.T) {
 		{"TLS handshake", "TLS handshake error", true},
 		{"Connection refused", "dial: connection refused", true},
 		{"Timeout", "i/o timeout", true},
+		{"Broken pipe", "broken pipe", true},
+		{"Empty", "", true},
 		{"Normal message", "user logged in", false},
 	}
 	for _, elem := range array {
