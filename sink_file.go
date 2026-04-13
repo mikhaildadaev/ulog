@@ -93,6 +93,9 @@ func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 	}
 	return fileSink.file.Write(p)
 }
+func (fileSink *FileSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err error) {
+	return fileSink.Write(p)
+}
 
 // Приватные функции
 func (fileSink *FileSink) cleanupBackups() error {
