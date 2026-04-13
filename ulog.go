@@ -154,6 +154,9 @@ func GetVersion() string {
 func (asyncWriter *asyncWriter) Close() error {
 	close(asyncWriter.ch)
 	asyncWriter.wg.Wait()
+	if closer, ok := asyncWriter.writer.(io.Closer); ok {
+		return closer.Close()
+	}
 	return nil
 }
 func (asyncWriter *asyncWriter) Sync() error {
