@@ -224,7 +224,7 @@ func (standardLogger *standardLogger) Write(p []byte) (n int, err error) {
 	if start >= end {
 		return 0, nil
 	}
-	if isIgnoredError(p[start:end]) {
+	if standardLogger.isIgnored(p[start:end]) {
 		return len(p), nil
 	}
 	message := string(p[start:end])
