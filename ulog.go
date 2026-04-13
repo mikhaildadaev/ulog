@@ -88,6 +88,10 @@ type Logger interface {
 	SetTheme(theme TypeTheme)
 	Sync() error
 }
+type SinkWriter interface {
+	io.Writer
+	WriteWithLevel(level TypeLevel, p []byte) (n int, err error)
+}
 
 // Публичные структуры
 type Field struct {
@@ -644,6 +648,13 @@ func (universalLogger *universalLogger) writeJson(level TypeLevel, context conte
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
+	if sink, ok := writer.(SinkWriter); ok {
+		_, err := sink.WriteWithLevel(level, dataBuf.Bytes())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ulog: failed to write log: %v\n", err)
+		}
+		return
+	}
 	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
 		fmt.Fprintf(os.Stderr, "ulog: failed to write log: %v\n", err)
 	}
@@ -670,6 +681,13 @@ func (universalLogger *universalLogger) writeText(level TypeLevel, context conte
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
+	if leveled, ok := writer.(SinkWriter); ok {
+		_, err := leveled.WriteWithLevel(level, dataBuf.Bytes())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ulog: failed to write log: %v\n", err)
+		}
+		return
+	}
 	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
 		fmt.Fprintf(os.Stderr, "ulog: failed to write log: %v\n", err)
 	}
