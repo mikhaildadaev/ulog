@@ -648,8 +648,8 @@ func (universalLogger *universalLogger) writeJson(level TypeLevel, context conte
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
-	if sink, ok := writer.(SinkWriter); ok {
-		_, err := sink.WriteWithLevel(level, dataBuf.Bytes())
+	if sinks, ok := writer.(SinkWriter); ok {
+		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ulog: failed to write log: %v\n", err)
 		}
@@ -681,8 +681,8 @@ func (universalLogger *universalLogger) writeText(level TypeLevel, context conte
 	universalLogger.mutex.RLock()
 	writer := universalLogger.writer
 	universalLogger.mutex.RUnlock()
-	if leveled, ok := writer.(SinkWriter); ok {
-		_, err := leveled.WriteWithLevel(level, dataBuf.Bytes())
+	if sinks, ok := writer.(SinkWriter); ok {
+		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ulog: failed to write log: %v\n", err)
 		}
