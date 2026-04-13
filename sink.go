@@ -33,7 +33,7 @@ func (teeSink *TeeSink) Close() error {
 	for i, w := range teeSink.writers {
 		if closer, ok := w.(io.Closer); ok {
 			if err := closer.Close(); err != nil {
-				errors = append(errors, fmt.Errorf("writer[%d]: %w", i, err))
+				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
 			}
 		}
 	}
@@ -68,6 +68,22 @@ func (teeSink *TeeSink) Replace(index int, w io.Writer) error {
 	teeSink.writers[index] = w
 	return nil
 }
+func (teeSink *TeeSink) Sync() error {
+	teeSink.mutex.RLock()
+	defer teeSink.mutex.RUnlock()
+	var errors []error
+	for i, w := range teeSink.writers {
+		if syncer, ok := w.(interface{ Sync() error }); ok {
+			if err := syncer.Sync(); err != nil {
+				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
+			}
+		}
+	}
+	if len(errors) > 0 {
+		return fmt.Errorf("sync errors: %v", errors)
+	}
+	return nil
+}
 func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 	teeSink.mutex.RLock()
 	defer teeSink.mutex.RUnlock()
@@ -75,9 +91,9 @@ func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 		return 0, nil
 	}
 	var errors []error
-	for _, w := range teeSink.writers {
+	for i, w := range teeSink.writers {
 		if _, err := w.Write(p); err != nil {
-			errors = append(errors, err)
+			errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
 		}
 	}
 	if len(errors) > 0 {
