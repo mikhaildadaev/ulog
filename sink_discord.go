@@ -11,19 +11,19 @@ type DiscordWebhook struct {
 	AvatarURL string `json:"avatar_url,omitempty"`
 	Content   string `json:"content,omitempty"`
 	TTS       bool   `json:"tts,omitempty"`
-	Username  string `json:"username,omitempty"`
+	UserName  string `json:"username,omitempty"`
 }
 type DiscordSink = HttpSink
 
 // Публичные конструкторы
-func NewDiscordSink(webhookURL string, username, avatarURL string, options ...HttpOption) *HttpSink {
-	return NewHttpSink(webhookURL, append([]HttpOption{
+func NewDiscordSink(endPoint string, userName, avatarURL string, options ...HttpOption) *HttpSink {
+	return NewHttpSink(endPoint, append([]HttpOption{
 		WithHttpFormatter(func(level TypeLevel, p []byte) ([]byte, error) {
 			webhook := DiscordWebhook{
 				AvatarURL: avatarURL,
 				Content:   string(p),
 				TTS:       false,
-				Username:  username,
+				UserName:  userName,
 			}
 			return json.Marshal(webhook)
 		}),

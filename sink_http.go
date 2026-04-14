@@ -21,28 +21,28 @@ type HttpSink struct {
 	batchSize    int
 	batchTicker  *time.Ticker
 	client       *http.Client
+	endPoint     string
 	formatter    func(level TypeLevel, p []byte) ([]byte, error)
 	headers      map[string]string
 	levelMin     TypeLevel
 	method       string
 	retryBackoff time.Duration
 	retryMax     int
-	url          string
 }
 type HttpOption func(*HttpSink)
 
 // Публичные конструкторы
-func NewHttpSink(url string, options ...HttpOption) *HttpSink {
+func NewHttpSink(endPoint string, options ...HttpOption) *HttpSink {
 	httpSink := &HttpSink{
 		batchChan:    make(chan struct{}),
-		retryBackoff: time.Second,
-		retryMax:     0,
+		endPoint:     endPoint,
 		client:       &http.Client{Timeout: 10 * time.Second},
 		formatter:    defaultformatter,
 		headers:      make(map[string]string),
 		levelMin:     LevelError,
 		method:       "POST",
-		url:          url,
+		retryBackoff: time.Second,
+		retryMax:     0,
 	}
 	for _, option := range options {
 		option(httpSink)
@@ -169,7 +169,7 @@ func (httpSink *HttpSink) flush() error {
 	return httpSink.sendWithRetry(body)
 }
 func (httpSink *HttpSink) send(body []byte) error {
-	req, err := http.NewRequest(httpSink.method, httpSink.url, bytes.NewReader(body))
+	req, err := http.NewRequest(httpSink.method, httpSink.endPoint, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
