@@ -17,9 +17,6 @@ type TelegramSink = HttpSink
 func NewTelegramSink(botToken, chatID string, options ...HttpOption) *HttpSink {
 	apiURL := "https://api.telegram.org/bot" + botToken + "/sendMessage"
 	return NewHttpSink(apiURL, append([]HttpOption{
-		WithHttpMethod("POST"),
-		WithHttpHeader("Content-Type", "application/json"),
-		WithHttpLevelMin(LevelError),
 		WithHttpFormatter(func(level TypeLevel, p []byte) ([]byte, error) {
 			data := TelegramData{
 				ChatID:    chatID,
@@ -28,5 +25,8 @@ func NewTelegramSink(botToken, chatID string, options ...HttpOption) *HttpSink {
 			}
 			return json.Marshal(data)
 		}),
+		WithHttpHeader("Content-Type", "application/json"),
+		WithHttpLevelMin(LevelError),
+		WithHttpMethod("POST"),
 	}, options...)...)
 }
