@@ -8,27 +8,37 @@ package ulog
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 // Публичные структуры
 type HttpSink struct {
-	batchBuffer  [][]byte
-	batchChan    chan struct{}
-	batchMutex   sync.Mutex
-	batchSize    int
-	batchTicker  *time.Ticker
-	client       *http.Client
-	endPoint     string
-	formatter    func(level TypeLevel, p []byte) ([]byte, error)
-	headers      map[string]string
-	levelMin     TypeLevel
-	method       string
-	retryBackoff time.Duration
-	retryMax     int
+	batchBuffer     [][]byte
+	batchChan       chan struct{}
+	batchMutex      sync.Mutex
+	batchSize       int
+	batchTicker     *time.Ticker
+	client          *http.Client
+	dedupCache      sync.Map
+	dedupTTL        time.Duration
+	dedupWindow     time.Duration
+	endPoint        string
+	formatter       func(level TypeLevel, p []byte) ([]byte, error)
+	headers         map[string]string
+	levelMin        TypeLevel
+	method          string
+	retryBackoff    time.Duration
+	retryMax        int
+	sampleCounter   atomic.Int32
+	sampleLastReset time.Time
+	sampleMutex     sync.Mutex
+	sampleRate      int32
+	sampleWindow    time.Duration
 }
 type HttpOption func(*HttpSink)
 
@@ -59,6 +69,11 @@ func WithHttpBatch(size int, flushInterval time.Duration) HttpOption {
 		go httpSink.batchLoop()
 	}
 }
+func WithHttpDedupWindow(window time.Duration) HttpOption {
+	return func(httpSink *HttpSink) {
+		httpSink.dedupWindow = window
+	}
+}
 func WithHttpFormatter(formatter func(level TypeLevel, p []byte) ([]byte, error)) HttpOption {
 	return func(httpSink *HttpSink) {
 		httpSink.formatter = formatter
@@ -83,6 +98,16 @@ func WithHttpRetry(maxRetries int, backoff time.Duration) HttpOption {
 	return func(httpSink *HttpSink) {
 		httpSink.retryMax = maxRetries
 		httpSink.retryBackoff = backoff
+	}
+}
+func WithHttpSampleRate(rate int32) HttpOption {
+	return func(httpSink *HttpSink) {
+		httpSink.sampleRate = rate
+	}
+}
+func WithHttpSampleWindow(window time.Duration) HttpOption {
+	return func(httpSink *HttpSink) {
+		httpSink.sampleWindow = window
 	}
 }
 func WithHttpTimeout(timeout time.Duration) HttpOption {
@@ -115,6 +140,14 @@ func (httpSink *HttpSink) Write(p []byte) (n int, err error) {
 func (httpSink *HttpSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err error) {
 	if level < httpSink.levelMin {
 		return len(p), nil
+	}
+	if level != LevelError && level != LevelFatal {
+		if !httpSink.shouldSample() {
+			return len(p), nil
+		}
+		if httpSink.isDuplicate(p) {
+			return len(p), nil
+		}
 	}
 	body, err := httpSink.formatter(level, p)
 	if err != nil {
@@ -177,6 +210,24 @@ func (httpSink *HttpSink) flush() error {
 	}
 	return httpSink.sendWithRetry(body)
 }
+func (httpSink *HttpSink) isDuplicate(p []byte) bool {
+	if httpSink.dedupWindow <= 0 {
+		return false
+	}
+	hash := httpSink.hashMessage(p)
+	if lastSeen, ok := httpSink.dedupCache.Load(hash); ok {
+		if time.Since(lastSeen.(time.Time)) < httpSink.dedupWindow {
+			return true
+		}
+	}
+	httpSink.dedupCache.Store(hash, time.Now())
+	return false
+}
+func (httpSink *HttpSink) hashMessage(p []byte) uint64 {
+	hash := fnv.New64a()
+	hash.Write(p)
+	return hash.Sum64()
+}
 func (httpSink *HttpSink) send(body []byte) error {
 	req, err := http.NewRequest(httpSink.method, httpSink.endPoint, bytes.NewReader(body))
 	if err != nil {
@@ -229,4 +280,18 @@ func (httpSink *HttpSink) sendWithRetry(body []byte) error {
 		time.Sleep(sleepDuration)
 	}
 	return fmt.Errorf("failed after %d retries: %w", httpSink.retryMax, lastErr)
+}
+func (httpSink *HttpSink) shouldSample() bool {
+	if httpSink.sampleRate <= 1 {
+		return true
+	}
+	if httpSink.sampleWindow > 0 {
+		httpSink.sampleMutex.Lock()
+		if time.Since(httpSink.sampleLastReset) > httpSink.sampleWindow {
+			httpSink.sampleCounter.Store(0)
+			httpSink.sampleLastReset = time.Now()
+		}
+		httpSink.sampleMutex.Unlock()
+	}
+	return httpSink.sampleCounter.Add(1)%httpSink.sampleRate == 0
 }
