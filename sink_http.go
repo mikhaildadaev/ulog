@@ -35,8 +35,8 @@ type HttpOption func(*HttpSink)
 func NewHttpSink(endPoint string, options ...HttpOption) *HttpSink {
 	httpSink := &HttpSink{
 		batchChan:    make(chan struct{}),
-		endPoint:     endPoint,
 		client:       &http.Client{Timeout: 10 * time.Second},
+		endPoint:     endPoint,
 		formatter:    defaultformatter,
 		headers:      make(map[string]string),
 		levelMin:     LevelError,

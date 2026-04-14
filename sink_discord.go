@@ -7,7 +7,7 @@ import (
 )
 
 // Публичные структуры
-type DiscordWebhook struct {
+type DiscordData struct {
 	AvatarURL string `json:"avatar_url,omitempty"`
 	Content   string `json:"content,omitempty"`
 	TTS       bool   `json:"tts,omitempty"`
@@ -19,7 +19,7 @@ type DiscordSink = HttpSink
 func NewDiscordSink(endPoint string, userName, avatarURL string, options ...HttpOption) *HttpSink {
 	return NewHttpSink(endPoint, append([]HttpOption{
 		WithHttpFormatter(func(level TypeLevel, p []byte) ([]byte, error) {
-			webhook := DiscordWebhook{
+			webhook := DiscordData{
 				AvatarURL: avatarURL,
 				Content:   string(p),
 				TTS:       false,
