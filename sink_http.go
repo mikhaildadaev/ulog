@@ -27,7 +27,6 @@ type HttpSink struct {
 	headers      map[string]string
 	levelMin     TypeLevel
 	method       string
-	retryAfter   time.Duration
 	retryBackoff time.Duration
 	retryMax     int
 }
