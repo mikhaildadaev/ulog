@@ -331,6 +331,38 @@ func (universalLogger *universalLogger) InfoWithContext(context context.Context,
 		universalLogger.writeText(LevelInfo, context, message, fields)
 	}
 }
+func (universalLogger *universalLogger) Metric(message string, fields ...Field) {
+	switch TypeFormat(universalLogger.format.Load()) {
+	case FormatJson:
+		universalLogger.writeJson(LevelInfo, context.Background(), message, fields)
+	case FormatText:
+		universalLogger.writeText(LevelInfo, context.Background(), message, fields)
+	}
+}
+func (universalLogger *universalLogger) MetricWithContext(context context.Context, message string, fields ...Field) {
+	switch TypeFormat(universalLogger.format.Load()) {
+	case FormatJson:
+		universalLogger.writeJson(LevelInfo, context, message, fields)
+	case FormatText:
+		universalLogger.writeText(LevelInfo, context, message, fields)
+	}
+}
+func (universalLogger *universalLogger) Trace(message string, fields ...Field) {
+	switch TypeFormat(universalLogger.format.Load()) {
+	case FormatJson:
+		universalLogger.writeJson(LevelInfo, context.Background(), message, fields)
+	case FormatText:
+		universalLogger.writeText(LevelInfo, context.Background(), message, fields)
+	}
+}
+func (universalLogger *universalLogger) TraceWithContext(context context.Context, message string, fields ...Field) {
+	switch TypeFormat(universalLogger.format.Load()) {
+	case FormatJson:
+		universalLogger.writeJson(LevelInfo, context, message, fields)
+	case FormatText:
+		universalLogger.writeText(LevelInfo, context, message, fields)
+	}
+}
 func (universalLogger *universalLogger) Warn(message string, fields ...Field) {
 	switch TypeFormat(universalLogger.format.Load()) {
 	case FormatJson:

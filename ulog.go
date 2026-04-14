@@ -21,6 +21,7 @@ import (
 )
 
 // Публичные типы
+type TypeData int
 type TypeField int
 type TypeFormat int
 type TypeLevel int
@@ -31,6 +32,11 @@ type TypeTheme int
 const (
 	Author  = "Mikhail Dadaev"
 	Version = "1.26.7"
+)
+const (
+	DataLog TypeData = iota
+	DataMetric
+	DataTrace
 )
 const (
 	FieldBool TypeField = iota
@@ -72,15 +78,19 @@ const (
 type Logger interface {
 	Close() error
 	Debug(message string, fields ...Field)
-	DebugWithContext(ctx context.Context, msg string, fields ...Field)
+	DebugWithContext(ctx context.Context, message string, fields ...Field)
 	Error(message string, fields ...Field)
-	ErrorWithContext(ctx context.Context, msg string, fields ...Field)
+	ErrorWithContext(ctx context.Context, message string, fields ...Field)
 	Fatal(message string, fields ...Field)
-	FatalWithContext(ctx context.Context, msg string, fields ...Field)
+	FatalWithContext(ctx context.Context, message string, fields ...Field)
 	Info(message string, fields ...Field)
-	InfoWithContext(ctx context.Context, msg string, fields ...Field)
+	InfoWithContext(ctx context.Context, message string, fields ...Field)
+	Metric(message string, fields ...Field)
+	MetricWithContext(ctx context.Context, message string, fields ...Field)
+	Trace(message string, fields ...Field)
+	TraceWithContext(ctx context.Context, message string, fields ...Field)
 	Warn(message string, fields ...Field)
-	WarnWithContext(ctx context.Context, msg string, fields ...Field)
+	WarnWithContext(ctx context.Context, message string, fields ...Field)
 	SetExtractor(keys ...string)
 	SetFormat(format TypeFormat)
 	SetLevel(level TypeLevel)
