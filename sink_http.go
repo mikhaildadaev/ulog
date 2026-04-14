@@ -214,15 +214,19 @@ func (httpSink *HttpSink) sendWithRetry(body []byte) error {
 			return nil
 		}
 		lastErr = err
-		if i < httpSink.retryMax {
-			if strings.Contains(err.Error(), "rate limited") {
-				continue
+		if i == httpSink.retryMax {
+			break
+		}
+		var sleepDuration time.Duration
+		if strings.Contains(err.Error(), "rate limited") {
+			sleepDuration = httpSink.retryAfter
+			if sleepDuration == 0 {
+				sleepDuration = 5 * time.Second
 			}
-			time.Sleep(httpSink.retryBackoff * time.Duration(1<<i))
+		} else {
+			sleepDuration = httpSink.retryBackoff * time.Duration(1<<i)
 		}
-		if i < httpSink.retryMax {
-			time.Sleep(httpSink.retryBackoff * time.Duration(1<<i))
-		}
+		time.Sleep(sleepDuration)
 	}
 	return fmt.Errorf("failed after %d retries: %w", httpSink.retryMax, lastErr)
 }
