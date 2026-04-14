@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -34,7 +33,7 @@ type HttpSink struct {
 	method          string
 	retryBackoff    time.Duration
 	retryMax        int
-	sampleCounter   atomic.Int32
+	sampleCounter   int32
 	sampleLastReset time.Time
 	sampleMutex     sync.Mutex
 	sampleRate      int32
@@ -285,13 +284,12 @@ func (httpSink *HttpSink) shouldSample() bool {
 	if httpSink.sampleRate <= 1 {
 		return true
 	}
-	if httpSink.sampleWindow > 0 {
-		httpSink.sampleMutex.Lock()
-		if time.Since(httpSink.sampleLastReset) > httpSink.sampleWindow {
-			httpSink.sampleCounter.Store(0)
-			httpSink.sampleLastReset = time.Now()
-		}
-		httpSink.sampleMutex.Unlock()
+	httpSink.sampleMutex.Lock()
+	defer httpSink.sampleMutex.Unlock()
+	if httpSink.sampleWindow > 0 && time.Since(httpSink.sampleLastReset) > httpSink.sampleWindow {
+		httpSink.sampleCounter = 0
+		httpSink.sampleLastReset = time.Now()
 	}
-	return httpSink.sampleCounter.Add(1)%httpSink.sampleRate == 0
+	httpSink.sampleCounter++
+	return httpSink.sampleCounter%httpSink.sampleRate == 0
 }
