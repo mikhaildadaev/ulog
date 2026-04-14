@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -94,6 +93,9 @@ func WithHttpTimeout(timeout time.Duration) HttpOption {
 }
 
 // Публичные методы
+func (rateLimitError *rateLimitError) Error() string {
+	return fmt.Sprintf("rate limited, retry after %v", rateLimitError.retryAfter)
+}
 func (httpSink *HttpSink) Close() error {
 	if httpSink.batchSize > 0 {
 		close(httpSink.batchChan)
@@ -130,6 +132,11 @@ func (httpSink *HttpSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err 
 		return len(p), nil
 	}
 	return len(p), httpSink.sendWithRetry(body)
+}
+
+// Приватные структуры
+type rateLimitError struct {
+	retryAfter time.Duration
 }
 
 // Приватные функции
@@ -185,21 +192,18 @@ func (httpSink *HttpSink) send(body []byte) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusTooManyRequests {
-		retryAfter := resp.Header.Get("Retry-After")
-		if retryAfter != "" {
-			if seconds, err := strconv.Atoi(retryAfter); err == nil {
-				httpSink.retryAfter = time.Duration(seconds) * time.Second
-			} else if t, err := http.ParseTime(retryAfter); err == nil {
-				httpSink.retryAfter = time.Until(t)
+		var retryAfter time.Duration
+		if retryAfterHeader := resp.Header.Get("Retry-After"); retryAfterHeader != "" {
+			if seconds, err := strconv.Atoi(retryAfterHeader); err == nil {
+				retryAfter = time.Duration(seconds) * time.Second
+			} else if t, err := http.ParseTime(retryAfterHeader); err == nil {
+				retryAfter = time.Until(t)
 			}
 		}
-		if httpSink.retryAfter == 0 {
-			httpSink.retryAfter = 5 * time.Second
+		if retryAfter == 0 {
+			retryAfter = 5 * time.Second
 		}
-		return fmt.Errorf("rate limited")
-	}
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		httpSink.retryAfter = 0
+		return &rateLimitError{retryAfter: retryAfter}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("HTTP %s", resp.Status)
@@ -218,11 +222,8 @@ func (httpSink *HttpSink) sendWithRetry(body []byte) error {
 			break
 		}
 		var sleepDuration time.Duration
-		if strings.Contains(err.Error(), "rate limited") {
-			sleepDuration = httpSink.retryAfter
-			if sleepDuration == 0 {
-				sleepDuration = 5 * time.Second
-			}
+		if rateErr, ok := err.(*rateLimitError); ok {
+			sleepDuration = rateErr.retryAfter
 		} else {
 			sleepDuration = httpSink.retryBackoff * time.Duration(1<<i)
 		}
