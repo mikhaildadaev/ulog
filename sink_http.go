@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -26,6 +28,7 @@ type HttpSink struct {
 	headers      map[string]string
 	levelMin     TypeLevel
 	method       string
+	retryAfter   time.Duration
 	retryBackoff time.Duration
 	retryMax     int
 }
@@ -181,6 +184,23 @@ func (httpSink *HttpSink) send(body []byte) error {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusTooManyRequests {
+		retryAfter := resp.Header.Get("Retry-After")
+		if retryAfter != "" {
+			if seconds, err := strconv.Atoi(retryAfter); err == nil {
+				httpSink.retryAfter = time.Duration(seconds) * time.Second
+			} else if t, err := http.ParseTime(retryAfter); err == nil {
+				httpSink.retryAfter = time.Until(t)
+			}
+		}
+		if httpSink.retryAfter == 0 {
+			httpSink.retryAfter = 5 * time.Second
+		}
+		return fmt.Errorf("rate limited")
+	}
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		httpSink.retryAfter = 0
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("HTTP %s", resp.Status)
 	}
@@ -189,10 +209,16 @@ func (httpSink *HttpSink) send(body []byte) error {
 func (httpSink *HttpSink) sendWithRetry(body []byte) error {
 	var lastErr error
 	for i := 0; i <= httpSink.retryMax; i++ {
-		if err := httpSink.send(body); err == nil {
+		err := httpSink.send(body)
+		if err == nil {
 			return nil
-		} else {
-			lastErr = err
+		}
+		lastErr = err
+		if i < httpSink.retryMax {
+			if strings.Contains(err.Error(), "rate limited") {
+				continue
+			}
+			time.Sleep(httpSink.retryBackoff * time.Duration(1<<i))
 		}
 		if i < httpSink.retryMax {
 			time.Sleep(httpSink.retryBackoff * time.Duration(1<<i))
