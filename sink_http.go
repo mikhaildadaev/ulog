@@ -120,9 +120,15 @@ func (rateLimitError *rateLimitError) Error() string {
 	return fmt.Sprintf("rate limited, retry after %v", rateLimitError.retryAfter)
 }
 func (httpSink *HttpSink) Close() error {
-	if httpSink.batchSize > 0 {
+	httpSink.batchMutex.Lock()
+	batchSize := httpSink.batchSize
+	ticker := httpSink.batchTicker
+	httpSink.batchMutex.Unlock()
+	if batchSize > 0 {
 		close(httpSink.batchChan)
-		httpSink.batchTicker.Stop()
+		if ticker != nil {
+			ticker.Stop()
+		}
 	}
 	httpSink.client.CloseIdleConnections()
 	return nil
