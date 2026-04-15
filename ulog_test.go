@@ -13,25 +13,25 @@ import (
 func TestClose(t *testing.T) {
 	t.Run("Close/Async", func(t *testing.T) {
 		buf := &bytes.Buffer{}
-		logger := NewLogger(WithMode(ModeAsync, buf, 100))
-		logger.Info("test message")
-		err := logger.Close()
+		telemetry := NewTelemetry(WithMode(ModeAsync, buf, 100))
+		telemetry.Info(DataLog, String("message", "test info text"))
+		err := telemetry.Close()
 		if err != nil {
 			t.Errorf("Close() returned error: %v", err)
 		}
 		output := buf.String()
-		if !strings.Contains(output, "test message") {
+		if !strings.Contains(output, "test info text") {
 			t.Error("Message not written after Close")
 		}
 	})
 	t.Run("Close/Sync", func(t *testing.T) {
 		buf := &bytes.Buffer{}
-		logger := NewLogger(WithMode(ModeSync, buf))
-		err := logger.Close()
+		telemetry := NewTelemetry(WithMode(ModeSync, buf))
+		telemetry.Info(DataLog, String("message", "test info text"))
+		err := telemetry.Close()
 		if err != nil {
 			t.Errorf("Close() returned error: %v", err)
 		}
-		logger.Info("after close")
 		if buf.Len() == 0 {
 			t.Error("Logger stopped working after Close in sync mode")
 		}
@@ -130,24 +130,24 @@ func TestExtractor(t *testing.T) {
 	for _, elem := range tests {
 		t.Run("WithExtractor/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
-			logger := NewLogger(
+			telemetry := NewTelemetry(
 				WithExtractor(elem.keys...),
 				WithFormat(FormatJson),
 				WithMode(ModeSync, buf),
 			)
-			logger.InfoWithContext(elem.context, "test message")
-			logger.Sync()
+			telemetry.InfoWithContext(elem.context, DataLog, String("message", "test info text"))
+			telemetry.Sync()
 			output := buf.String()
 			checkExtractor(t, elem, output)
 		})
 		t.Run("SetExtractor/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
-			logger := NewLogger()
-			logger.SetExtractor(elem.keys...)
-			logger.SetFormat(FormatJson)
-			logger.SetMode(ModeSync, buf)
-			logger.InfoWithContext(elem.context, "test message")
-			logger.Sync()
+			telemetry := NewTelemetry()
+			telemetry.SetExtractor(elem.keys...)
+			telemetry.SetFormat(FormatJson)
+			telemetry.SetMode(ModeSync, buf)
+			telemetry.InfoWithContext(elem.context, DataLog, String("message", "test info text"))
+			telemetry.Sync()
 			output := buf.String()
 			checkExtractor(t, elem, output)
 		})
@@ -241,18 +241,18 @@ func TestFormat(t *testing.T) {
 		format TypeFormat
 		expect string
 	}{
-		{"Json", FormatJson, `"message":"test message"`},
-		{"Text", FormatText, "test message"},
+		{"Json", FormatJson, `"message":"test info text"`},
+		{"Text", FormatText, `message="test info text"`},
 	}
 	for _, elem := range array {
 		t.Run("WithFormat/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
-			logger := NewLogger(
+			telemetry := NewTelemetry(
 				WithFormat(elem.format),
 				WithMode(ModeSync, buf, 0),
 			)
-			logger.Info("test message")
-			logger.Sync()
+			telemetry.Info(DataLog, String("message", "test info text"))
+			telemetry.Sync()
 			output := buf.String()
 			if !strings.Contains(output, elem.expect) {
 				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
@@ -260,11 +260,11 @@ func TestFormat(t *testing.T) {
 		})
 		t.Run("SetFormat/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
-			logger := NewLogger()
-			logger.SetFormat(elem.format)
-			logger.SetMode(ModeSync, buf, 0)
-			logger.Info("test message")
-			logger.Sync()
+			telemetry := NewTelemetry()
+			telemetry.SetFormat(elem.format)
+			telemetry.SetMode(ModeSync, buf, 0)
+			telemetry.Info(DataLog, String("message", "test info text"))
+			telemetry.Sync()
 			output := buf.String()
 			if !strings.Contains(output, elem.expect) {
 				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
@@ -276,7 +276,7 @@ func TestLevel(t *testing.T) {
 	array := []struct {
 		name      string
 		level     TypeLevel
-		logFunc   func(Logger)
+		logFunc   func(Telemetry)
 		shouldLog bool
 	}{
 		// DEBUG
@@ -313,12 +313,12 @@ func TestLevel(t *testing.T) {
 	for _, elem := range array {
 		t.Run("WithLevel/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
-			logger := NewLogger(
+			telemetry := NewTelemetry(
 				WithLevel(elem.level),
 				WithMode(ModeSync, buf, 0),
 			)
-			elem.logFunc(logger)
-			logger.Sync()
+			elem.logFunc(telemetry)
+			telemetry.Sync()
 			if elem.shouldLog && buf.Len() == 0 {
 				t.Error("Expected log to be written, but got nothing")
 			}
@@ -328,11 +328,11 @@ func TestLevel(t *testing.T) {
 		})
 		t.Run("SetLevel/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
-			logger := NewLogger()
-			logger.SetLevel(elem.level)
-			logger.SetMode(ModeSync, buf, 0)
-			elem.logFunc(logger)
-			logger.Sync()
+			telemetry := NewTelemetry()
+			telemetry.SetLevel(elem.level)
+			telemetry.SetMode(ModeSync, buf, 0)
+			elem.logFunc(telemetry)
+			telemetry.Sync()
 			if elem.shouldLog && buf.Len() == 0 {
 				t.Error("Expected log to be written, but got nothing")
 			}
@@ -342,40 +342,34 @@ func TestLevel(t *testing.T) {
 		})
 	}
 }
-func TestLogger(t *testing.T) {
+func TestTelemetry(t *testing.T) {
 	buf := &bytes.Buffer{}
-	logger := NewLogger(
+	telemetry := NewTelemetry(
 		WithFormat(FormatText),
 		WithMode(ModeSync, buf),
 	)
-	if logger == nil {
-		t.Fatal("NewLogger returned nil")
+	if telemetry == nil {
+		t.Fatal("NewTelemetry returned nil")
 	}
-	logger.Info("test message")
-	logger.Sync()
-	if buf.Len() == 0 {
-		t.Error("Logger produced no buf")
-	}
-	if !strings.Contains(buf.String(), "test message") {
-		t.Errorf("Expected 'test message', got %q", buf.String())
+	telemetry.Info(DataLog, String("message", "test info text"))
+	telemetry.Sync()
+	if !strings.Contains(buf.String(), "test info text") {
+		t.Errorf("Expected 'test info text', got %q", buf.String())
 	}
 }
-func TestLoggerLog(t *testing.T) {
+func TestTelemetryLog(t *testing.T) {
 	buf := &bytes.Buffer{}
-	logger := NewLogger(
+	telemetry := NewTelemetry(
 		WithFormat(FormatText),
 		WithMode(ModeSync, buf),
 	)
-	loggerLog := NewLoggerLog(LevelInfo, logger)
-	loggerLog.Print("test message")
-	if buf.Len() == 0 {
-		t.Error("Logger produced no buf")
-	}
-	if !strings.Contains(buf.String(), "test message") {
-		t.Errorf("Expected 'test message', got %q", buf.String())
+	telemetryLog := NewTelemetryLog(LevelInfo, telemetry)
+	telemetryLog.Print("test text")
+	if !strings.Contains(buf.String(), "test text") {
+		t.Errorf("Expected 'test text', got %q", buf.String())
 	}
 }
-func TestLoggerLogIgnore(t *testing.T) {
+func TestTelemetryLogIgnore(t *testing.T) {
 	array := []struct {
 		name     string
 		message  string
@@ -392,12 +386,12 @@ func TestLoggerLogIgnore(t *testing.T) {
 	for _, elem := range array {
 		t.Run(elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
-			logger := NewLogger(
+			telemetry := NewTelemetry(
 				WithFormat(FormatText),
 				WithMode(ModeSync, buf),
 			)
-			loggerLog := NewLoggerLog(LevelError, logger)
-			loggerLog.Print(elem.message)
+			telemetryLog := NewTelemetryLog(LevelError, telemetry)
+			telemetryLog.Print(elem.message)
 			output := buf.String()
 			if elem.expected {
 				if output != "" {
@@ -417,7 +411,7 @@ func TestLoggerLogIgnore(t *testing.T) {
 func TestMethod(t *testing.T) {
 	array := []struct {
 		name      string
-		logFunc   func(Logger)
+		logFunc   func(Telemetry)
 		level     TypeLevel
 		shouldLog bool
 	}{
@@ -440,14 +434,14 @@ func TestMethod(t *testing.T) {
 	for _, elem := range array {
 		t.Run(elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
-			logger := NewLogger(
+			telemetry := NewTelemetry(
 				WithMode(ModeSync, buf),
 				WithLevel(elem.level),
 			)
-			elem.logFunc(logger)
-			logger.Sync()
+			elem.logFunc(telemetry)
+			telemetry.Sync()
 			output := buf.String()
-			if elem.shouldLog && !strings.Contains(output, "test message") {
+			if elem.shouldLog && !strings.Contains(output, "message") {
 				t.Errorf("Expected message not found in output: %q", output)
 			}
 		})
@@ -456,138 +450,138 @@ func TestMethod(t *testing.T) {
 func TestMode(t *testing.T) {
 	t.Run("WithMode/Async", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
-		logger := NewLogger(
+		telemetry := NewTelemetry(
 			WithMode(ModeAsync, writerBuf, 1000),
 		)
-		logger.Info("test message")
-		logger.Sync()
+		telemetry.Info(DataLog, String("message", "test info text"))
+		telemetry.Sync()
 		if writerBuf.Len() == 0 {
 			t.Error("Async mode: expected output, got nothing")
 		}
-		if !strings.Contains(writerBuf.String(), "test message") {
+		if !strings.Contains(writerBuf.String(), "test info text") {
 			t.Error("Async mode: expected message not found")
 		}
 	})
 	t.Run("SetMode/Async", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
-		logger := NewLogger()
-		logger.SetMode(ModeAsync, writerBuf, 1000)
-		logger.Info("test message")
-		logger.Sync()
+		telemetry := NewTelemetry()
+		telemetry.SetMode(ModeAsync, writerBuf, 1000)
+		telemetry.Info(DataLog, String("message", "test info text"))
+		telemetry.Sync()
 		if writerBuf.Len() == 0 {
 			t.Error("Async mode: expected output, got nothing")
 		}
-		if !strings.Contains(writerBuf.String(), "test message") {
+		if !strings.Contains(writerBuf.String(), "test info text") {
 			t.Error("Async mode: expected message not found")
 		}
 	})
 	t.Run("WithMode/Sync", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
-		logger := NewLogger(
+		telemetry := NewTelemetry(
 			WithMode(ModeSync, writerBuf),
 		)
-		logger.Info("test message")
-		logger.Sync()
+		telemetry.Info(DataLog, String("message", "test info text"))
+		telemetry.Sync()
 		if writerBuf.Len() == 0 {
 			t.Error("Sync mode: expected output, got nothing")
 		}
-		if !strings.Contains(writerBuf.String(), "test message") {
+		if !strings.Contains(writerBuf.String(), "test info text") {
 			t.Error("Sync mode: expected message not found")
 		}
 	})
 	t.Run("SetMode/Sync", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
-		logger := NewLogger()
-		logger.SetMode(ModeSync, writerBuf)
-		logger.Info("test message")
-		logger.Sync()
+		telemetry := NewTelemetry()
+		telemetry.SetMode(ModeSync, writerBuf)
+		telemetry.Info(DataLog, String("message", "test info text"))
+		telemetry.Sync()
 		if writerBuf.Len() == 0 {
 			t.Error("Sync mode: expected output, got nothing")
 		}
-		if !strings.Contains(writerBuf.String(), "test message") {
+		if !strings.Contains(writerBuf.String(), "test info text") {
 			t.Error("Sync mode: expected message not found")
 		}
 	})
 }
 func TestSync(t *testing.T) {
-	t.Run("Sync/Async", func(t *testing.T) {
+	t.Run("Async", func(t *testing.T) {
 		buf := &bytes.Buffer{}
-		logger := NewLogger(WithMode(ModeAsync, buf, 1000))
-		defer logger.Close()
-		logger.Info("test message")
-		err := logger.Sync()
+		telemetry := NewTelemetry(WithMode(ModeAsync, buf, 1000))
+		defer telemetry.Close()
+		telemetry.Info(DataLog, String("message", "test info text"))
+		err := telemetry.Sync()
 		if err != nil {
 			t.Errorf("Sync() returned error: %v", err)
 		}
 		output := buf.String()
-		if !strings.Contains(output, "test message") {
+		if !strings.Contains(output, "test info text") {
 			t.Error("Message not written after Sync")
 		}
 	})
-	t.Run("Sync/Sync", func(t *testing.T) {
+	t.Run("Sync", func(t *testing.T) {
 		buf := &bytes.Buffer{}
-		logger := NewLogger(WithMode(ModeSync, buf))
-		defer logger.Close()
-		logger.Info("test message")
-		err := logger.Sync()
+		telemetry := NewTelemetry(WithMode(ModeSync, buf))
+		defer telemetry.Close()
+		telemetry.Info(DataLog, String("message", "test info text"))
+		err := telemetry.Sync()
 		if err != nil {
 			t.Errorf("Sync() returned error: %v", err)
 		}
 		output := buf.String()
-		if !strings.Contains(output, "test message") {
+		if !strings.Contains(output, "test info text") {
 			t.Error("Message not written after Sync")
 		}
 	})
 }
 func TestTheme(t *testing.T) {
 	array := []struct {
-		name         string
-		theme        TypeTheme
-		callerColor  string
-		messageColor string
-		prefixDebug  string
-		prefixError  string
-		prefixFatal  string
-		prefixInfo   string
-		prefixWarn   string
-		reset        string
+		name        string
+		theme       TypeTheme
+		callerColor string
+		dataColor   string
+		prefixDebug string
+		prefixError string
+		prefixFatal string
+		prefixInfo  string
+		prefixWarn  string
+		reset       string
 	}{
 		{
-			name:         "Dark",
-			theme:        ThemeDark,
-			callerColor:  colorDarkBlue,
-			messageColor: colorDarkWhite,
-			prefixDebug:  colorDarkCyan + "[DEBUG]",
-			prefixError:  colorDarkRed + "[ERROR]",
-			prefixFatal:  colorDarkPurple + "[FATAL]",
-			prefixInfo:   colorDarkGreen + "[INFO]",
-			prefixWarn:   colorDarkYellow + "[WARN]",
-			reset:        colorReset,
+			name:        "Dark",
+			theme:       ThemeDark,
+			callerColor: colorDarkBlue,
+			dataColor:   colorDarkWhite,
+			prefixDebug: colorDarkCyan + "[DEBUG]",
+			prefixError: colorDarkRed + "[ERROR]",
+			prefixFatal: colorDarkPurple + "[FATAL]",
+			prefixInfo:  colorDarkGreen + "[INFO]",
+			prefixWarn:  colorDarkYellow + "[WARN]",
+			reset:       colorReset,
 		},
 		{
-			name:         "Light",
-			theme:        ThemeLight,
-			callerColor:  colorLightBlue,
-			messageColor: colorLightBlack,
-			prefixDebug:  colorLightCyan + "[DEBUG]",
-			prefixError:  colorLightRed + "[ERROR]",
-			prefixFatal:  colorLightPurple + "[FATAL]",
-			prefixInfo:   colorLightGreen + "[INFO]",
-			prefixWarn:   colorLightYellow + "[WARN]",
-			reset:        colorReset,
+			name:        "Light",
+			theme:       ThemeLight,
+			callerColor: colorLightBlue,
+			dataColor:   colorLightBlack,
+			prefixDebug: colorLightCyan + "[DEBUG]",
+			prefixError: colorLightRed + "[ERROR]",
+			prefixFatal: colorLightPurple + "[FATAL]",
+			prefixInfo:  colorLightGreen + "[INFO]",
+			prefixWarn:  colorLightYellow + "[WARN]",
+			reset:       colorReset,
 		},
 	}
 	for _, elem := range array {
 		t.Run("WithTheme/"+elem.name, func(t *testing.T) {
-			testLevel := func(level string, logFunc func(Logger), expectedPrefix string) {
+			testLevel := func(level string, logFunc func(Telemetry), expectedPrefix string) {
 				buf := &bytes.Buffer{}
-				logger := NewLogger(
+				telemetry := NewTelemetry(
 					WithLevel(LevelDebug),
 					WithMode(ModeSync, buf),
 					WithTheme(elem.theme),
 				)
-				logFunc(logger)
-				logger.Sync()
+				logFunc(telemetry)
+				telemetry.Sync()
 				output := buf.String()
 				checkTheme(t, level, expectedPrefix, elem, output)
 			}
@@ -598,14 +592,14 @@ func TestTheme(t *testing.T) {
 			testLevel("Warn", testWarn, elem.prefixWarn)
 		})
 		t.Run("SetTheme/"+elem.name, func(t *testing.T) {
-			testLevel := func(level string, logFunc func(Logger), expectedPrefix string) {
+			testLevel := func(level string, logFunc func(Telemetry), expectedPrefix string) {
 				buf := &bytes.Buffer{}
-				logger := NewLogger()
-				logger.SetLevel(LevelDebug)
-				logger.SetMode(ModeSync, buf)
-				logger.SetTheme(elem.theme)
-				logFunc(logger)
-				logger.Sync()
+				telemetry := NewTelemetry()
+				telemetry.SetLevel(LevelDebug)
+				telemetry.SetMode(ModeSync, buf)
+				telemetry.SetTheme(elem.theme)
+				logFunc(telemetry)
+				telemetry.Sync()
 				output := buf.String()
 				checkTheme(t, level, expectedPrefix, elem, output)
 			}
@@ -842,16 +836,16 @@ func checkFieldTimes(t *testing.T, field Field, vals []time.Time) {
 	}
 }
 func checkTheme(t *testing.T, level, expectedPrefix string, elem struct {
-	name         string
-	theme        TypeTheme
-	callerColor  string
-	messageColor string
-	prefixDebug  string
-	prefixError  string
-	prefixFatal  string
-	prefixInfo   string
-	prefixWarn   string
-	reset        string
+	name        string
+	theme       TypeTheme
+	callerColor string
+	dataColor   string
+	prefixDebug string
+	prefixError string
+	prefixFatal string
+	prefixInfo  string
+	prefixWarn  string
+	reset       string
 }, output string) {
 	t.Helper()
 	if !strings.Contains(output, elem.callerColor) && level == "DEBUG" {
@@ -860,46 +854,46 @@ func checkTheme(t *testing.T, level, expectedPrefix string, elem struct {
 	if !strings.Contains(output, expectedPrefix) {
 		t.Errorf("%s: expected prefix %q not found in %q", level, expectedPrefix, output)
 	}
-	if !strings.Contains(output, elem.messageColor) {
-		t.Errorf("%s: expected message color %q not found", level, elem.messageColor)
+	if !strings.Contains(output, elem.dataColor) {
+		t.Errorf("%s: expected data color %q not found", level, elem.dataColor)
 	}
 	if !strings.Contains(output, elem.reset) {
-		t.Errorf("%s: expected message color %q not found", level, elem.reset)
+		t.Errorf("%s: expected data color %q not found", level, elem.reset)
 	}
 }
-func testDebug(l Logger) {
-	l.Debug("test message")
+func testDebug(telemetry Telemetry) {
+	telemetry.Debug(DataLog, String("message", "test debug text"))
 }
-func testDebugWithContext(l Logger) {
-	l.DebugWithContext(context.Background(), "test message")
+func testDebugWithContext(telemetry Telemetry) {
+	telemetry.DebugWithContext(context.Background(), DataLog, String("message", "test debug text"))
 }
-func testError(l Logger) {
-	l.Error("test message")
+func testError(telemetry Telemetry) {
+	telemetry.Error(DataLog, String("message", "test error text"))
 }
-func testErrorWithContext(l Logger) {
-	l.ErrorWithContext(context.Background(), "test message")
+func testErrorWithContext(telemetry Telemetry) {
+	telemetry.ErrorWithContext(context.Background(), DataLog, String("message", "test error text"))
 }
-func testFatal(l Logger) {
+func testFatal(telemetry Telemetry) {
 	oldExit := osExit
 	osExit = func(int) {}
 	defer func() { osExit = oldExit }()
-	l.Fatal("test message")
+	telemetry.Fatal(DataLog, String("message", "test fatal text"))
 }
-func testFatalWithContext(l Logger) {
+func testFatalWithContext(telemetry Telemetry) {
 	oldExit := osExit
 	osExit = func(int) {}
 	defer func() { osExit = oldExit }()
-	l.FatalWithContext(context.Background(), "test message")
+	telemetry.FatalWithContext(context.Background(), DataLog, String("message", "test fatal text"))
 }
-func testInfo(l Logger) {
-	l.Info("test message")
+func testInfo(telemetry Telemetry) {
+	telemetry.Info(DataLog, String("message", "test info text"))
 }
-func testInfoWithContext(l Logger) {
-	l.InfoWithContext(context.Background(), "test message")
+func testInfoWithContext(telemetry Telemetry) {
+	telemetry.InfoWithContext(context.Background(), DataLog, String("message", "test info text"))
 }
-func testWarn(l Logger) {
-	l.Warn("test message")
+func testWarn(telemetry Telemetry) {
+	telemetry.Warn(DataLog, String("message", "test warn text"))
 }
-func testWarnWithContext(l Logger) {
-	l.WarnWithContext(context.Background(), "test message")
+func testWarnWithContext(telemetry Telemetry) {
+	telemetry.WarnWithContext(context.Background(), DataLog, String("message", "test warn text"))
 }

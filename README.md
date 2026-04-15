@@ -6,7 +6,7 @@
 
 # ULOG Toolkit
 
-A high-performance, zero-dependency structured logger for Go with JSON and Text outputs, colored themes, async writer, and full context support.
+A high-performance, zero-dependency structured telemetry for Go with JSON and Text outputs, colored themes, async writer, and full context support.
 
 ## Features
 
@@ -81,48 +81,32 @@ go get github.com/mikhaildadaev/ulog
 
 ### Multi Thread
 
-|   Level   |  Mode | Format | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-----------|-------|--------|------------|--------------|---------------|--------|
-| **Debug** | Async | Simple |       1.0B |	        0.58 |	           0 |      0 |
-| **Debug** | Async | Format |       1.0B |    	    0.57 |             0 |      0 |
-| **Debug** |  Sync | Simple |       1.0B |    	    0.57 |	           0 |      0 |
-| **Debug** |  Sync | Format |       1.0B |    	    0.57 |	           0 |      0 |
-| **Error** | Async | Simple |       6.2M |       203.90 |        	 120 |      2 |
-| **Error** | Async | Format |       4.0M |       275.70 |        	 728 |      5 |
-| **Error** |  Sync | Simple |      11.4M |       104.90 |        	  24 |      1 |
-| **Error** |  Sync | Format |       6.0M |       200.20 |        	 616 |      4 |
-|  **Info** | Async | Simple |       6.8M |       165.80 |	         104 |      2 |
-|  **Info** | Async | Format |       4.1M |       273.70 |	         728 |      5 |
-|  **Info** |  Sync | Simple |      11.4M |    	  103.80 | 	       	  24 |      1 |
-|  **Info** |  Sync | Format |       7.0M |       172.50 |	         616 |      4 |
-|  **Warn** | Async | Simple |       7.3M |    	  161.40 |        	 104 |      2 |
-|  **Warn** | Async | Format |       4.4M |       242.50 |        	 728 |      5 |
-|  **Warn** |  Sync | Simple |      11.5M |       102.00 |        	  24 |      1 |
-|  **Warn** |  Sync | Format |       6.9M |    	  164.20 |        	 616 |      4 |
+|   Level   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-----------|-------|------------|--------------|---------------|--------|
+| **Debug** | Async |       1.0B |   	   0.57 |             0 |      0 |
+| **Debug** |  Sync |       1.0B |    	   0.57 |	          0 |      0 |
+| **Error** | Async |       4.0M |       275.70 |           728 |      5 |
+| **Error** |  Sync |       6.0M |       200.20 |           616 |      4 |
+|  **Info** | Async |       4.1M |       273.70 |	        728 |      5 |
+|  **Info** |  Sync |       7.0M |       172.50 |	        616 |      4 |
+|  **Warn** | Async |       4.4M |       242.50 |           728 |      5 |
+|  **Warn** |  Sync |       6.9M |    	 164.20 |       	616 |      4 |
 
 ### Single Thread
 
-|   Level   |  Mode | Format | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-----------|-------|--------|------------|--------------|---------------|--------|
-| **Debug** | Async | Simple |     304.6M |         4.21 |             0 |      0 |
-| **Debug**	| Async | Format |     288.9M |         5.29 |	           0 |      0 |
-| **Debug**	|  Sync | Simple |     283.9M |         3.92 |	           0 |      0 |
-| **Debug**	|  Sync | Format |     307.7M |         3.85 |	           0 |      0 |
-| **Error**	| Async | Simple |       2.1M |       587.30 |	         120 |      2 |
-| **Error**	| Async | Format |       1.4M |       824.20 |	         728 |      5 |
-| **Error**	|  Sync | Simple |       3.0M |       395.90 |	          24 |      1 |
-| **Error**	|  Sync | Format |       1.8M |       647.10 |	         616 |	    4 |
-|  **Info**	| Async | Simple |       2.1M |       551.90 |	         104 |      2 |
-|  **Info**	| Async | Format |       1.4M |       826.50 |	         728 |      5 |
-|  **Info**	|  Sync | Simple |       3.0M |       388.70 |	          24 |      1 |
-|  **Info**	|  Sync | Format |       1.8M |       634.70 |	         616 |      4 |
-|  **Warn**	| Async | Simple |       2.0M |       586.40 |	         104 |      2 |
-|  **Warn**	| Async | Format |       1.5M |       818.80 |	         728 |      5 |
-|  **Warn**	|  Sync | Simple |       3.0M |       394.30 |	          24 |      1 |
-|  **Warn**	|  Sync | Format |       1.9M |       627.70 |	         616 |      3 |
+|   Level   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-----------|-------|------------|--------------|---------------|--------|
+| **Debug**	| Async |     288.9M |         5.29 |	          0 |      0 |
+| **Debug**	|  Sync |     307.7M |         3.85 |	          0 |      0 |
+| **Error**	| Async |       1.4M |       824.20 |	        728 |      5 |
+| **Error**	|  Sync |       1.8M |       647.10 |	        616 |	   4 |
+|  **Info**	| Async |       1.4M |       826.50 |	        728 |      5 |
+|  **Info**	|  Sync |       1.8M |       634.70 |	        616 |      4 |
+|  **Warn**	| Async |       1.5M |       818.80 |           728 |      5 |
+|  **Warn**	|  Sync |       1.9M |       627.70 |	        616 |      3 |
 
 > **Note:**
-> - `Format` benchmarks use `WithExtractor("trace_id")` to automatically extract from context.
+> - Benchmarks use `WithExtractor("trace_id")` to automatically extract from context.
 > - All benchmarks write to `io.Discard` (equivalent to `/dev/null` on Unix or `NUL` on Windows).
 > - This measures only the logging overhead (field formatting, JSON encoding, context extraction) without disk or network I/O.
 > - Real-world performance will depend on your output destination (file, network, etc.).
@@ -139,42 +123,42 @@ import (
 
 func main() {
     ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-    // Universal logger [Async] with JSON output
-    loggerAsync := ulog.NewLogger(
+    // Universal telemetryAsync with JSON output
+    telemetryAsync := ulog.NewTelemetry(
         ulog.WithMode(ulog.ModeAsync, os.Stdout, 10000),
         ulog.WithFormat(ulog.FormatJson),
     )
-    defer loggerAsync.Close()
-    loggerAsync.Debug("debugging request", ulog.String("path", "/api/user"))
-    loggerAsync.DebugWithContext(ctx, "debugging request", ulog.String("path", "/api/user"))
-    loggerAsync.Info("server started", ulog.Int("port", 8080))
-    loggerAsync.InfoWithContext(ctx, "server started", ulog.Int("port", 8080))
-    loggerAsync.Warn("high latency", ulog.Duration("latency", 150*time.Millisecond))
-    loggerAsync.WarnWithContext(ctx, "high latency", ulog.Duration("latency", 150*time.Millisecond))
-    loggerAsync.Error("database error", ulog.Error(nil))
-    loggerAsync.ErrorWithContext(ctx, "database error", ulog.Error(nil))
-    loggerAsync.Sync()
-    // Universal logger [Sync] with colored text output
-    loggerSync := ulog.NewLogger(
+    defer telemetryAsync.Close()
+    telemetryAsync.Debug("debugging request", ulog.String("path", "/api/user"))
+    telemetryAsync.DebugWithContext(ctx, "debugging request", ulog.String("path", "/api/user"))
+    telemetryAsync.Info("server started", ulog.Int("port", 8080))
+    telemetryAsync.InfoWithContext(ctx, "server started", ulog.Int("port", 8080))
+    telemetryAsync.Warn("high latency", ulog.Duration("latency", 150*time.Millisecond))
+    telemetryAsync.WarnWithContext(ctx, "high latency", ulog.Duration("latency", 150*time.Millisecond))
+    telemetryAsync.Error("database error", ulog.Error(nil))
+    telemetryAsync.ErrorWithContext(ctx, "database error", ulog.Error(nil))
+    telemetryAsync.Sync()
+    // Universal telemetrySync with colored text output
+    telemetrySync := ulog.NewTelemetry(
         ulog.WithMode(ulog.ModeSync, os.Stdout),
         ulog.WithFormat(ulog.FormatText),
         ulog.WithTheme(ulog.ThemeDark),
     )
-    loggerSync.Debug("debugging request", ulog.String("path", "/api/user"))
-    loggerSync.DebugWithContext(ctx, "debugging request", ulog.String("path", "/api/user"))
-    loggerSync.Info("server started", ulog.Int("port", 8080))
-    loggerSync.InfoWithContext(ctx, "server started", ulog.Int("port", 8080))
-    loggerSync.Warn("high latency", ulog.Duration("latency", 150*time.Millisecond))
-    loggerSync.WarnWithContext(ctx, "high latency", ulog.Duration("latency", 150*time.Millisecond))
-    loggerSync.Error("database error", ulog.Error(nil))
-    loggerSync.ErrorWithContext(ctx, "database error", ulog.Error(nil))
+    telemetrySync.Debug("debugging request", ulog.String("path", "/api/user"))
+    telemetrySync.DebugWithContext(ctx, "debugging request", ulog.String("path", "/api/user"))
+    telemetrySync.Info("server started", ulog.Int("port", 8080))
+    telemetrySync.InfoWithContext(ctx, "server started", ulog.Int("port", 8080))
+    telemetrySync.Warn("high latency", ulog.Duration("latency", 150*time.Millisecond))
+    telemetrySync.WarnWithContext(ctx, "high latency", ulog.Duration("latency", 150*time.Millisecond))
+    telemetrySync.Error("database error", ulog.Error(nil))
+    telemetrySync.ErrorWithContext(ctx, "database error", ulog.Error(nil))
     // Standard logger adapter (writes only errors)
-    logger := ulog.NewLogger(
+    telemetry := ulog.NewTelemetry(
         ulog.WithMode(ulog.ModeSync, os.Stdout),
         ulog.WithFormat(ulog.FormatJson),
     )
-    loggerLog := ulog.NewLoggerLog(ulog.LevelError, logger)
-    loggerLog.Print("error from standard logger")
+    telemetryLog := ulog.NewTelemetryLog(ulog.LevelError, telemetry)
+    telemetryLog.Print("error from standard logger")
 }
 ```
 

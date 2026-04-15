@@ -137,9 +137,9 @@ func Times(nameKey string, valueTimes []time.Time) Field {
 }
 
 // Публичные функции
-func WithExtractor(keys ...string) OptionLogger {
-	return func(universalLogger *universalLogger) {
-		universalLogger.extractor = func(ctx context.Context) []Field {
+func WithExtractor(keys ...string) OptionTelemetry {
+	return func(universalTelemetry *universalTelemetry) {
+		universalTelemetry.extractor = func(ctx context.Context) []Field {
 			if ctx == nil {
 				return nil
 			}
@@ -172,47 +172,47 @@ func WithExtractor(keys ...string) OptionLogger {
 		}
 	}
 }
-func WithFormat(format TypeFormat) OptionLogger {
-	return func(universalLogger *universalLogger) {
-		universalLogger.format.Store(int32(format))
+func WithFormat(format TypeFormat) OptionTelemetry {
+	return func(universalTelemetry *universalTelemetry) {
+		universalTelemetry.format.Store(int32(format))
 	}
 }
-func WithLevel(level TypeLevel) OptionLogger {
-	return func(universalLogger *universalLogger) {
-		universalLogger.level.Store(int32(level))
+func WithLevel(level TypeLevel) OptionTelemetry {
+	return func(universalTelemetry *universalTelemetry) {
+		universalTelemetry.level.Store(int32(level))
 	}
 }
-func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) OptionLogger {
-	return func(universalLogger *universalLogger) {
+func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) OptionTelemetry {
+	return func(universalTelemetry *universalTelemetry) {
 		switch mode {
 		case ModeAsync:
 			size := defaultBufferSize
 			if len(bufferSize) > 0 && bufferSize[0] >= 0 {
 				size = bufferSize[0]
 			}
-			universalLogger.mode = ModeAsync
-			universalLogger.writer = newAsyncWriter(writer, size)
+			universalTelemetry.mode = ModeAsync
+			universalTelemetry.writer = newAsyncWriter(writer, size)
 		case ModeSync:
-			universalLogger.mode = ModeSync
-			universalLogger.writer = writer
+			universalTelemetry.mode = ModeSync
+			universalTelemetry.writer = writer
 		}
 	}
 }
-func WithTheme(theme TypeTheme) OptionLogger {
-	return func(universalLogger *universalLogger) {
+func WithTheme(theme TypeTheme) OptionTelemetry {
+	return func(universalTelemetry *universalTelemetry) {
 		switch theme {
 		case ThemeDark:
-			universalLogger.theme = themeDark
+			universalTelemetry.theme = themeDark
 		case ThemeLight:
-			universalLogger.theme = themeLight
+			universalTelemetry.theme = themeLight
 		}
 	}
 }
 
 // Публичные методы
-func (standardLogger *standardLogger) Write(p []byte) (n int, err error) {
-	standardLogger.mutex.Lock()
-	defer standardLogger.mutex.Unlock()
+func (standardTelemetry *standardTelemetry) Write(p []byte) (n int, err error) {
+	standardTelemetry.mutex.Lock()
+	defer standardTelemetry.mutex.Unlock()
 	start := 0
 	end := len(p)
 	for start < end && p[start] <= ' ' {
@@ -224,29 +224,29 @@ func (standardLogger *standardLogger) Write(p []byte) (n int, err error) {
 	if start >= end {
 		return 0, nil
 	}
-	if standardLogger.isIgnored(p[start:end]) {
+	if standardTelemetry.isIgnored(p[start:end]) {
 		return len(p), nil
 	}
 	message := string(p[start:end])
-	switch TypeLevel(standardLogger.level.Load()) {
+	switch TypeLevel(standardTelemetry.level.Load()) {
 	case LevelDebug:
-		standardLogger.logger.Debug(message)
+		standardTelemetry.telemetry.Debug(DataLog, String("message", message))
 	case LevelInfo:
-		standardLogger.logger.Info(message)
+		standardTelemetry.telemetry.Info(DataLog, String("message", message))
 	case LevelWarn:
-		standardLogger.logger.Warn(message)
+		standardTelemetry.telemetry.Warn(DataLog, String("message", message))
 	case LevelError:
-		standardLogger.logger.Error(message)
+		standardTelemetry.telemetry.Error(DataLog, String("message", message))
 	case LevelFatal:
-		standardLogger.logger.Fatal(message)
+		standardTelemetry.telemetry.Fatal(DataLog, String("message", message))
 	}
 	return len(p), nil
 }
-func (universalLogger *universalLogger) Close() error {
-	universalLogger.mutex.RLock()
-	writer := universalLogger.writer
-	universalLogger.mutex.RUnlock()
-	if universalLogger.mode == ModeAsync {
+func (universalTelemetry *universalTelemetry) Close() error {
+	universalTelemetry.mutex.RLock()
+	writer := universalTelemetry.writer
+	universalTelemetry.mutex.RUnlock()
+	if universalTelemetry.mode == ModeAsync {
 		if asyncWriter, ok := writer.(*asyncWriter); ok {
 			return asyncWriter.Close()
 		}
@@ -259,130 +259,98 @@ func (universalLogger *universalLogger) Close() error {
 	}
 	return nil
 }
-func (universalLogger *universalLogger) Debug(message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
+func (universalTelemetry *universalTelemetry) Debug(typeData TypeData, fields ...Field) {
+	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalLogger.writeJson(LevelDebug, context.Background(), message, fields)
+		universalTelemetry.writeJson(LevelDebug, context.Background(), typeData, fields)
 	case FormatText:
-		universalLogger.writeText(LevelDebug, context.Background(), message, fields)
+		universalTelemetry.writeText(LevelDebug, context.Background(), typeData, fields)
 	}
 }
-func (universalLogger *universalLogger) DebugWithContext(context context.Context, message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
+func (universalTelemetry *universalTelemetry) DebugWithContext(context context.Context, typeData TypeData, fields ...Field) {
+	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalLogger.writeJson(LevelDebug, context, message, fields)
+		universalTelemetry.writeJson(LevelDebug, context, typeData, fields)
 	case FormatText:
-		universalLogger.writeText(LevelDebug, context, message, fields)
+		universalTelemetry.writeText(LevelDebug, context, typeData, fields)
 	}
 }
-func (universalLogger *universalLogger) Error(message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
+func (universalTelemetry *universalTelemetry) Error(typeData TypeData, fields ...Field) {
+	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalLogger.writeJson(LevelError, context.Background(), message, fields)
+		universalTelemetry.writeJson(LevelError, context.Background(), typeData, fields)
 	case FormatText:
-		universalLogger.writeText(LevelError, context.Background(), message, fields)
+		universalTelemetry.writeText(LevelError, context.Background(), typeData, fields)
 	}
 }
-func (universalLogger *universalLogger) ErrorWithContext(context context.Context, message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
+func (universalTelemetry *universalTelemetry) ErrorWithContext(context context.Context, typeData TypeData, fields ...Field) {
+	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalLogger.writeJson(LevelError, context, message, fields)
+		universalTelemetry.writeJson(LevelError, context, typeData, fields)
 	case FormatText:
-		universalLogger.writeText(LevelError, context, message, fields)
+		universalTelemetry.writeText(LevelError, context, typeData, fields)
 	}
 }
-func (universalLogger *universalLogger) Fatal(message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
+func (universalTelemetry *universalTelemetry) Fatal(typeData TypeData, fields ...Field) {
+	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalLogger.writeJson(LevelFatal, context.Background(), message, fields)
+		universalTelemetry.writeJson(LevelFatal, context.Background(), typeData, fields)
 	case FormatText:
-		universalLogger.writeText(LevelFatal, context.Background(), message, fields)
+		universalTelemetry.writeText(LevelFatal, context.Background(), typeData, fields)
 	}
-	if universalLogger.mode == ModeAsync {
-		universalLogger.Sync()
+	if universalTelemetry.mode == ModeAsync {
+		universalTelemetry.Sync()
 	}
 	osExit(1)
 }
-func (universalLogger *universalLogger) FatalWithContext(context context.Context, message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
+func (universalTelemetry *universalTelemetry) FatalWithContext(context context.Context, typeData TypeData, fields ...Field) {
+	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalLogger.writeJson(LevelFatal, context, message, fields)
+		universalTelemetry.writeJson(LevelFatal, context, typeData, fields)
 	case FormatText:
-		universalLogger.writeText(LevelFatal, context, message, fields)
+		universalTelemetry.writeText(LevelFatal, context, typeData, fields)
 	}
-	if universalLogger.mode == ModeAsync {
-		universalLogger.Sync()
+	if universalTelemetry.mode == ModeAsync {
+		universalTelemetry.Sync()
 	}
 	osExit(1)
 }
-func (universalLogger *universalLogger) Info(message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
+func (universalTelemetry *universalTelemetry) Info(typeData TypeData, fields ...Field) {
+	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalLogger.writeJson(LevelInfo, context.Background(), message, fields)
+		universalTelemetry.writeJson(LevelInfo, context.Background(), typeData, fields)
 	case FormatText:
-		universalLogger.writeText(LevelInfo, context.Background(), message, fields)
+		universalTelemetry.writeText(LevelInfo, context.Background(), typeData, fields)
 	}
 }
-func (universalLogger *universalLogger) InfoWithContext(context context.Context, message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
+func (universalTelemetry *universalTelemetry) InfoWithContext(context context.Context, typeData TypeData, fields ...Field) {
+	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalLogger.writeJson(LevelInfo, context, message, fields)
+		universalTelemetry.writeJson(LevelInfo, context, typeData, fields)
 	case FormatText:
-		universalLogger.writeText(LevelInfo, context, message, fields)
+		universalTelemetry.writeText(LevelInfo, context, typeData, fields)
 	}
 }
-func (universalLogger *universalLogger) Metric(message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
+func (universalTelemetry *universalTelemetry) Warn(typeData TypeData, fields ...Field) {
+	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalLogger.writeJson(LevelInfo, context.Background(), message, fields)
+		universalTelemetry.writeJson(LevelWarn, context.Background(), typeData, fields)
 	case FormatText:
-		universalLogger.writeText(LevelInfo, context.Background(), message, fields)
+		universalTelemetry.writeText(LevelWarn, context.Background(), typeData, fields)
 	}
 }
-func (universalLogger *universalLogger) MetricWithContext(context context.Context, message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
+func (universalTelemetry *universalTelemetry) WarnWithContext(context context.Context, typeData TypeData, fields ...Field) {
+	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalLogger.writeJson(LevelInfo, context, message, fields)
+		universalTelemetry.writeJson(LevelWarn, context, typeData, fields)
 	case FormatText:
-		universalLogger.writeText(LevelInfo, context, message, fields)
+		universalTelemetry.writeText(LevelWarn, context, typeData, fields)
 	}
 }
-func (universalLogger *universalLogger) Trace(message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
-	case FormatJson:
-		universalLogger.writeJson(LevelInfo, context.Background(), message, fields)
-	case FormatText:
-		universalLogger.writeText(LevelInfo, context.Background(), message, fields)
-	}
-}
-func (universalLogger *universalLogger) TraceWithContext(context context.Context, message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
-	case FormatJson:
-		universalLogger.writeJson(LevelInfo, context, message, fields)
-	case FormatText:
-		universalLogger.writeText(LevelInfo, context, message, fields)
-	}
-}
-func (universalLogger *universalLogger) Warn(message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
-	case FormatJson:
-		universalLogger.writeJson(LevelWarn, context.Background(), message, fields)
-	case FormatText:
-		universalLogger.writeText(LevelWarn, context.Background(), message, fields)
-	}
-}
-func (universalLogger *universalLogger) WarnWithContext(context context.Context, message string, fields ...Field) {
-	switch TypeFormat(universalLogger.format.Load()) {
-	case FormatJson:
-		universalLogger.writeJson(LevelWarn, context, message, fields)
-	case FormatText:
-		universalLogger.writeText(LevelWarn, context, message, fields)
-	}
-}
-func (universalLogger *universalLogger) SetExtractor(keys ...string) {
-	universalLogger.mutex.Lock()
-	defer universalLogger.mutex.Unlock()
-	universalLogger.extractor = func(ctx context.Context) []Field {
+func (universalTelemetry *universalTelemetry) SetExtractor(keys ...string) {
+	universalTelemetry.mutex.Lock()
+	defer universalTelemetry.mutex.Unlock()
+	universalTelemetry.extractor = func(ctx context.Context) []Field {
 		if ctx == nil {
 			return nil
 		}
@@ -414,17 +382,17 @@ func (universalLogger *universalLogger) SetExtractor(keys ...string) {
 		return fields
 	}
 }
-func (universalLogger *universalLogger) SetFormat(format TypeFormat) {
-	universalLogger.format.Store(int32(format))
+func (universalTelemetry *universalTelemetry) SetFormat(format TypeFormat) {
+	universalTelemetry.format.Store(int32(format))
 }
-func (universalLogger *universalLogger) SetLevel(level TypeLevel) {
-	universalLogger.level.Store(int32(level))
+func (universalTelemetry *universalTelemetry) SetLevel(level TypeLevel) {
+	universalTelemetry.level.Store(int32(level))
 }
-func (universalLogger *universalLogger) SetMode(mode TypeMode, writer io.Writer, bufferSize ...int) {
-	universalLogger.mutex.Lock()
-	defer universalLogger.mutex.Unlock()
-	if universalLogger.mode == ModeAsync {
-		if asyncWriter, ok := universalLogger.writer.(*asyncWriter); ok {
+func (universalTelemetry *universalTelemetry) SetMode(mode TypeMode, writer io.Writer, bufferSize ...int) {
+	universalTelemetry.mutex.Lock()
+	defer universalTelemetry.mutex.Unlock()
+	if universalTelemetry.mode == ModeAsync {
+		if asyncWriter, ok := universalTelemetry.writer.(*asyncWriter); ok {
 			asyncWriter.Close()
 		}
 	}
@@ -434,28 +402,28 @@ func (universalLogger *universalLogger) SetMode(mode TypeMode, writer io.Writer,
 		if len(bufferSize) > 0 && bufferSize[0] >= 0 {
 			size = bufferSize[0]
 		}
-		universalLogger.mode = ModeAsync
-		universalLogger.writer = newAsyncWriter(writer, size)
+		universalTelemetry.mode = ModeAsync
+		universalTelemetry.writer = newAsyncWriter(writer, size)
 	case ModeSync:
-		universalLogger.mode = ModeSync
-		universalLogger.writer = writer
+		universalTelemetry.mode = ModeSync
+		universalTelemetry.writer = writer
 	}
 }
-func (universalLogger *universalLogger) SetTheme(theme TypeTheme) {
-	universalLogger.mutex.Lock()
-	defer universalLogger.mutex.Unlock()
+func (universalTelemetry *universalTelemetry) SetTheme(theme TypeTheme) {
+	universalTelemetry.mutex.Lock()
+	defer universalTelemetry.mutex.Unlock()
 	switch theme {
 	case ThemeDark:
-		universalLogger.theme = themeDark
+		universalTelemetry.theme = themeDark
 	case ThemeLight:
-		universalLogger.theme = themeLight
+		universalTelemetry.theme = themeLight
 	}
 }
-func (universalLogger *universalLogger) Sync() error {
-	universalLogger.mutex.RLock()
-	currentWriter := universalLogger.writer
-	universalLogger.mutex.RUnlock()
-	if universalLogger.mode == ModeAsync {
+func (universalTelemetry *universalTelemetry) Sync() error {
+	universalTelemetry.mutex.RLock()
+	currentWriter := universalTelemetry.writer
+	universalTelemetry.mutex.RUnlock()
+	if universalTelemetry.mode == ModeAsync {
 		if asyncWriter, ok := currentWriter.(*asyncWriter); ok {
 			if err := asyncWriter.Sync(); err != nil {
 				return err
@@ -468,9 +436,9 @@ func (universalLogger *universalLogger) Sync() error {
 	}
 	return nil
 }
-func (universalLogger *universalLogger) Write(p []byte) (n int, err error) {
-	universalLogger.mutex.RLock()
-	writer := universalLogger.writer
-	universalLogger.mutex.RUnlock()
+func (universalTelemetry *universalTelemetry) Write(p []byte) (n int, err error) {
+	universalTelemetry.mutex.RLock()
+	writer := universalTelemetry.writer
+	universalTelemetry.mutex.RUnlock()
 	return writer.Write(p)
 }

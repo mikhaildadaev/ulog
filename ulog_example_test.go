@@ -11,59 +11,59 @@ import (
 )
 
 // Примеры использования публичных конструкторов
-func ExampleNewLogger() {
+func ExampleNewTelemetry() {
 	buf := &bytes.Buffer{}
 	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-	logger := ulog.NewLogger(
+	telemetry := ulog.NewTelemetry(
 		ulog.WithFormat(ulog.FormatText),
 		ulog.WithLevel(ulog.LevelDebug),
 		ulog.WithMode(ulog.ModeAsync, buf, 1000),
 		ulog.WithTheme(ulog.ThemeDark),
 	)
-	defer logger.Close()
-	logger.Debug("test message")
-	logger.Info("test message")
-	logger.Warn("test message")
-	logger.Error("test message")
-	logger.Sync()
-	logger.SetExtractor("trace_id")
-	logger.SetFormat(ulog.FormatJson)
-	logger.SetLevel(ulog.LevelDebug)
-	logger.SetMode(ulog.ModeSync, buf)
-	logger.DebugWithContext(ctx, "test message")
-	logger.InfoWithContext(ctx, "test message")
-	logger.WarnWithContext(ctx, "test message")
-	logger.ErrorWithContext(ctx, "test message")
-	logger.Sync()
+	defer telemetry.Close()
+	telemetry.Debug(ulog.DataLog, ulog.String("message", "test debug text"))
+	telemetry.Info(ulog.DataLog, ulog.String("message", "test info text"))
+	telemetry.Warn(ulog.DataLog, ulog.String("message", "test warn text"))
+	telemetry.Error(ulog.DataLog, ulog.String("message", "test error text"))
+	telemetry.Sync()
+	telemetry.SetExtractor("trace_id")
+	telemetry.SetFormat(ulog.FormatJson)
+	telemetry.SetLevel(ulog.LevelDebug)
+	telemetry.SetMode(ulog.ModeSync, buf)
+	telemetry.DebugWithContext(ctx, ulog.DataLog, ulog.String("message", "test debug text"))
+	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "test info text"))
+	telemetry.WarnWithContext(ctx, ulog.DataLog, ulog.String("message", "test warn text"))
+	telemetry.ErrorWithContext(ctx, ulog.DataLog, ulog.String("message", "test error text"))
+	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
-	// [DEBUG] test message
-	// [INFO] test message
-	// [WARN] test message
-	// [ERROR] test message
-	// {"level":"debug","message":"test message","trace_id":"abc-123"}
-	// {"level":"info","message":"test message","trace_id":"abc-123"}
-	// {"level":"warn","message":"test message","trace_id":"abc-123"}
-	// {"level":"error","message":"test message","trace_id":"abc-123"}
+	// [DEBUG] type="log" message="test debug text"
+	// [INFO] type="log" message="test info text"
+	// [WARN] type="log" message="test warn text"
+	// [ERROR] type="log" message="test error text"
+	// {"level":"debug","type":"log","message":"test debug text","trace_id":"abc-123"}
+	// {"level":"info","type":"log","message":"test info text","trace_id":"abc-123"}
+	// {"level":"warn","type":"log","message":"test warn text","trace_id":"abc-123"}
+	// {"level":"error","type":"log","message":"test error text","trace_id":"abc-123"}
 }
-func ExampleNewLoggerLog() {
+func ExampleNewTelemetryLog() {
 	buf := &bytes.Buffer{}
-	logger := ulog.NewLogger(
+	telemetry := ulog.NewTelemetry(
 		ulog.WithMode(ulog.ModeSync, buf),
 		ulog.WithFormat(ulog.FormatText),
 		ulog.WithLevel(ulog.LevelError),
 	)
-	loggerLog := ulog.NewLoggerLog(ulog.LevelError, logger)
-	loggerLog.Print("this will be logged as ERROR")
-	loggerLog.Printf("user %s failed to login", "john")
-	loggerLog.Println("another error message")
+	telemetryLog := ulog.NewTelemetryLog(ulog.LevelError, telemetry)
+	telemetryLog.Print("this will be logged as ERROR")
+	telemetryLog.Printf("user %s failed to login", "john")
+	telemetryLog.Println("another error message")
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
-	// [ERROR] this will be logged as ERROR
-	// [ERROR] user john failed to login
-	// [ERROR] another error message
+	// [ERROR] type="log" message="this will be logged as ERROR"
+	// [ERROR] type="log" message="user john failed to login"
+	// [ERROR] type="log" message="another error message"
 }
 
 // Вспомогательные функции

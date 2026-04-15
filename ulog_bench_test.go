@@ -9,327 +9,8 @@ import (
 )
 
 // Бенчмарки компонентов
-func Benchmark_Logger_Debug_Multi(b *testing.B) {
+func Benchmark_Telemetry_Debug_Multi(b *testing.B) {
 	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-	formats := []struct {
-		name       string
-		mode       TypeMode
-		writer     io.Writer
-		bufferSize int
-	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
-	}
-	for _, format := range formats {
-		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
-			if b.N == 1 {
-				logger.DebugWithContext(ctx, "test debug simple message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					logger.DebugWithContext(ctx, "test debug simple message")
-				}
-			})
-		})
-		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger(
-				WithExtractor("trace_id"),
-			)
-			if b.N == 1 {
-				logger.DebugWithContext(ctx, "test debug format message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					logger.DebugWithContext(ctx, "test debug format message")
-				}
-			})
-		})
-	}
-}
-func Benchmark_Logger_Debug_Single(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-	formats := []struct {
-		name       string
-		mode       TypeMode
-		writer     io.Writer
-		bufferSize int
-	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
-	}
-	for _, format := range formats {
-		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
-			if b.N == 1 {
-				logger.DebugWithContext(ctx, "test debug simple message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				logger.DebugWithContext(ctx, "test debug simple message")
-			}
-		})
-		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger(
-				WithExtractor("trace_id"),
-			)
-			if b.N == 1 {
-				logger.DebugWithContext(ctx, "test debug format message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				logger.DebugWithContext(ctx, "test debug format message")
-			}
-		})
-	}
-}
-func Benchmark_Logger_Error_Multi(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-	formats := []struct {
-		name       string
-		mode       TypeMode
-		writer     io.Writer
-		bufferSize int
-	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
-	}
-	for _, format := range formats {
-		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
-			if b.N == 1 {
-				logger.ErrorWithContext(ctx, "test error simple message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					logger.ErrorWithContext(ctx, "test error simple message")
-				}
-			})
-		})
-		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger(
-				WithExtractor("trace_id"),
-			)
-			if b.N == 1 {
-				logger.ErrorWithContext(ctx, "test error format message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					logger.ErrorWithContext(ctx, "test error format message")
-				}
-			})
-		})
-	}
-}
-func Benchmark_Logger_Error_Single(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-	formats := []struct {
-		name       string
-		mode       TypeMode
-		writer     io.Writer
-		bufferSize int
-	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
-	}
-	for _, format := range formats {
-		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
-			if b.N == 1 {
-				logger.ErrorWithContext(ctx, "test error simple message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				logger.ErrorWithContext(ctx, "test error simple message")
-			}
-		})
-		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger(
-				WithExtractor("trace_id"),
-			)
-			if b.N == 1 {
-				logger.ErrorWithContext(ctx, "test error format message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				logger.ErrorWithContext(ctx, "test error format message")
-			}
-		})
-	}
-}
-func Benchmark_Logger_Info_Multi(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-	formats := []struct {
-		name       string
-		mode       TypeMode
-		writer     io.Writer
-		bufferSize int
-	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
-	}
-	for _, format := range formats {
-		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
-			if b.N == 1 {
-				logger.InfoWithContext(ctx, "test info simple message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					logger.InfoWithContext(ctx, "test info simple message")
-				}
-			})
-		})
-		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger(
-				WithExtractor("trace_id"),
-			)
-			if b.N == 1 {
-				logger.InfoWithContext(ctx, "test info format message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					logger.InfoWithContext(ctx, "test info format message")
-				}
-			})
-		})
-	}
-}
-func Benchmark_Logger_Info_Single(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-	formats := []struct {
-		name       string
-		mode       TypeMode
-		writer     io.Writer
-		bufferSize int
-	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
-	}
-	for _, format := range formats {
-		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
-			if b.N == 1 {
-				logger.InfoWithContext(ctx, "test info simple message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				logger.InfoWithContext(ctx, "test info simple message")
-			}
-		})
-		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger(
-				WithExtractor("trace_id"),
-			)
-			if b.N == 1 {
-				logger.InfoWithContext(ctx, "test info format message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				logger.InfoWithContext(ctx, "test info format message")
-			}
-		})
-	}
-}
-func Benchmark_Logger_Warn_Multi(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-	formats := []struct {
-		name       string
-		mode       TypeMode
-		writer     io.Writer
-		bufferSize int
-	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
-	}
-	for _, format := range formats {
-		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
-			if b.N == 1 {
-				logger.WarnWithContext(ctx, "test warn simple message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					logger.WarnWithContext(ctx, "test warn simple message")
-				}
-			})
-		})
-		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger(
-				WithExtractor("trace_id"),
-			)
-			if b.N == 1 {
-				logger.WarnWithContext(ctx, "test warn format message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					logger.WarnWithContext(ctx, "test warn format message")
-				}
-			})
-		})
-	}
-}
-func Benchmark_Logger_Warn_Single(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-	formats := []struct {
-		name       string
-		mode       TypeMode
-		writer     io.Writer
-		bufferSize int
-	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
-	}
-	for _, format := range formats {
-		b.Run("Simple "+format.name, func(b *testing.B) {
-			logger := NewLogger()
-			if b.N == 1 {
-				logger.WarnWithContext(ctx, "test warn simple message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				logger.WarnWithContext(ctx, "test warn simple message")
-			}
-		})
-		b.Run("Format "+format.name, func(b *testing.B) {
-			logger := NewLogger(
-				WithExtractor("trace_id"),
-			)
-			if b.N == 1 {
-				logger.WarnWithContext(ctx, "test warn format message")
-			}
-			logger.SetMode(format.mode, format.writer, format.bufferSize)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				logger.WarnWithContext(ctx, "test warn format message")
-			}
-		})
-	}
-}
-func Benchmark_LoggerLog_Error_Multi(b *testing.B) {
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -341,20 +22,24 @@ func Benchmark_LoggerLog_Error_Multi(b *testing.B) {
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
-			logger := NewLogger(
-				WithMode(format.mode, format.writer, format.bufferSize),
+			telemetry := NewTelemetry(
+				WithExtractor("trace_id"),
 			)
-			loggerLog := NewLoggerLog(LevelError, logger)
+			if b.N == 1 {
+				telemetry.DebugWithContext(ctx, DataLog, String("message", "test debug text"))
+			}
+			telemetry.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					loggerLog.Print("test error message")
+					telemetry.DebugWithContext(ctx, DataLog, String("message", "test debug text"))
 				}
 			})
 		})
 	}
 }
-func Benchmark_LoggerLog_Error_Single(b *testing.B) {
+func Benchmark_Telemetry_Debug_Single(b *testing.B) {
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -366,13 +51,230 @@ func Benchmark_LoggerLog_Error_Single(b *testing.B) {
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
-			logger := NewLogger(
-				WithMode(format.mode, format.writer, format.bufferSize),
-			)
-			loggerLog := NewLoggerLog(LevelError, logger)
+			telemetry := NewTelemetry()
+			if b.N == 1 {
+				telemetry.DebugWithContext(ctx, DataLog, String("message", "test debug text"))
+			}
+			telemetry.SetMode(format.mode, format.writer, format.bufferSize)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				loggerLog.Print("test error message")
+				telemetry.DebugWithContext(ctx, DataLog, String("message", "test debug text"))
+			}
+		})
+	}
+}
+func Benchmark_Telemetry_Error_Multi(b *testing.B) {
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	formats := []struct {
+		name       string
+		mode       TypeMode
+		writer     io.Writer
+		bufferSize int
+	}{
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
+		{"Sync", ModeSync, io.Discard, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			telemetry := NewTelemetry(
+				WithExtractor("trace_id"),
+			)
+			if b.N == 1 {
+				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
+			}
+			telemetry.SetMode(format.mode, format.writer, format.bufferSize)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
+				}
+			})
+		})
+	}
+}
+func Benchmark_Telemetry_Error_Single(b *testing.B) {
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	formats := []struct {
+		name       string
+		mode       TypeMode
+		writer     io.Writer
+		bufferSize int
+	}{
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
+		{"Sync", ModeSync, io.Discard, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			telemetry := NewTelemetry(
+				WithExtractor("trace_id"),
+			)
+			if b.N == 1 {
+				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
+			}
+			telemetry.SetMode(format.mode, format.writer, format.bufferSize)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
+			}
+		})
+	}
+}
+func Benchmark_Telemetry_Info_Multi(b *testing.B) {
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	formats := []struct {
+		name       string
+		mode       TypeMode
+		writer     io.Writer
+		bufferSize int
+	}{
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
+		{"Sync", ModeSync, io.Discard, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			telemetry := NewTelemetry(
+				WithExtractor("trace_id"),
+			)
+			if b.N == 1 {
+				telemetry.InfoWithContext(ctx, DataLog, String("message", "test info text"))
+			}
+			telemetry.SetMode(format.mode, format.writer, format.bufferSize)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					telemetry.InfoWithContext(ctx, DataLog, String("message", "test info text"))
+				}
+			})
+		})
+	}
+}
+func Benchmark_Telemetry_Info_Single(b *testing.B) {
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	formats := []struct {
+		name       string
+		mode       TypeMode
+		writer     io.Writer
+		bufferSize int
+	}{
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
+		{"Sync", ModeSync, io.Discard, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			telemetry := NewTelemetry(
+				WithExtractor("trace_id"),
+			)
+			if b.N == 1 {
+				telemetry.InfoWithContext(ctx, DataLog, String("message", "test info text"))
+			}
+			telemetry.SetMode(format.mode, format.writer, format.bufferSize)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				telemetry.InfoWithContext(ctx, DataLog, String("message", "test info text"))
+			}
+		})
+	}
+}
+func Benchmark_Telemetry_Warn_Multi(b *testing.B) {
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	formats := []struct {
+		name       string
+		mode       TypeMode
+		writer     io.Writer
+		bufferSize int
+	}{
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
+		{"Sync", ModeSync, io.Discard, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			telemetry := NewTelemetry(
+				WithExtractor("trace_id"),
+			)
+			if b.N == 1 {
+				telemetry.WarnWithContext(ctx, DataLog, String("message", "test warn text"))
+			}
+			telemetry.SetMode(format.mode, format.writer, format.bufferSize)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					telemetry.WarnWithContext(ctx, DataLog, String("message", "test warn text"))
+				}
+			})
+		})
+	}
+}
+func Benchmark_Telemetry_Warn_Single(b *testing.B) {
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	formats := []struct {
+		name       string
+		mode       TypeMode
+		writer     io.Writer
+		bufferSize int
+	}{
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
+		{"Sync", ModeSync, io.Discard, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			telemetry := NewTelemetry(
+				WithExtractor("trace_id"),
+			)
+			if b.N == 1 {
+				telemetry.WarnWithContext(ctx, DataLog, String("message", "test warn text"))
+			}
+			telemetry.SetMode(format.mode, format.writer, format.bufferSize)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				telemetry.WarnWithContext(ctx, DataLog, String("message", "test warn text"))
+			}
+		})
+	}
+}
+func Benchmark_TelemetryLog_Error_Multi(b *testing.B) {
+	formats := []struct {
+		name       string
+		mode       TypeMode
+		writer     io.Writer
+		bufferSize int
+	}{
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
+		{"Sync", ModeSync, io.Discard, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			telemetry := NewTelemetry(
+				WithMode(format.mode, format.writer, format.bufferSize),
+			)
+			telemetryLog := NewTelemetryLog(LevelError, telemetry)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					telemetryLog.Print("test error text")
+				}
+			})
+		})
+	}
+}
+func Benchmark_TelemetryLog_Error_Single(b *testing.B) {
+	formats := []struct {
+		name       string
+		mode       TypeMode
+		writer     io.Writer
+		bufferSize int
+	}{
+		{"Async", ModeAsync, io.Discard, defaultBufferSize},
+		{"Sync", ModeSync, io.Discard, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			telemetry := NewTelemetry(
+				WithMode(format.mode, format.writer, format.bufferSize),
+			)
+			telemetryLog := NewTelemetryLog(LevelError, telemetry)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				telemetryLog.Print("test error text")
 			}
 		})
 	}
@@ -397,7 +299,7 @@ func BenchmarkTeeSink_Multi(b *testing.B) {
 		{"Sync", ModeSync, nil, 0},
 	}
 	for _, format := range formats {
-		b.Run("Simple "+format.name, func(b *testing.B) {
+		b.Run(format.name, func(b *testing.B) {
 			logFile := filepath.Join(tmpDir, "ulog_file.log")
 			sinkFile, err := NewFileSink(logFile,
 				WithFileMaxSize(15),
@@ -406,41 +308,18 @@ func BenchmarkTeeSink_Multi(b *testing.B) {
 				b.Fatal(err)
 			}
 			teeSink := NewTeeSink(sinkFile)
-			logger := NewLogger(
-				WithFormat(FormatJson),
-			)
-			if b.N == 1 {
-				logger.ErrorWithContext(ctx, "test error simple message")
-			}
-			logger.SetMode(format.mode, teeSink, format.bufferSize)
-			b.ResetTimer()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					logger.ErrorWithContext(ctx, "test error simple message")
-				}
-			})
-		})
-		b.Run("Format "+format.name, func(b *testing.B) {
-			logFile := filepath.Join(tmpDir, "ulog_file.log")
-			sinkFile, err := NewFileSink(logFile,
-				WithFileMaxSize(15),
-			)
-			if err != nil {
-				b.Fatal(err)
-			}
-			teeSink := NewTeeSink(sinkFile)
-			logger := NewLogger(
+			telemetry := NewTelemetry(
 				WithExtractor("trace_id"),
 				WithFormat(FormatJson),
 			)
 			if b.N == 1 {
-				logger.ErrorWithContext(ctx, "test error format message")
+				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
 			}
-			logger.SetMode(format.mode, teeSink, format.bufferSize)
+			telemetry.SetMode(format.mode, teeSink, format.bufferSize)
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					logger.ErrorWithContext(ctx, "test error format message")
+					telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
 				}
 			})
 		})
@@ -466,7 +345,7 @@ func BenchmarkTeeSink_Single(b *testing.B) {
 		{"Sync", ModeSync, nil, 0},
 	}
 	for _, format := range formats {
-		b.Run("Simple "+format.name, func(b *testing.B) {
+		b.Run(format.name, func(b *testing.B) {
 			logFile := filepath.Join(tmpDir, "ulog_file.log")
 			sinkFile, err := NewFileSink(logFile,
 				WithFileMaxSize(15),
@@ -475,38 +354,17 @@ func BenchmarkTeeSink_Single(b *testing.B) {
 				b.Fatal(err)
 			}
 			teeSink := NewTeeSink(sinkFile)
-			logger := NewLogger(
-				WithFormat(FormatJson),
-			)
-			if b.N == 1 {
-				logger.ErrorWithContext(ctx, "test error simple message")
-			}
-			logger.SetMode(format.mode, teeSink, format.bufferSize)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				logger.ErrorWithContext(ctx, "test error simple message")
-			}
-		})
-		b.Run("Format "+format.name, func(b *testing.B) {
-			logFile := filepath.Join(tmpDir, "ulog_file.log")
-			sinkFile, err := NewFileSink(logFile,
-				WithFileMaxSize(15),
-			)
-			if err != nil {
-				b.Fatal(err)
-			}
-			teeSink := NewTeeSink(sinkFile)
-			logger := NewLogger(
+			telemetry := NewTelemetry(
 				WithExtractor("trace_id"),
 				WithFormat(FormatJson),
 			)
 			if b.N == 1 {
-				logger.ErrorWithContext(ctx, "test error format message")
+				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
 			}
-			logger.SetMode(format.mode, teeSink, format.bufferSize)
+			telemetry.SetMode(format.mode, teeSink, format.bufferSize)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				logger.ErrorWithContext(ctx, "test error format message")
+				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
 			}
 		})
 	}

@@ -121,10 +121,3 @@ func (teeSink *TeeSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err er
 	}
 	return len(p), nil
 }
-
-// Приватные константы
-const (
-	maxDiscordMessageLen  = 2000
-	maxSlackMessageLen    = 4000
-	maxTelegramMessageLen = 4096
-)

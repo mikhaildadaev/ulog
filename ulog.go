@@ -75,22 +75,18 @@ const (
 )
 
 // Публичные интерфейсы
-type Logger interface {
+type Telemetry interface {
 	Close() error
-	Debug(message string, fields ...Field)
-	DebugWithContext(ctx context.Context, message string, fields ...Field)
-	Error(message string, fields ...Field)
-	ErrorWithContext(ctx context.Context, message string, fields ...Field)
-	Fatal(message string, fields ...Field)
-	FatalWithContext(ctx context.Context, message string, fields ...Field)
-	Info(message string, fields ...Field)
-	InfoWithContext(ctx context.Context, message string, fields ...Field)
-	Metric(message string, fields ...Field)
-	MetricWithContext(ctx context.Context, message string, fields ...Field)
-	Trace(message string, fields ...Field)
-	TraceWithContext(ctx context.Context, message string, fields ...Field)
-	Warn(message string, fields ...Field)
-	WarnWithContext(ctx context.Context, message string, fields ...Field)
+	Debug(typeData TypeData, fields ...Field)
+	DebugWithContext(ctx context.Context, typeData TypeData, fields ...Field)
+	Error(typeData TypeData, fields ...Field)
+	ErrorWithContext(ctx context.Context, typeData TypeData, fields ...Field)
+	Fatal(typeData TypeData, fields ...Field)
+	FatalWithContext(ctx context.Context, typeData TypeData, fields ...Field)
+	Info(typeData TypeData, fields ...Field)
+	InfoWithContext(ctx context.Context, typeData TypeData, fields ...Field)
+	Warn(typeData TypeData, fields ...Field)
+	WarnWithContext(ctx context.Context, typeData TypeData, fields ...Field)
 	SetExtractor(keys ...string)
 	SetFormat(format TypeFormat)
 	SetLevel(level TypeLevel)
@@ -124,28 +120,28 @@ type Field struct {
 }
 
 type ContextExtractor func(context context.Context) []Field
-type OptionLogger func(*universalLogger)
+type OptionTelemetry func(*universalTelemetry)
 
 // Публичные конструкторы
-func NewLogger(options ...OptionLogger) Logger {
-	universalLogger := &universalLogger{
+func NewTelemetry(options ...OptionTelemetry) Telemetry {
+	universalTelemetry := &universalTelemetry{
 		mode:   defaultMode,
-		theme:  getLoggerTheme(),
+		theme:  getDefaultTheme(),
 		writer: defaultWriterOut,
 	}
-	universalLogger.format.Store(int32(defaultFormat))
-	universalLogger.level.Store(int32(getLoggerLevel()))
+	universalTelemetry.format.Store(int32(defaultFormat))
+	universalTelemetry.level.Store(int32(getDefaultLevel()))
 	for _, option := range options {
-		option(universalLogger)
+		option(universalTelemetry)
 	}
-	return universalLogger
+	return universalTelemetry
 }
-func NewLoggerLog(level TypeLevel, logger Logger) *log.Logger {
-	standardLogger := &standardLogger{
-		logger: logger,
+func NewTelemetryLog(level TypeLevel, telemetry Telemetry) *log.Logger {
+	standardTelemetry := &standardTelemetry{
+		telemetry: telemetry,
 	}
-	standardLogger.level.Store(int32(level))
-	return log.New(standardLogger, "", 0)
+	standardTelemetry.level.Store(int32(level))
+	return log.New(standardTelemetry, "", 0)
 }
 
 // Публичные функции
@@ -228,7 +224,7 @@ var ignoredErrors = [][]byte{
 // Приватные структуры
 type colorTheme struct {
 	caller      string
-	message     string
+	data        string
 	prefixDebug string
 	prefixError string
 	prefixFatal string
@@ -236,12 +232,12 @@ type colorTheme struct {
 	prefixWarn  string
 	reset       string
 }
-type standardLogger struct {
-	level  atomic.Int32
-	logger Logger
-	mutex  sync.Mutex
+type standardTelemetry struct {
+	level     atomic.Int32
+	mutex     sync.Mutex
+	telemetry Telemetry
 }
-type universalLogger struct {
+type universalTelemetry struct {
 	cache     sync.Map
 	extractor ContextExtractor
 	format    atomic.Int32
@@ -262,7 +258,7 @@ var (
 	osExit    = os.Exit
 	themeDark = colorTheme{
 		caller:      colorDarkBlue,
-		message:     colorDarkWhite,
+		data:        colorDarkWhite,
 		prefixDebug: colorDarkCyan + "[DEBUG]",
 		prefixError: colorDarkRed + "[ERROR]",
 		prefixFatal: colorDarkPurple + "[FATAL]",
@@ -272,7 +268,7 @@ var (
 	}
 	themeLight = colorTheme{
 		caller:      colorLightBlue,
-		message:     colorLightBlack,
+		data:        colorLightBlack,
 		prefixDebug: colorLightCyan + "[DEBUG]",
 		prefixError: colorLightRed + "[ERROR]",
 		prefixFatal: colorLightPurple + "[FATAL]",
@@ -307,7 +303,17 @@ func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
 }
 
 // Приватные функции
-func escapeJSON(buf *bytes.Buffer, s string) {
+func getTypeData(buf *bytes.Buffer, typeData TypeData) {
+	switch typeData {
+	case 0:
+		buf.WriteString(`log`)
+	case 1:
+		buf.WriteString(`metric`)
+	case 2:
+		buf.WriteString(`trace`)
+	}
+}
+func escapeJson(buf *bytes.Buffer, s string) {
 	start := 0
 	for i := 0; i < len(s); i++ {
 		ch := s[i]
@@ -345,9 +351,9 @@ func escapeJSON(buf *bytes.Buffer, s string) {
 		buf.WriteString(s[start:])
 	}
 }
-func formatDataJson(dataBuf *bytes.Buffer, message string, fields []Field) {
-	dataBuf.WriteString(`"message":"`)
-	escapeJSON(dataBuf, message)
+func formatDataJson(dataBuf *bytes.Buffer, typeData TypeData, fields []Field) {
+	dataBuf.WriteString(`"type":"`)
+	getTypeData(dataBuf, typeData)
 	dataBuf.WriteByte('"')
 	if len(fields) != 0 {
 		dataBuf.WriteString(`,`)
@@ -356,17 +362,18 @@ func formatDataJson(dataBuf *bytes.Buffer, message string, fields []Field) {
 				dataBuf.WriteByte(',')
 			}
 			dataBuf.WriteByte('"')
-			escapeJSON(dataBuf, field.nameKey)
+			escapeJson(dataBuf, field.nameKey)
 			dataBuf.WriteString(`":`)
 			formatFieldValue(dataBuf, field)
 		}
 	}
 }
-func formatDataText(dataBuf *bytes.Buffer, message string, fields []Field, theme colorTheme) {
-	dataBuf.WriteString(theme.message)
-	dataBuf.WriteString(message)
+func formatDataText(dataBuf *bytes.Buffer, typeData TypeData, fields []Field, theme colorTheme) {
+	dataBuf.WriteString(theme.data)
+	dataBuf.WriteString(`type="`)
+	getTypeData(dataBuf, typeData)
+	dataBuf.WriteByte('"')
 	if len(fields) != 0 {
-		dataBuf.WriteByte(':')
 		for _, field := range fields {
 			dataBuf.WriteByte(' ')
 			dataBuf.WriteString(field.nameKey)
@@ -425,7 +432,7 @@ func formatPrefixJson(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
 	dataBuf.WriteByte('"')
 	if caller != "" {
 		dataBuf.WriteString(`,"caller":"`)
-		escapeJSON(dataBuf, caller)
+		escapeJson(dataBuf, caller)
 		dataBuf.WriteByte('"')
 	}
 }
@@ -557,15 +564,7 @@ func formatValueTimes(dataBuf *bytes.Buffer, v []time.Time) {
 	}
 	dataBuf.WriteByte(']')
 }
-func getLoggerCaller(path string) string {
-	for i := len(path) - 1; i >= 0; i-- {
-		if path[i] == '/' || path[i] == '\\' {
-			return path[i+1:]
-		}
-	}
-	return path
-}
-func getLoggerLevel() TypeLevel {
+func getDefaultLevel() TypeLevel {
 	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
 	case "debug":
 		return LevelDebug
@@ -583,7 +582,7 @@ func getLoggerLevel() TypeLevel {
 	}
 	return defaultLevel
 }
-func getLoggerTheme() colorTheme {
+func getDefaultTheme() colorTheme {
 	switch strings.ToLower(os.Getenv("TERM_THEME")) {
 	case "dark":
 		return themeDark
@@ -612,7 +611,7 @@ func (asyncWriter *asyncWriter) run() {
 		asyncWriter.wg.Done()
 	}
 }
-func (standardLogger *standardLogger) isIgnored(data []byte) bool {
+func (standardTelemetry *standardTelemetry) isIgnored(data []byte) bool {
 	for _, err := range ignoredErrors {
 		if bytes.Contains(data, err) {
 			return true
@@ -620,49 +619,55 @@ func (standardLogger *standardLogger) isIgnored(data []byte) bool {
 	}
 	return false
 }
-func (universalLogger *universalLogger) getCaller(level TypeLevel) string {
+func (universalTelemetry *universalTelemetry) getCaller(level TypeLevel) string {
 	if level != LevelDebug {
 		return ""
 	}
 	pc, file, line, _ := runtime.Caller(2)
-	if val, ok := universalLogger.cache.Load(pc); ok {
+	if val, ok := universalTelemetry.cache.Load(pc); ok {
 		return val.(string)
 	}
-	caller := getLoggerCaller(file) + ":" + strconv.Itoa(line)
-	universalLogger.cache.Store(pc, caller)
+	for i := len(file) - 1; i >= 0; i-- {
+		if file[i] == '/' || file[i] == '\\' {
+			file = file[i+1:]
+			break
+		}
+	}
+	caller := file + ":" + strconv.Itoa(line)
+	universalTelemetry.cache.Store(pc, caller)
 	return caller
 }
-func (universalLogger *universalLogger) getLevel() TypeLevel {
-	return TypeLevel(universalLogger.level.Load())
+func (universalTelemetry *universalTelemetry) getLevel() TypeLevel {
+	return TypeLevel(universalTelemetry.level.Load())
 }
-func (universalLogger *universalLogger) getTheme() colorTheme {
-	universalLogger.mutex.RLock()
-	defer universalLogger.mutex.RUnlock()
-	return universalLogger.theme
+func (universalTelemetry *universalTelemetry) getTheme() colorTheme {
+	universalTelemetry.mutex.RLock()
+	defer universalTelemetry.mutex.RUnlock()
+	return universalTelemetry.theme
 }
-func (universalLogger *universalLogger) writeJson(level TypeLevel, context context.Context, message string, fields []Field) {
-	if universalLogger.getLevel() > level {
+func (universalTelemetry *universalTelemetry) writeJson(level TypeLevel, context context.Context, typeData TypeData, fields []Field) {
+	if universalTelemetry.getLevel() > level {
 		return
 	}
-	if universalLogger.extractor != nil && context != nil {
-		fields = append(fields, universalLogger.extractor(context)...)
+	if universalTelemetry.extractor != nil && context != nil {
+		fields = append(fields, universalTelemetry.extractor(context)...)
 	}
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
-	caller := universalLogger.getCaller(level)
+	caller := universalTelemetry.getCaller(level)
 	time := time.Now()
 	dataBuf.WriteByte('{')
 	formatTimeJson(dataBuf, time)
 	dataBuf.WriteByte(',')
 	formatPrefixJson(dataBuf, level, caller)
 	dataBuf.WriteByte(',')
-	formatDataJson(dataBuf, message, fields)
+	formatDataJson(dataBuf, typeData, fields)
 	dataBuf.WriteByte('}')
 	dataBuf.WriteByte('\n')
-	universalLogger.mutex.RLock()
-	writer := universalLogger.writer
-	universalLogger.mutex.RUnlock()
+	universalTelemetry.mutex.RLock()
+	writer := universalTelemetry.writer
+	universalTelemetry.mutex.RUnlock()
 	if sinks, ok := writer.(SinkWriter); ok {
 		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
 		if err != nil {
@@ -674,28 +679,28 @@ func (universalLogger *universalLogger) writeJson(level TypeLevel, context conte
 		fmt.Fprintf(defaultWriterErr, "ulog: failed to write log: %v\n", err)
 	}
 }
-func (universalLogger *universalLogger) writeText(level TypeLevel, context context.Context, message string, fields []Field) {
-	if universalLogger.getLevel() > level {
+func (universalTelemetry *universalTelemetry) writeText(level TypeLevel, context context.Context, typeData TypeData, fields []Field) {
+	if universalTelemetry.getLevel() > level {
 		return
 	}
-	if universalLogger.extractor != nil && context != nil {
-		fields = append(fields, universalLogger.extractor(context)...)
+	if universalTelemetry.extractor != nil && context != nil {
+		fields = append(fields, universalTelemetry.extractor(context)...)
 	}
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
-	caller := universalLogger.getCaller(level)
-	theme := universalLogger.getTheme()
+	caller := universalTelemetry.getCaller(level)
+	theme := universalTelemetry.getTheme()
 	time := time.Now()
 	formatTimeText(dataBuf, time)
 	dataBuf.WriteByte(' ')
 	formatPrefixText(dataBuf, level, caller, theme)
 	dataBuf.WriteByte(' ')
-	formatDataText(dataBuf, message, fields, theme)
+	formatDataText(dataBuf, typeData, fields, theme)
 	dataBuf.WriteByte('\n')
-	universalLogger.mutex.RLock()
-	writer := universalLogger.writer
-	universalLogger.mutex.RUnlock()
+	universalTelemetry.mutex.RLock()
+	writer := universalTelemetry.writer
+	universalTelemetry.mutex.RUnlock()
 	if sinks, ok := writer.(SinkWriter); ok {
 		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
 		if err != nil {
