@@ -34,13 +34,13 @@ type TelegramSink = HttpSink
 func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
 		WithHttpFormatter(func(attributes writeAttributes, p []byte) ([]byte, error) {
-			webhook := DiscordData{
+			data := DiscordData{
 				AvatarURL: avatarURL,
 				Content:   string(p),
 				TTS:       false,
 				UserName:  userName,
 			}
-			return json.Marshal(webhook)
+			return json.Marshal(data)
 		}),
 		WithHttpHeader("Content-Type", "application/json"),
 		WithHttpLevelMin(LevelError),
