@@ -74,6 +74,11 @@ func WithHttpDedupWindow(window time.Duration) httpParams {
 		httpSink.dedupWindow = window
 	}
 }
+func WithHttpFilter(typeData TypeData) httpParams {
+	return func(httpSink *HttpSink) {
+		httpSink.typeFilter = typeData
+	}
+}
 func WithHttpFormatter(formatter func(attributes writeAttributes, p []byte) ([]byte, error)) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.formatter = formatter
@@ -92,11 +97,6 @@ func WithHttpLevelMin(level TypeLevel) httpParams {
 func WithHttpMethod(method string) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.method = method
-	}
-}
-func WithHttpTypeFilter(typeData TypeData) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.typeFilter = typeData
 	}
 }
 func WithHttpRetry(maxRetries int, backoff time.Duration) httpParams {
@@ -156,7 +156,7 @@ func (httpSink *HttpSink) WriteWithAttributes(attributes writeAttributes, p []by
 	if attributes.typeLevel < httpSink.levelMin {
 		return len(p), nil
 	}
-	if attributes.typeData != httpSink.typeFilter && httpSink.typeFilter >= 0 {
+	if attributes.typeData != httpSink.typeFilter && httpSink.typeFilter > TypeData(defaultType) {
 		return len(p), nil
 	}
 	if attributes.typeLevel != LevelError && attributes.typeLevel != LevelFatal {
