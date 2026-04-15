@@ -122,7 +122,7 @@ type Field struct {
 type ContextExtractor func(context context.Context) []Field
 
 // Публичные конструкторы
-func NewTelemetry(options ...optionTelemetry) Telemetry {
+func NewTelemetry(options ...telemetryOptions) Telemetry {
 	universalTelemetry := &universalTelemetry{
 		mode:   defaultMode,
 		theme:  getDefaultTheme(),
@@ -257,7 +257,7 @@ type writeAttributes struct {
 	typeData  TypeData
 	typeLevel TypeLevel
 }
-type optionTelemetry func(*universalTelemetry)
+type telemetryOptions func(*universalTelemetry)
 
 // Приватные переменные
 var (

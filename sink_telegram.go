@@ -14,9 +14,9 @@ type TelegramData struct {
 type TelegramSink = HttpSink
 
 // Публичные конструкторы
-func NewTelegramSink(botToken, chatID string, params ...HttpParams) *HttpSink {
+func NewTelegramSink(botToken, chatID string, params ...httpParams) *HttpSink {
 	endPoint := "https://api.telegram.org/bot" + botToken + "/sendMessage"
-	return NewHttpSink(endPoint, append([]HttpParams{
+	return NewHttpSink(endPoint, append([]httpParams{
 		WithHttpFormatter(func(attributes writeAttributes, p []byte) ([]byte, error) {
 			data := TelegramData{
 				ChatID:    chatID,

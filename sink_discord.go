@@ -16,8 +16,8 @@ type DiscordData struct {
 type DiscordSink = HttpSink
 
 // Публичные конструкторы
-func NewDiscordSink(endPoint, userName, avatarURL string, params ...HttpParams) *HttpSink {
-	return NewHttpSink(endPoint, append([]HttpParams{
+func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) *HttpSink {
+	return NewHttpSink(endPoint, append([]httpParams{
 		WithHttpFormatter(func(attributes writeAttributes, p []byte) ([]byte, error) {
 			webhook := DiscordData{
 				AvatarURL: avatarURL,

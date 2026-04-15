@@ -137,7 +137,7 @@ func Times(nameKey string, valueTimes []time.Time) Field {
 }
 
 // Публичные функции
-func WithExtractor(keys ...string) optionTelemetry {
+func WithExtractor(keys ...string) telemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
 		universalTelemetry.extractor = func(ctx context.Context) []Field {
 			if ctx == nil {
@@ -172,17 +172,17 @@ func WithExtractor(keys ...string) optionTelemetry {
 		}
 	}
 }
-func WithFormat(format TypeFormat) optionTelemetry {
+func WithFormat(format TypeFormat) telemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
 		universalTelemetry.format.Store(int32(format))
 	}
 }
-func WithLevel(level TypeLevel) optionTelemetry {
+func WithLevel(level TypeLevel) telemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
 		universalTelemetry.level.Store(int32(level))
 	}
 }
-func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) optionTelemetry {
+func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) telemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
 		switch mode {
 		case ModeAsync:
@@ -198,7 +198,7 @@ func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) optionTelemetr
 		}
 	}
 }
-func WithTheme(theme TypeTheme) optionTelemetry {
+func WithTheme(theme TypeTheme) telemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
 		switch theme {
 		case ThemeDark:

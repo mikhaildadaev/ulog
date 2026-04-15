@@ -21,10 +21,9 @@ type FileSink struct {
 	maxSize     int64
 	mutex       sync.Mutex
 }
-type FileOption func(*FileSink)
 
 // Публичные конструкторы
-func NewFileSink(filename string, params ...FileOption) (*FileSink, error) {
+func NewFileSink(filename string, params ...fileParams) (*FileSink, error) {
 	dir := filepath.Dir(filename)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create log directory: %w", err)
@@ -52,17 +51,17 @@ func NewFileSink(filename string, params ...FileOption) (*FileSink, error) {
 }
 
 // Публичные функции
-func WithFileMaxAge(days int) FileOption {
+func WithFileMaxAge(days int) fileParams {
 	return func(fileSink *FileSink) {
 		fileSink.maxAge = days
 	}
 }
-func WithFileMaxBackups(count int) FileOption {
+func WithFileMaxBackups(count int) fileParams {
 	return func(fileSink *FileSink) {
 		fileSink.maxBackups = count
 	}
 }
-func WithFileMaxSize(sizeMB int) FileOption {
+func WithFileMaxSize(sizeMB int) fileParams {
 	return func(fileSink *FileSink) {
 		fileSink.maxSize = int64(sizeMB) * 1024 * 1024
 	}
@@ -102,6 +101,9 @@ func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 func (fileSink *FileSink) WriteWithAttributes(attributes writeAttributes, p []byte) (n int, err error) {
 	return fileSink.Write(p)
 }
+
+// Приватные структуры
+type fileParams func(*FileSink)
 
 // Приватные функции
 func (fileSink *FileSink) cleanupBackups() error {

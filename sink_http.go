@@ -40,10 +40,9 @@ type HttpSink struct {
 	sampleWindow    time.Duration
 	typeFilter      TypeData
 }
-type HttpParams func(*HttpSink)
 
 // Публичные конструкторы
-func NewHttpSink(endPoint string, params ...HttpParams) *HttpSink {
+func NewHttpSink(endPoint string, params ...httpParams) *HttpSink {
 	httpSink := &HttpSink{
 		batchChan:    make(chan struct{}),
 		client:       &http.Client{Timeout: 10 * time.Second},
@@ -63,60 +62,60 @@ func NewHttpSink(endPoint string, params ...HttpParams) *HttpSink {
 }
 
 // Публичные функции
-func WithHttpBatch(size int, flushInterval time.Duration) HttpParams {
+func WithHttpBatch(size int, flushInterval time.Duration) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.batchSize = size
 		httpSink.batchTicker = time.NewTicker(flushInterval)
 		go httpSink.batchLoop()
 	}
 }
-func WithHttpDedupWindow(window time.Duration) HttpParams {
+func WithHttpDedupWindow(window time.Duration) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.dedupWindow = window
 	}
 }
-func WithHttpFormatter(formatter func(attributes writeAttributes, p []byte) ([]byte, error)) HttpParams {
+func WithHttpFormatter(formatter func(attributes writeAttributes, p []byte) ([]byte, error)) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.formatter = formatter
 	}
 }
-func WithHttpHeader(key, value string) HttpParams {
+func WithHttpHeader(key, value string) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.headers[key] = value
 	}
 }
-func WithHttpLevelMin(level TypeLevel) HttpParams {
+func WithHttpLevelMin(level TypeLevel) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.levelMin = level
 	}
 }
-func WithHttpMethod(method string) HttpParams {
+func WithHttpMethod(method string) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.method = method
 	}
 }
-func WithHttpTypeFilter(typeData TypeData) HttpParams {
+func WithHttpTypeFilter(typeData TypeData) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.typeFilter = typeData
 	}
 }
-func WithHttpRetry(maxRetries int, backoff time.Duration) HttpParams {
+func WithHttpRetry(maxRetries int, backoff time.Duration) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.retryMax = maxRetries
 		httpSink.retryBackoff = backoff
 	}
 }
-func WithHttpSampleRate(rate int32) HttpParams {
+func WithHttpSampleRate(rate int32) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.sampleRate = rate
 	}
 }
-func WithHttpSampleWindow(window time.Duration) HttpParams {
+func WithHttpSampleWindow(window time.Duration) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.sampleWindow = window
 	}
 }
-func WithHttpTimeout(timeout time.Duration) HttpParams {
+func WithHttpTimeout(timeout time.Duration) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.client.Timeout = timeout
 	}
@@ -189,6 +188,7 @@ func (httpSink *HttpSink) WriteWithAttributes(attributes writeAttributes, p []by
 type rateLimitError struct {
 	retryAfter time.Duration
 }
+type httpParams func(*HttpSink)
 
 // Приватные функции
 func defaultformatter(attributes writeAttributes, p []byte) ([]byte, error) {

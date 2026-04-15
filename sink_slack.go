@@ -17,8 +17,8 @@ type SlackData struct {
 type SlackSink = HttpSink
 
 // Публичные конструкторы
-func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params ...HttpParams) *HttpSink {
-	return NewHttpSink(endPoint, append([]HttpParams{
+func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params ...httpParams) *HttpSink {
+	return NewHttpSink(endPoint, append([]httpParams{
 		WithHttpFormatter(func(attributes writeAttributes, p []byte) ([]byte, error) {
 			data := SlackData{
 				Channel:   channel,
