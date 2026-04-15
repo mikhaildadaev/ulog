@@ -274,10 +274,10 @@ func TestFormat(t *testing.T) {
 }
 func TestLevel(t *testing.T) {
 	array := []struct {
-		name      string
-		level     TypeLevel
-		logFunc   func(Telemetry)
-		shouldLog bool
+		name         string
+		level        TypeLevel
+		functionTest func(Telemetry)
+		responseBool bool
 	}{
 		// DEBUG
 		{"DEBUG->DEBUG", LevelDebug, testDebug, true},
@@ -317,12 +317,12 @@ func TestLevel(t *testing.T) {
 				WithLevel(elem.level),
 				WithMode(ModeSync, buf, 0),
 			)
-			elem.logFunc(telemetry)
+			elem.functionTest(telemetry)
 			telemetry.Sync()
-			if elem.shouldLog && buf.Len() == 0 {
+			if elem.responseBool && buf.Len() == 0 {
 				t.Error("Expected log to be written, but got nothing")
 			}
-			if !elem.shouldLog && buf.Len() > 0 {
+			if !elem.responseBool && buf.Len() > 0 {
 				t.Error("Expected no log, but got output")
 			}
 		})
@@ -331,12 +331,12 @@ func TestLevel(t *testing.T) {
 			telemetry := NewTelemetry()
 			telemetry.SetLevel(elem.level)
 			telemetry.SetMode(ModeSync, buf, 0)
-			elem.logFunc(telemetry)
+			elem.functionTest(telemetry)
 			telemetry.Sync()
-			if elem.shouldLog && buf.Len() == 0 {
+			if elem.responseBool && buf.Len() == 0 {
 				t.Error("Expected log to be written, but got nothing")
 			}
-			if !elem.shouldLog && buf.Len() > 0 {
+			if !elem.responseBool && buf.Len() > 0 {
 				t.Error("Expected no log, but got output")
 			}
 		})
@@ -410,10 +410,10 @@ func TestTelemetryLogIgnore(t *testing.T) {
 }
 func TestMethod(t *testing.T) {
 	array := []struct {
-		name      string
-		logFunc   func(Telemetry)
-		level     TypeLevel
-		shouldLog bool
+		name         string
+		functionTest func(Telemetry)
+		level        TypeLevel
+		responseBool bool
 	}{
 		// DEBUG
 		{"DEBUG", testDebug, LevelDebug, true},
@@ -438,10 +438,10 @@ func TestMethod(t *testing.T) {
 				WithMode(ModeSync, buf),
 				WithLevel(elem.level),
 			)
-			elem.logFunc(telemetry)
+			elem.functionTest(telemetry)
 			telemetry.Sync()
 			output := buf.String()
-			if elem.shouldLog && !strings.Contains(output, "message") {
+			if elem.responseBool && !strings.Contains(output, "message") {
 				t.Errorf("Expected message not found in output: %q", output)
 			}
 		})
@@ -573,14 +573,14 @@ func TestTheme(t *testing.T) {
 	}
 	for _, elem := range array {
 		t.Run("WithTheme/"+elem.name, func(t *testing.T) {
-			testLevel := func(level string, logFunc func(Telemetry), expectedPrefix string) {
+			testLevel := func(level string, functionTest func(Telemetry), expectedPrefix string) {
 				buf := &bytes.Buffer{}
 				telemetry := NewTelemetry(
 					WithLevel(LevelDebug),
 					WithMode(ModeSync, buf),
 					WithTheme(elem.theme),
 				)
-				logFunc(telemetry)
+				functionTest(telemetry)
 				telemetry.Sync()
 				output := buf.String()
 				checkTheme(t, level, expectedPrefix, elem, output)
@@ -592,13 +592,13 @@ func TestTheme(t *testing.T) {
 			testLevel("Warn", testWarn, elem.prefixWarn)
 		})
 		t.Run("SetTheme/"+elem.name, func(t *testing.T) {
-			testLevel := func(level string, logFunc func(Telemetry), expectedPrefix string) {
+			testLevel := func(level string, functionTest func(Telemetry), expectedPrefix string) {
 				buf := &bytes.Buffer{}
 				telemetry := NewTelemetry()
 				telemetry.SetLevel(LevelDebug)
 				telemetry.SetMode(ModeSync, buf)
 				telemetry.SetTheme(elem.theme)
-				logFunc(telemetry)
+				functionTest(telemetry)
 				telemetry.Sync()
 				output := buf.String()
 				checkTheme(t, level, expectedPrefix, elem, output)
