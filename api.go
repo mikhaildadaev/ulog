@@ -260,63 +260,63 @@ func (universalTelemetry *universalTelemetry) Close() error {
 	return nil
 }
 func (universalTelemetry *universalTelemetry) Debug(typeData TypeData, fields ...Field) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  typeData,
 		typeLevel: LevelDebug,
 	}
 	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalTelemetry.writeJson(context.Background(), options, fields)
+		universalTelemetry.writeJson(context.Background(), attributes, fields)
 	case FormatText:
-		universalTelemetry.writeText(context.Background(), options, fields)
+		universalTelemetry.writeText(context.Background(), attributes, fields)
 	}
 }
 func (universalTelemetry *universalTelemetry) DebugWithContext(context context.Context, typeData TypeData, fields ...Field) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  typeData,
 		typeLevel: LevelDebug,
 	}
 	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalTelemetry.writeJson(context, options, fields)
+		universalTelemetry.writeJson(context, attributes, fields)
 	case FormatText:
-		universalTelemetry.writeText(context, options, fields)
+		universalTelemetry.writeText(context, attributes, fields)
 	}
 }
 func (universalTelemetry *universalTelemetry) Error(typeData TypeData, fields ...Field) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  typeData,
 		typeLevel: LevelError,
 	}
 	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalTelemetry.writeJson(context.Background(), options, fields)
+		universalTelemetry.writeJson(context.Background(), attributes, fields)
 	case FormatText:
-		universalTelemetry.writeText(context.Background(), options, fields)
+		universalTelemetry.writeText(context.Background(), attributes, fields)
 	}
 }
 func (universalTelemetry *universalTelemetry) ErrorWithContext(context context.Context, typeData TypeData, fields ...Field) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  typeData,
 		typeLevel: LevelError,
 	}
 	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalTelemetry.writeJson(context, options, fields)
+		universalTelemetry.writeJson(context, attributes, fields)
 	case FormatText:
-		universalTelemetry.writeText(context, options, fields)
+		universalTelemetry.writeText(context, attributes, fields)
 	}
 }
 func (universalTelemetry *universalTelemetry) Fatal(typeData TypeData, fields ...Field) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  typeData,
 		typeLevel: LevelFatal,
 	}
 	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalTelemetry.writeJson(context.Background(), options, fields)
+		universalTelemetry.writeJson(context.Background(), attributes, fields)
 	case FormatText:
-		universalTelemetry.writeText(context.Background(), options, fields)
+		universalTelemetry.writeText(context.Background(), attributes, fields)
 	}
 	if universalTelemetry.mode == ModeAsync {
 		universalTelemetry.Sync()
@@ -324,15 +324,15 @@ func (universalTelemetry *universalTelemetry) Fatal(typeData TypeData, fields ..
 	osExit(1)
 }
 func (universalTelemetry *universalTelemetry) FatalWithContext(context context.Context, typeData TypeData, fields ...Field) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  typeData,
 		typeLevel: LevelFatal,
 	}
 	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalTelemetry.writeJson(context, options, fields)
+		universalTelemetry.writeJson(context, attributes, fields)
 	case FormatText:
-		universalTelemetry.writeText(context, options, fields)
+		universalTelemetry.writeText(context, attributes, fields)
 	}
 	if universalTelemetry.mode == ModeAsync {
 		universalTelemetry.Sync()
@@ -340,51 +340,51 @@ func (universalTelemetry *universalTelemetry) FatalWithContext(context context.C
 	osExit(1)
 }
 func (universalTelemetry *universalTelemetry) Info(typeData TypeData, fields ...Field) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  typeData,
 		typeLevel: LevelInfo,
 	}
 	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalTelemetry.writeJson(context.Background(), options, fields)
+		universalTelemetry.writeJson(context.Background(), attributes, fields)
 	case FormatText:
-		universalTelemetry.writeText(context.Background(), options, fields)
+		universalTelemetry.writeText(context.Background(), attributes, fields)
 	}
 }
 func (universalTelemetry *universalTelemetry) InfoWithContext(context context.Context, typeData TypeData, fields ...Field) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  typeData,
 		typeLevel: LevelInfo,
 	}
 	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalTelemetry.writeJson(context, options, fields)
+		universalTelemetry.writeJson(context, attributes, fields)
 	case FormatText:
-		universalTelemetry.writeText(context, options, fields)
+		universalTelemetry.writeText(context, attributes, fields)
 	}
 }
 func (universalTelemetry *universalTelemetry) Warn(typeData TypeData, fields ...Field) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  typeData,
 		typeLevel: LevelWarn,
 	}
 	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalTelemetry.writeJson(context.Background(), options, fields)
+		universalTelemetry.writeJson(context.Background(), attributes, fields)
 	case FormatText:
-		universalTelemetry.writeText(context.Background(), options, fields)
+		universalTelemetry.writeText(context.Background(), attributes, fields)
 	}
 }
 func (universalTelemetry *universalTelemetry) WarnWithContext(context context.Context, typeData TypeData, fields ...Field) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  typeData,
 		typeLevel: LevelWarn,
 	}
 	switch TypeFormat(universalTelemetry.format.Load()) {
 	case FormatJson:
-		universalTelemetry.writeJson(context, options, fields)
+		universalTelemetry.writeJson(context, attributes, fields)
 	case FormatText:
-		universalTelemetry.writeText(context, options, fields)
+		universalTelemetry.writeText(context, attributes, fields)
 	}
 }
 func (universalTelemetry *universalTelemetry) SetExtractor(keys ...string) {

@@ -24,7 +24,7 @@ type FileSink struct {
 type FileOption func(*FileSink)
 
 // Публичные конструкторы
-func NewFileSink(filename string, options ...FileOption) (*FileSink, error) {
+func NewFileSink(filename string, params ...FileOption) (*FileSink, error) {
 	dir := filepath.Dir(filename)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create log directory: %w", err)
@@ -45,8 +45,8 @@ func NewFileSink(filename string, options ...FileOption) (*FileSink, error) {
 		maxBackups:  10,
 		maxSize:     100 * 1024 * 1024,
 	}
-	for _, option := range options {
-		option(fileSink)
+	for _, param := range params {
+		param(fileSink)
 	}
 	return fileSink, nil
 }
@@ -99,7 +99,7 @@ func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 	}
 	return n, err
 }
-func (fileSink *FileSink) WriteWithOptions(options writeOptions, p []byte) (n int, err error) {
+func (fileSink *FileSink) WriteWithAttributes(attributes writeAttributes, p []byte) (n int, err error) {
 	return fileSink.Write(p)
 }
 

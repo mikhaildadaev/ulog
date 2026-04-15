@@ -101,13 +101,13 @@ func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 	}
 	return len(p), nil
 }
-func (teeSink *TeeSink) WriteWithOptions(options writeOptions, p []byte) (n int, err error) {
+func (teeSink *TeeSink) WriteWithAttributes(attributes writeAttributes, p []byte) (n int, err error) {
 	teeSink.mutex.RLock()
 	defer teeSink.mutex.RUnlock()
 	var errors []error
 	for i, writer := range teeSink.writers {
 		if sink, ok := writer.(SinkWriter); ok {
-			if _, err := sink.WriteWithOptions(options, p); err != nil {
+			if _, err := sink.WriteWithAttributes(attributes, p); err != nil {
 				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
 			}
 		} else {

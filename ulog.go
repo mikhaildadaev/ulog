@@ -96,7 +96,7 @@ type Telemetry interface {
 }
 type SinkWriter interface {
 	io.Writer
-	WriteWithOptions(opions writeOptions, p []byte) (n int, err error)
+	WriteWithAttributes(attributes writeAttributes, p []byte) (n int, err error)
 }
 
 // Публичные структуры
@@ -207,6 +207,7 @@ var (
 	defaultFormat     = FormatText
 	defaultLevel      = LevelInfo
 	defaultMode       = ModeSync
+	defaultType       = -1
 	defaultWriterErr  = os.Stderr
 	defaultWriterOut  = os.Stdout
 )
@@ -221,6 +222,12 @@ var ignoredErrors = [][]byte{
 }
 
 // Приватные структуры
+type asyncWriter struct {
+	ch     chan []byte
+	limit  int
+	wg     sync.WaitGroup
+	writer io.Writer
+}
 type colorTheme struct {
 	caller      string
 	data        string
@@ -246,6 +253,11 @@ type universalTelemetry struct {
 	theme     colorTheme
 	writer    io.Writer
 }
+type writeAttributes struct {
+	typeData  TypeData
+	typeLevel TypeLevel
+}
+type optionTelemetry func(*universalTelemetry)
 
 // Приватные переменные
 var (
@@ -281,19 +293,6 @@ var (
 		},
 	}
 )
-
-// Приватная структура
-type asyncWriter struct {
-	ch     chan []byte
-	limit  int
-	wg     sync.WaitGroup
-	writer io.Writer
-}
-type writeOptions struct {
-	typeData  TypeData
-	typeLevel TypeLevel
-}
-type optionTelemetry func(*universalTelemetry)
 
 // Приватные конструкторы
 func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
@@ -649,8 +648,8 @@ func (universalTelemetry *universalTelemetry) getTheme() colorTheme {
 	defer universalTelemetry.mutex.RUnlock()
 	return universalTelemetry.theme
 }
-func (universalTelemetry *universalTelemetry) writeJson(context context.Context, options writeOptions, fields []Field) {
-	if universalTelemetry.getLevel() > options.typeLevel {
+func (universalTelemetry *universalTelemetry) writeJson(context context.Context, attributes writeAttributes, fields []Field) {
+	if universalTelemetry.getLevel() > attributes.typeLevel {
 		return
 	}
 	if universalTelemetry.extractor != nil && context != nil {
@@ -659,21 +658,21 @@ func (universalTelemetry *universalTelemetry) writeJson(context context.Context,
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
-	caller := universalTelemetry.getCaller(options.typeLevel)
+	caller := universalTelemetry.getCaller(attributes.typeLevel)
 	time := time.Now()
 	dataBuf.WriteByte('{')
 	formatTimeJson(dataBuf, time)
 	dataBuf.WriteByte(',')
-	formatPrefixJson(dataBuf, options.typeLevel, caller)
+	formatPrefixJson(dataBuf, attributes.typeLevel, caller)
 	dataBuf.WriteByte(',')
-	formatDataJson(dataBuf, options.typeData, fields)
+	formatDataJson(dataBuf, attributes.typeData, fields)
 	dataBuf.WriteByte('}')
 	dataBuf.WriteByte('\n')
 	universalTelemetry.mutex.RLock()
 	writer := universalTelemetry.writer
 	universalTelemetry.mutex.RUnlock()
 	if sinks, ok := writer.(SinkWriter); ok {
-		_, err := sinks.WriteWithOptions(options, dataBuf.Bytes())
+		_, err := sinks.WriteWithAttributes(attributes, dataBuf.Bytes())
 		if err != nil {
 			fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 		}
@@ -683,8 +682,8 @@ func (universalTelemetry *universalTelemetry) writeJson(context context.Context,
 		fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 	}
 }
-func (universalTelemetry *universalTelemetry) writeText(context context.Context, options writeOptions, fields []Field) {
-	if universalTelemetry.getLevel() > options.typeLevel {
+func (universalTelemetry *universalTelemetry) writeText(context context.Context, attributes writeAttributes, fields []Field) {
+	if universalTelemetry.getLevel() > attributes.typeLevel {
 		return
 	}
 	if universalTelemetry.extractor != nil && context != nil {
@@ -693,20 +692,20 @@ func (universalTelemetry *universalTelemetry) writeText(context context.Context,
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
-	caller := universalTelemetry.getCaller(options.typeLevel)
+	caller := universalTelemetry.getCaller(attributes.typeLevel)
 	theme := universalTelemetry.getTheme()
 	time := time.Now()
 	formatTimeText(dataBuf, time)
 	dataBuf.WriteByte(' ')
-	formatPrefixText(dataBuf, options.typeLevel, caller, theme)
+	formatPrefixText(dataBuf, attributes.typeLevel, caller, theme)
 	dataBuf.WriteByte(' ')
-	formatDataText(dataBuf, options.typeData, fields, theme)
+	formatDataText(dataBuf, attributes.typeData, fields, theme)
 	dataBuf.WriteByte('\n')
 	universalTelemetry.mutex.RLock()
 	writer := universalTelemetry.writer
 	universalTelemetry.mutex.RUnlock()
 	if sinks, ok := writer.(SinkWriter); ok {
-		_, err := sinks.WriteWithOptions(options, dataBuf.Bytes())
+		_, err := sinks.WriteWithAttributes(attributes, dataBuf.Bytes())
 		if err != nil {
 			fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 		}

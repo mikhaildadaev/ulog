@@ -27,7 +27,7 @@ type HttpSink struct {
 	dedupTTL        time.Duration
 	dedupWindow     time.Duration
 	endPoint        string
-	formatter       func(options writeOptions, p []byte) ([]byte, error)
+	formatter       func(attributes writeAttributes, p []byte) ([]byte, error)
 	headers         map[string]string
 	levelMin        TypeLevel
 	method          string
@@ -40,10 +40,10 @@ type HttpSink struct {
 	sampleWindow    time.Duration
 	typeFilter      TypeData
 }
-type HttpOption func(*HttpSink)
+type HttpParams func(*HttpSink)
 
 // Публичные конструкторы
-func NewHttpSink(endPoint string, options ...HttpOption) *HttpSink {
+func NewHttpSink(endPoint string, params ...HttpParams) *HttpSink {
 	httpSink := &HttpSink{
 		batchChan:    make(chan struct{}),
 		client:       &http.Client{Timeout: 10 * time.Second},
@@ -54,68 +54,69 @@ func NewHttpSink(endPoint string, options ...HttpOption) *HttpSink {
 		method:       "POST",
 		retryBackoff: time.Second,
 		retryMax:     0,
+		typeFilter:   TypeData(defaultType),
 	}
-	for _, option := range options {
-		option(httpSink)
+	for _, param := range params {
+		param(httpSink)
 	}
 	return httpSink
 }
 
 // Публичные функции
-func WithHttpBatch(size int, flushInterval time.Duration) HttpOption {
+func WithHttpBatch(size int, flushInterval time.Duration) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.batchSize = size
 		httpSink.batchTicker = time.NewTicker(flushInterval)
 		go httpSink.batchLoop()
 	}
 }
-func WithHttpDedupWindow(window time.Duration) HttpOption {
+func WithHttpDedupWindow(window time.Duration) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.dedupWindow = window
 	}
 }
-func WithHttpFormatter(formatter func(options writeOptions, p []byte) ([]byte, error)) HttpOption {
+func WithHttpFormatter(formatter func(attributes writeAttributes, p []byte) ([]byte, error)) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.formatter = formatter
 	}
 }
-func WithHttpHeader(key, value string) HttpOption {
+func WithHttpHeader(key, value string) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.headers[key] = value
 	}
 }
-func WithHttpLevelMin(level TypeLevel) HttpOption {
+func WithHttpLevelMin(level TypeLevel) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.levelMin = level
 	}
 }
-func WithHttpMethod(method string) HttpOption {
+func WithHttpMethod(method string) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.method = method
 	}
 }
-func WithHttpTypeFilter(typeData TypeData) HttpOption {
+func WithHttpTypeFilter(typeData TypeData) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.typeFilter = typeData
 	}
 }
-func WithHttpRetry(maxRetries int, backoff time.Duration) HttpOption {
+func WithHttpRetry(maxRetries int, backoff time.Duration) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.retryMax = maxRetries
 		httpSink.retryBackoff = backoff
 	}
 }
-func WithHttpSampleRate(rate int32) HttpOption {
+func WithHttpSampleRate(rate int32) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.sampleRate = rate
 	}
 }
-func WithHttpSampleWindow(window time.Duration) HttpOption {
+func WithHttpSampleWindow(window time.Duration) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.sampleWindow = window
 	}
 }
-func WithHttpTimeout(timeout time.Duration) HttpOption {
+func WithHttpTimeout(timeout time.Duration) HttpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.client.Timeout = timeout
 	}
@@ -146,20 +147,20 @@ func (httpSink *HttpSink) Sync() error {
 	return nil
 }
 func (httpSink *HttpSink) Write(p []byte) (n int, err error) {
-	options := writeOptions{
+	attributes := writeAttributes{
 		typeData:  DataLog,
 		typeLevel: LevelDebug,
 	}
-	return httpSink.WriteWithOptions(options, p)
+	return httpSink.WriteWithAttributes(attributes, p)
 }
-func (httpSink *HttpSink) WriteWithOptions(options writeOptions, p []byte) (n int, err error) {
-	if options.typeLevel < httpSink.levelMin {
+func (httpSink *HttpSink) WriteWithAttributes(attributes writeAttributes, p []byte) (n int, err error) {
+	if attributes.typeLevel < httpSink.levelMin {
 		return len(p), nil
 	}
-	if options.typeData != httpSink.typeFilter && httpSink.typeFilter >= 0 {
+	if attributes.typeData != httpSink.typeFilter && httpSink.typeFilter >= 0 {
 		return len(p), nil
 	}
-	if options.typeLevel != LevelError && options.typeLevel != LevelFatal {
+	if attributes.typeLevel != LevelError && attributes.typeLevel != LevelFatal {
 		if !httpSink.shouldSample() {
 			return len(p), nil
 		}
@@ -167,7 +168,7 @@ func (httpSink *HttpSink) WriteWithOptions(options writeOptions, p []byte) (n in
 			return len(p), nil
 		}
 	}
-	body, err := httpSink.formatter(options, p)
+	body, err := httpSink.formatter(attributes, p)
 	if err != nil {
 		return len(p), fmt.Errorf("formatter error: %w", err)
 	}
@@ -190,7 +191,7 @@ type rateLimitError struct {
 }
 
 // Приватные функции
-func defaultformatter(options writeOptions, p []byte) ([]byte, error) {
+func defaultformatter(attributes writeAttributes, p []byte) ([]byte, error) {
 	return p, nil
 }
 
