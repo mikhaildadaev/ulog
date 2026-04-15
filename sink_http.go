@@ -27,7 +27,7 @@ type HttpSink struct {
 	dedupTTL        time.Duration
 	dedupWindow     time.Duration
 	endPoint        string
-	formatter       func(level TypeLevel, p []byte) ([]byte, error)
+	formatter       func(options writeOptions, p []byte) ([]byte, error)
 	headers         map[string]string
 	levelMin        TypeLevel
 	method          string
@@ -38,6 +38,7 @@ type HttpSink struct {
 	sampleMutex     sync.Mutex
 	sampleRate      int32
 	sampleWindow    time.Duration
+	typeFilter      TypeData
 }
 type HttpOption func(*HttpSink)
 
@@ -73,7 +74,7 @@ func WithHttpDedupWindow(window time.Duration) HttpOption {
 		httpSink.dedupWindow = window
 	}
 }
-func WithHttpFormatter(formatter func(level TypeLevel, p []byte) ([]byte, error)) HttpOption {
+func WithHttpFormatter(formatter func(options writeOptions, p []byte) ([]byte, error)) HttpOption {
 	return func(httpSink *HttpSink) {
 		httpSink.formatter = formatter
 	}
@@ -91,6 +92,11 @@ func WithHttpLevelMin(level TypeLevel) HttpOption {
 func WithHttpMethod(method string) HttpOption {
 	return func(httpSink *HttpSink) {
 		httpSink.method = method
+	}
+}
+func WithHttpTypeFilter(typeData TypeData) HttpOption {
+	return func(httpSink *HttpSink) {
+		httpSink.typeFilter = typeData
 	}
 }
 func WithHttpRetry(maxRetries int, backoff time.Duration) HttpOption {
@@ -140,13 +146,20 @@ func (httpSink *HttpSink) Sync() error {
 	return nil
 }
 func (httpSink *HttpSink) Write(p []byte) (n int, err error) {
-	return httpSink.WriteWithLevel(LevelDebug, p)
+	options := writeOptions{
+		typeData:  DataLog,
+		typeLevel: LevelDebug,
+	}
+	return httpSink.WriteWithOptions(options, p)
 }
-func (httpSink *HttpSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err error) {
-	if level < httpSink.levelMin {
+func (httpSink *HttpSink) WriteWithOptions(options writeOptions, p []byte) (n int, err error) {
+	if options.typeLevel < httpSink.levelMin {
 		return len(p), nil
 	}
-	if level != LevelError && level != LevelFatal {
+	if options.typeData != httpSink.typeFilter && httpSink.typeFilter >= 0 {
+		return len(p), nil
+	}
+	if options.typeLevel != LevelError && options.typeLevel != LevelFatal {
 		if !httpSink.shouldSample() {
 			return len(p), nil
 		}
@@ -154,7 +167,7 @@ func (httpSink *HttpSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err 
 			return len(p), nil
 		}
 	}
-	body, err := httpSink.formatter(level, p)
+	body, err := httpSink.formatter(options, p)
 	if err != nil {
 		return len(p), fmt.Errorf("formatter error: %w", err)
 	}
@@ -177,7 +190,7 @@ type rateLimitError struct {
 }
 
 // Приватные функции
-func defaultformatter(level TypeLevel, p []byte) ([]byte, error) {
+func defaultformatter(options writeOptions, p []byte) ([]byte, error) {
 	return p, nil
 }
 

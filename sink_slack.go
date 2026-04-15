@@ -19,7 +19,7 @@ type SlackSink = HttpSink
 // Публичные конструкторы
 func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, options ...HttpOption) *HttpSink {
 	return NewHttpSink(endPoint, append([]HttpOption{
-		WithHttpFormatter(func(level TypeLevel, p []byte) ([]byte, error) {
+		WithHttpFormatter(func(options writeOptions, p []byte) ([]byte, error) {
 			data := SlackData{
 				Channel:   channel,
 				IconEmoji: iconEmoji,

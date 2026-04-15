@@ -99,7 +99,7 @@ func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 	}
 	return n, err
 }
-func (fileSink *FileSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err error) {
+func (fileSink *FileSink) WriteWithOptions(options writeOptions, p []byte) (n int, err error) {
 	return fileSink.Write(p)
 }
 

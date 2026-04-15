@@ -96,7 +96,7 @@ type Telemetry interface {
 }
 type SinkWriter interface {
 	io.Writer
-	WriteWithLevel(level TypeLevel, p []byte) (n int, err error)
+	WriteWithOptions(opions writeOptions, p []byte) (n int, err error)
 }
 
 // Публичные структуры
@@ -120,10 +120,9 @@ type Field struct {
 }
 
 type ContextExtractor func(context context.Context) []Field
-type OptionTelemetry func(*universalTelemetry)
 
 // Публичные конструкторы
-func NewTelemetry(options ...OptionTelemetry) Telemetry {
+func NewTelemetry(options ...optionTelemetry) Telemetry {
 	universalTelemetry := &universalTelemetry{
 		mode:   defaultMode,
 		theme:  getDefaultTheme(),
@@ -290,6 +289,11 @@ type asyncWriter struct {
 	wg     sync.WaitGroup
 	writer io.Writer
 }
+type writeOptions struct {
+	typeData  TypeData
+	typeLevel TypeLevel
+}
+type optionTelemetry func(*universalTelemetry)
 
 // Приватные конструкторы
 func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
@@ -645,8 +649,8 @@ func (universalTelemetry *universalTelemetry) getTheme() colorTheme {
 	defer universalTelemetry.mutex.RUnlock()
 	return universalTelemetry.theme
 }
-func (universalTelemetry *universalTelemetry) writeJson(level TypeLevel, context context.Context, typeData TypeData, fields []Field) {
-	if universalTelemetry.getLevel() > level {
+func (universalTelemetry *universalTelemetry) writeJson(context context.Context, options writeOptions, fields []Field) {
+	if universalTelemetry.getLevel() > options.typeLevel {
 		return
 	}
 	if universalTelemetry.extractor != nil && context != nil {
@@ -655,21 +659,21 @@ func (universalTelemetry *universalTelemetry) writeJson(level TypeLevel, context
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
-	caller := universalTelemetry.getCaller(level)
+	caller := universalTelemetry.getCaller(options.typeLevel)
 	time := time.Now()
 	dataBuf.WriteByte('{')
 	formatTimeJson(dataBuf, time)
 	dataBuf.WriteByte(',')
-	formatPrefixJson(dataBuf, level, caller)
+	formatPrefixJson(dataBuf, options.typeLevel, caller)
 	dataBuf.WriteByte(',')
-	formatDataJson(dataBuf, typeData, fields)
+	formatDataJson(dataBuf, options.typeData, fields)
 	dataBuf.WriteByte('}')
 	dataBuf.WriteByte('\n')
 	universalTelemetry.mutex.RLock()
 	writer := universalTelemetry.writer
 	universalTelemetry.mutex.RUnlock()
 	if sinks, ok := writer.(SinkWriter); ok {
-		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
+		_, err := sinks.WriteWithOptions(options, dataBuf.Bytes())
 		if err != nil {
 			fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 		}
@@ -679,8 +683,8 @@ func (universalTelemetry *universalTelemetry) writeJson(level TypeLevel, context
 		fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 	}
 }
-func (universalTelemetry *universalTelemetry) writeText(level TypeLevel, context context.Context, typeData TypeData, fields []Field) {
-	if universalTelemetry.getLevel() > level {
+func (universalTelemetry *universalTelemetry) writeText(context context.Context, options writeOptions, fields []Field) {
+	if universalTelemetry.getLevel() > options.typeLevel {
 		return
 	}
 	if universalTelemetry.extractor != nil && context != nil {
@@ -689,20 +693,20 @@ func (universalTelemetry *universalTelemetry) writeText(level TypeLevel, context
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
-	caller := universalTelemetry.getCaller(level)
+	caller := universalTelemetry.getCaller(options.typeLevel)
 	theme := universalTelemetry.getTheme()
 	time := time.Now()
 	formatTimeText(dataBuf, time)
 	dataBuf.WriteByte(' ')
-	formatPrefixText(dataBuf, level, caller, theme)
+	formatPrefixText(dataBuf, options.typeLevel, caller, theme)
 	dataBuf.WriteByte(' ')
-	formatDataText(dataBuf, typeData, fields, theme)
+	formatDataText(dataBuf, options.typeData, fields, theme)
 	dataBuf.WriteByte('\n')
 	universalTelemetry.mutex.RLock()
 	writer := universalTelemetry.writer
 	universalTelemetry.mutex.RUnlock()
 	if sinks, ok := writer.(SinkWriter); ok {
-		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
+		_, err := sinks.WriteWithOptions(options, dataBuf.Bytes())
 		if err != nil {
 			fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 		}

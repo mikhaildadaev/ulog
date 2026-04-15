@@ -101,17 +101,17 @@ func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 	}
 	return len(p), nil
 }
-func (teeSink *TeeSink) WriteWithLevel(level TypeLevel, p []byte) (n int, err error) {
+func (teeSink *TeeSink) WriteWithOptions(options writeOptions, p []byte) (n int, err error) {
 	teeSink.mutex.RLock()
 	defer teeSink.mutex.RUnlock()
 	var errors []error
-	for i, w := range teeSink.writers {
-		if leveled, ok := w.(SinkWriter); ok {
-			if _, err := leveled.WriteWithLevel(level, p); err != nil {
+	for i, writer := range teeSink.writers {
+		if sink, ok := writer.(SinkWriter); ok {
+			if _, err := sink.WriteWithOptions(options, p); err != nil {
 				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
 			}
 		} else {
-			if _, err := w.Write(p); err != nil {
+			if _, err := writer.Write(p); err != nil {
 				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
 			}
 		}
