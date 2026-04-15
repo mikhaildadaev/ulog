@@ -419,15 +419,15 @@ func formatPrefixJson(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
 	dataBuf.WriteString(`"level":"`)
 	switch level {
 	case LevelDebug:
-		dataBuf.WriteString("debug")
+		dataBuf.WriteString(`debug`)
 	case LevelInfo:
-		dataBuf.WriteString("info")
+		dataBuf.WriteString(`info`)
 	case LevelWarn:
-		dataBuf.WriteString("warn")
+		dataBuf.WriteString(`warn`)
 	case LevelError:
-		dataBuf.WriteString("error")
+		dataBuf.WriteString(`error`)
 	case LevelFatal:
-		dataBuf.WriteString("fatal")
+		dataBuf.WriteString(`fatal`)
 	}
 	dataBuf.WriteByte('"')
 	if caller != "" {
@@ -671,12 +671,12 @@ func (universalTelemetry *universalTelemetry) writeJson(level TypeLevel, context
 	if sinks, ok := writer.(SinkWriter); ok {
 		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
 		if err != nil {
-			fmt.Fprintf(defaultWriterErr, "ulog: failed to write log: %v\n", err)
+			fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 		}
 		return
 	}
 	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
-		fmt.Fprintf(defaultWriterErr, "ulog: failed to write log: %v\n", err)
+		fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 	}
 }
 func (universalTelemetry *universalTelemetry) writeText(level TypeLevel, context context.Context, typeData TypeData, fields []Field) {
@@ -704,11 +704,11 @@ func (universalTelemetry *universalTelemetry) writeText(level TypeLevel, context
 	if sinks, ok := writer.(SinkWriter); ok {
 		_, err := sinks.WriteWithLevel(level, dataBuf.Bytes())
 		if err != nil {
-			fmt.Fprintf(defaultWriterErr, "ulog: failed to write log: %v\n", err)
+			fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 		}
 		return
 	}
 	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
-		fmt.Fprintf(defaultWriterErr, "ulog: failed to write log: %v\n", err)
+		fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 	}
 }
