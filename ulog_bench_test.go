@@ -3,6 +3,8 @@ package ulog
 import (
 	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -369,5 +371,39 @@ func Benchmark_SinkFile_Single(b *testing.B) {
 		})
 	}
 }
-func Benchmark_SinkHttp_Multi(b *testing.B)  {}
-func Benchmark_SinkHttp_Single(b *testing.B) {}
+func Benchmark_SinkHttp_Multi(b *testing.B) {
+	// Дописать
+}
+func Benchmark_SinkHttp_Single(b *testing.B) {
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewHttpSink(server.URL,
+		WithHttpLevelMin(LevelDebug),
+	)
+	formats := []struct {
+		name    string
+		mode    TypeMode
+		bufSize int
+	}{
+		{"Async", ModeAsync, defaultBufferSize},
+		{"Sync", ModeSync, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			tee := NewTeeSink(sink)
+			telemetry := NewTelemetry(
+				WithExtractor("trace_id"),
+				WithFormat(FormatJson),
+				WithLevel(LevelDebug),
+			)
+			telemetry.SetMode(format.mode, tee, format.bufSize)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
+			}
+		})
+	}
+}
