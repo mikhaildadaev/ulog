@@ -609,21 +609,32 @@ func TestTelemetryTheme(t *testing.T) {
 func TestSink(t *testing.T) {
 	buf1 := &bytes.Buffer{}
 	buf2 := &bytes.Buffer{}
-	teeSink := NewTeeSink(buf1, buf2)
-	data := []byte(`{"message":"test"}`)
-	n, err := teeSink.Write(data)
-	if err != nil {
-		t.Fatalf("Write failed: %v", err)
+	buf3 := &bytes.Buffer{}
+	buf4 := &bytes.Buffer{}
+	data := []byte(test_message)
+	tee := NewTeeSink(buf1, buf2)
+	if tee.Len() != 2 {
+		t.Errorf("Len() = %d, want 2", tee.Len())
 	}
-	if n != len(data) {
-		t.Errorf("Expected %d bytes written, got %d", len(data), n)
+	tee.Write(data)
+	if buf1.String() != test_message || buf2.String() != test_message {
+		t.Error("Write failed")
 	}
-	if buf1.String() != string(data) {
-		t.Errorf("buf1: expected %q, got %q", data, buf1.String())
+	tee.Add(buf3)
+	if tee.Len() != 3 {
+		t.Errorf("After Add, Len() = %d, want 3", tee.Len())
 	}
-	if buf2.String() != string(data) {
-		t.Errorf("buf2: expected %q, got %q", data, buf2.String())
+	tee.Remove(1)
+	if tee.Len() != 2 {
+		t.Errorf("After Remove, Len() = %d, want 2", tee.Len())
 	}
+	tee.Replace(0, buf4)
+	if tee.Len() != 2 {
+		t.Errorf("After Replace, Len() = %d, want 2", tee.Len())
+	}
+	attributes := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
+	tee.WriteWithAttributes(attributes, data)
+	tee.Close()
 }
 func TestSinkFactory(t *testing.T) {
 	// Дописать
@@ -696,7 +707,7 @@ func TestSinkHttpDeduplication(t *testing.T) {
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
-	data := []byte(`{"message":"test"}`)
+	data := []byte(test_message)
 	sink.WriteWithAttributes(attributes, data)
 	time.Sleep(shortDelay)
 	sink.WriteWithAttributes(attributes, data)
@@ -735,7 +746,7 @@ func TestSinkHttpRateLimit(t *testing.T) {
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
-	data := []byte(`{"message":"test"}`)
+	data := []byte(test_message)
 	_, err := sink.WriteWithAttributes(attributes, data)
 	if err != nil {
 		t.Fatalf("WriteWithAttributes failed: %v", err)
@@ -774,7 +785,7 @@ func TestSinkHttpRetry(t *testing.T) {
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
-	data := []byte(`{"message":"test"}`)
+	data := []byte(test_message)
 	sink.WriteWithAttributes(attributes, data)
 	if attempt != retry {
 		t.Errorf("Expected 3 attempts, got %d", attempt)
@@ -802,7 +813,7 @@ func TestSinkHttpSampling(t *testing.T) {
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
-	data := []byte(`{"message":"test"}`)
+	data := []byte(test_message)
 	for i := 0; i < counts; i++ {
 		sink.WriteWithAttributes(attributes, data)
 	}
@@ -814,6 +825,11 @@ func TestSinkHttpSampling(t *testing.T) {
 		t.Errorf("Expected ~10 requests, got %d", count)
 	}
 }
+
+// Приватные переменные
+var (
+	test_message = `{"message":"test"}`
+)
 
 // Приватные функции
 func checkExtractor(t *testing.T, elem struct {
