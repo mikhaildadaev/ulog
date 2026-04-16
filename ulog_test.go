@@ -3,6 +3,7 @@ package ulog
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -777,7 +778,51 @@ func TestSinkFile_Rotate(t *testing.T) {
 	}
 }
 func TestSinkHttp(t *testing.T) {
-	// Дописать
+	var mutex sync.Mutex
+	var receivedBody []byte
+	var receivedMethod string
+	var receivedHeaders http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mutex.Lock()
+		defer mutex.Unlock()
+		receivedMethod = r.Method
+		receivedHeaders = r.Header.Clone()
+		body, _ := io.ReadAll(r.Body)
+		receivedBody = body
+		r.Body.Close()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewHttpSink(server.URL,
+		WithHttpHeader("Content-Type", "application/json"),
+		WithHttpLevelMin(LevelDebug),
+		WithHttpMethod("POST"),
+	)
+	attributes := writeAttributes{
+		typeData:  DataLog,
+		typeLevel: LevelInfo,
+	}
+	data := []byte(test_message)
+	_, err := sink.WriteWithAttributes(attributes, data)
+	if err != nil {
+		t.Fatalf("WriteWithAttributes failed: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	mutex.Lock()
+	defer mutex.Unlock()
+	if receivedMethod != "POST" {
+		t.Errorf("Expected POST, got %s", receivedMethod)
+	}
+	if receivedHeaders.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", receivedHeaders.Get("Content-Type"))
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(receivedBody, &body); err != nil {
+		t.Errorf("Failed to decode body: %v", err)
+	}
+	if body["message"] != "test" {
+		t.Errorf("Expected message 'test', got %v", body["message"])
+	}
 }
 func TestSinkHttp_Batch(t *testing.T) {
 	var mutex sync.Mutex
