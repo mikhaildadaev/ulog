@@ -623,6 +623,9 @@ func TestSinkHttpBatch(t *testing.T) {
 func TestSinkHttpDeduplication(t *testing.T) {
 	var mutex sync.Mutex
 	var requestCount int
+	deduplication := 1 * time.Second
+	shortDelay := 10 * time.Millisecond
+	mediumDelay := 100 * time.Millisecond
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mutex.Lock()
 		requestCount++
@@ -631,18 +634,18 @@ func TestSinkHttpDeduplication(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
-		WithHttpDeduplication(5*time.Second),
+		WithHttpDeduplication(deduplication),
 		WithHttpLevelMin(LevelDebug),
 	)
 	attrs := writeAttributes{
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
-	data := []byte(`{"message":"duplicate message"}`)
+	data := []byte(`{"message":"test"}`)
 	sink.WriteWithAttributes(attrs, data)
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(shortDelay)
 	sink.WriteWithAttributes(attrs, data)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(mediumDelay)
 	mutex.Lock()
 	count := requestCount
 	mutex.Unlock()
