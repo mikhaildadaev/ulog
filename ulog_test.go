@@ -673,7 +673,7 @@ func TestSinkHttpDeduplication(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
-		WithHttpDeduplication(deduplication),
+		WithHttpDedupWindow(deduplication),
 		WithHttpLevelMin(LevelDebug),
 	)
 	attributes := writeAttributes{
