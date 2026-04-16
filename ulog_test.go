@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -623,7 +624,49 @@ func TestSinkHttpDeduplication(t *testing.T) {
 	// Дописать
 }
 func TestSinkHttpRateLimit(t *testing.T) {
-	// Дописать
+	var mutex sync.Mutex
+	attempt := 0
+	backoff := 100 * time.Millisecond
+	retry := 2
+	retryAfterSeconds := 1
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mutex.Lock()
+		attempt++
+		mutex.Unlock()
+		if attempt == 1 {
+			w.Header().Set("Retry-After", strconv.Itoa(retryAfterSeconds))
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	start := time.Now()
+	sink := NewHttpSink(server.URL,
+		WithHttpLevelMin(LevelDebug),
+		WithHttpRetry(retry, backoff),
+	)
+	attrs := writeAttributes{
+		typeData:  DataLog,
+		typeLevel: LevelInfo,
+	}
+	data := []byte(`{"message":"test"}`)
+	_, err := sink.WriteWithAttributes(attrs, data)
+	if err != nil {
+		t.Fatalf("WriteWithAttributes failed: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	elapsed := time.Since(start)
+	expectedDuration := time.Duration(retryAfterSeconds) * time.Second
+	mutex.Lock()
+	finalAttempt := attempt
+	mutex.Unlock()
+	if finalAttempt != retry {
+		t.Errorf("Expected 2 attempts, got %d", attempt)
+	}
+	if elapsed < expectedDuration {
+		t.Errorf("Expected to wait at least 1 second due to Retry-After, got %v", elapsed)
+	}
 }
 func TestSinkHttpRetry(t *testing.T) {
 	attempt := 0
