@@ -127,8 +127,8 @@ func main() {
     ctx = context.WithValue(ctx, "trace_id", "abc-123")
     // Universal telemetry async mode with JSON output
     telemetryAsync := ulog.NewTelemetry(
-        ulog.WithMode(ulog.ModeAsync, os.Stdout, 10000),
         ulog.WithFormat(ulog.FormatJson),
+        ulog.WithMode(ulog.ModeAsync, os.Stdout, 10000),
     )
     defer telemetryAsync.Close()
     telemetryAsync.Debug(DataLog, "debugging request", ulog.String("path", "/api/user"))
