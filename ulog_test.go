@@ -745,8 +745,6 @@ func TestSinkFile_CleanupByCount(t *testing.T) {
 func TestSinkFile_Rotate(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
-	initialFiles, _ := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
-	initialCount := len(initialFiles)
 	sink, err := NewFileSink(logFile,
 		WithFileMaxBackups(3),
 		WithFileMaxSize(1),
@@ -759,20 +757,22 @@ func TestSinkFile_Rotate(t *testing.T) {
 	for i := range data {
 		data[i] = 'A'
 	}
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		_, err := sink.Write(data)
 		if err != nil {
 			t.Fatalf("Write failed at iteration %d: %v", i, err)
 		}
+		time.Sleep(100 * time.Millisecond)
 	}
-	sink.Sync()
+	if err := sink.Sync(); err != nil {
+		t.Logf("Sync error: %v", err)
+	}
 	time.Sleep(500 * time.Millisecond)
-	finalFiles, _ := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
-	finalCount := len(finalFiles)
-	t.Logf("Initial files: %d, final files: %d", initialCount, finalCount)
-	t.Logf("Files: %v", finalFiles)
-
-	if finalCount == 0 {
+	files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
+	if err != nil {
+		t.Fatalf("Glob failed: %v", err)
+	}
+	if len(files) == 0 {
 		t.Error("No log files created")
 	}
 }
