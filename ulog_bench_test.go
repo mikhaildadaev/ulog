@@ -12,7 +12,9 @@ import (
 
 // Бенчмарки компонентов
 func Benchmark_Telemetry_Debug_Multi(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -25,7 +27,7 @@ func Benchmark_Telemetry_Debug_Multi(b *testing.B) {
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
 			telemetry := NewTelemetry(
-				WithExtractor("trace_id"),
+				WithExtractor("node_id", "trace_id"),
 			)
 			if b.N == 1 {
 				telemetry.DebugWithContext(ctx, DataLog, String("message", "test debug text"))
@@ -41,7 +43,9 @@ func Benchmark_Telemetry_Debug_Multi(b *testing.B) {
 	}
 }
 func Benchmark_Telemetry_Debug_Single(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -66,7 +70,9 @@ func Benchmark_Telemetry_Debug_Single(b *testing.B) {
 	}
 }
 func Benchmark_Telemetry_Error_Multi(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -79,7 +85,7 @@ func Benchmark_Telemetry_Error_Multi(b *testing.B) {
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
 			telemetry := NewTelemetry(
-				WithExtractor("trace_id"),
+				WithExtractor("node_id", "trace_id"),
 			)
 			if b.N == 1 {
 				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
@@ -95,7 +101,9 @@ func Benchmark_Telemetry_Error_Multi(b *testing.B) {
 	}
 }
 func Benchmark_Telemetry_Error_Single(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -108,7 +116,7 @@ func Benchmark_Telemetry_Error_Single(b *testing.B) {
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
 			telemetry := NewTelemetry(
-				WithExtractor("trace_id"),
+				WithExtractor("node_id", "trace_id"),
 			)
 			if b.N == 1 {
 				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
@@ -122,7 +130,9 @@ func Benchmark_Telemetry_Error_Single(b *testing.B) {
 	}
 }
 func Benchmark_Telemetry_Info_Multi(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -135,7 +145,7 @@ func Benchmark_Telemetry_Info_Multi(b *testing.B) {
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
 			telemetry := NewTelemetry(
-				WithExtractor("trace_id"),
+				WithExtractor("node_id", "trace_id"),
 			)
 			if b.N == 1 {
 				telemetry.InfoWithContext(ctx, DataLog, String("message", "test info text"))
@@ -151,7 +161,9 @@ func Benchmark_Telemetry_Info_Multi(b *testing.B) {
 	}
 }
 func Benchmark_Telemetry_Info_Single(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -164,7 +176,7 @@ func Benchmark_Telemetry_Info_Single(b *testing.B) {
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
 			telemetry := NewTelemetry(
-				WithExtractor("trace_id"),
+				WithExtractor("node_id", "trace_id"),
 			)
 			if b.N == 1 {
 				telemetry.InfoWithContext(ctx, DataLog, String("message", "test info text"))
@@ -178,7 +190,9 @@ func Benchmark_Telemetry_Info_Single(b *testing.B) {
 	}
 }
 func Benchmark_Telemetry_Warn_Multi(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -191,7 +205,7 @@ func Benchmark_Telemetry_Warn_Multi(b *testing.B) {
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
 			telemetry := NewTelemetry(
-				WithExtractor("trace_id"),
+				WithExtractor("node_id", "trace_id"),
 			)
 			if b.N == 1 {
 				telemetry.WarnWithContext(ctx, DataLog, String("message", "test warn text"))
@@ -207,7 +221,9 @@ func Benchmark_Telemetry_Warn_Multi(b *testing.B) {
 	}
 }
 func Benchmark_Telemetry_Warn_Single(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	formats := []struct {
 		name       string
 		mode       TypeMode
@@ -220,7 +236,7 @@ func Benchmark_Telemetry_Warn_Single(b *testing.B) {
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
 			telemetry := NewTelemetry(
-				WithExtractor("trace_id"),
+				WithExtractor("node_id", "trace_id"),
 			)
 			if b.N == 1 {
 				telemetry.WarnWithContext(ctx, DataLog, String("message", "test warn text"))
@@ -282,7 +298,9 @@ func Benchmark_TelemetryLog_Error_Single(b *testing.B) {
 	}
 }
 func Benchmark_SinkFile_Multi(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	cwd, err := os.Getwd()
 	if err != nil {
 		b.Fatal(err)
@@ -311,7 +329,7 @@ func Benchmark_SinkFile_Multi(b *testing.B) {
 			}
 			teeSink := NewTeeSink(sinkFile)
 			telemetry := NewTelemetry(
-				WithExtractor("trace_id"),
+				WithExtractor("node_id", "trace_id"),
 				WithFormat(FormatJson),
 			)
 			if b.N == 1 {
@@ -328,7 +346,9 @@ func Benchmark_SinkFile_Multi(b *testing.B) {
 	}
 }
 func Benchmark_SinkFile_Single(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	cwd, err := os.Getwd()
 	if err != nil {
 		b.Fatal(err)
@@ -357,7 +377,7 @@ func Benchmark_SinkFile_Single(b *testing.B) {
 			}
 			teeSink := NewTeeSink(sinkFile)
 			telemetry := NewTelemetry(
-				WithExtractor("trace_id"),
+				WithExtractor("node_id", "trace_id"),
 				WithFormat(FormatJson),
 			)
 			if b.N == 1 {
@@ -375,7 +395,9 @@ func Benchmark_SinkHttp_Multi(b *testing.B) {
 	// Дописать
 }
 func Benchmark_SinkHttp_Single(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -396,7 +418,7 @@ func Benchmark_SinkHttp_Single(b *testing.B) {
 		b.Run(format.name, func(b *testing.B) {
 			tee := NewTeeSink(sink)
 			telemetry := NewTelemetry(
-				WithExtractor("trace_id"),
+				WithExtractor("node_id", "trace_id"),
 				WithFormat(FormatJson),
 				WithLevel(LevelDebug),
 			)
