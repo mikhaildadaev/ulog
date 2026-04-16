@@ -637,7 +637,10 @@ func TestSink(t *testing.T) {
 	if tee.Len() != 2 {
 		t.Errorf("After Replace, Len() = %d, want 2", tee.Len())
 	}
-	attributes := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
+	attributes := writeAttributes{
+		typeData:  DataLog,
+		typeLevel: LevelInfo,
+	}
 	tee.WriteWithAttributes(attributes, data)
 	if buf1.String() != "" {
 		t.Errorf("WriteWithAttributes: buf1 should be empty (removed), got %q", buf1.String())
