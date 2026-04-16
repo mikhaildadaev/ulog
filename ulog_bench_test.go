@@ -381,6 +381,7 @@ func Benchmark_SinkHttp_Single(b *testing.B) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
+		WithHttpBatchDisabled(),
 		WithHttpLevelMin(LevelDebug),
 	)
 	formats := []struct {
