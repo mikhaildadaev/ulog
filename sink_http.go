@@ -27,9 +27,10 @@ type HttpSink struct {
 	dedupTTL        time.Duration
 	dedupWindow     time.Duration
 	endPoint        string
+	filterData      TypeData
+	filterLevel     TypeLevel
 	formatter       func(attributes writeAttributes, p []byte) ([]byte, error)
 	headers         map[string]string
-	levelMin        TypeLevel
 	method          string
 	retryBackoff    time.Duration
 	retryMax        int
@@ -38,7 +39,6 @@ type HttpSink struct {
 	sampleMutex     sync.Mutex
 	sampleRate      int32
 	sampleWindow    time.Duration
-	typeFilter      TypeData
 }
 
 // Публичные конструкторы
@@ -57,13 +57,13 @@ func NewHttpSink(endPoint string, params ...httpParams) *HttpSink {
 			},
 		},
 		endPoint:     endPoint,
+		filterData:   TypeData(defaultType),
+		filterLevel:  LevelError,
 		formatter:    defaultformatter,
 		headers:      make(map[string]string),
-		levelMin:     LevelError,
 		method:       "POST",
 		retryBackoff: time.Second,
 		retryMax:     0,
-		typeFilter:   TypeData(defaultType),
 	}
 	for _, param := range params {
 		param(httpSink)
@@ -79,15 +79,15 @@ func WithHttpBatch(size int, flushInterval time.Duration) httpParams {
 		go httpSink.batchLoop()
 	}
 }
-func WithHttpBatchDisabled() httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.batchSize = 0
-		httpSink.batchTicker = nil
-	}
-}
 func WithHttpDedupWindow(window time.Duration) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.dedupWindow = window
+	}
+}
+func WithHttpDisabledBatch() httpParams {
+	return func(httpSink *HttpSink) {
+		httpSink.batchSize = 0
+		httpSink.batchTicker = nil
 	}
 }
 func WithHttpDisableKeepAlive() httpParams {
@@ -97,9 +97,14 @@ func WithHttpDisableKeepAlive() httpParams {
 		}
 	}
 }
-func WithHttpFilter(typeData TypeData) httpParams {
+func WithHttpFilterData(typeData TypeData) httpParams {
 	return func(httpSink *HttpSink) {
-		httpSink.typeFilter = typeData
+		httpSink.filterData = typeData
+	}
+}
+func WithHttpFilterLevel(level TypeLevel) httpParams {
+	return func(httpSink *HttpSink) {
+		httpSink.filterLevel = level
 	}
 }
 func WithHttpFormatter(formatter func(attributes writeAttributes, p []byte) ([]byte, error)) httpParams {
@@ -110,11 +115,6 @@ func WithHttpFormatter(formatter func(attributes writeAttributes, p []byte) ([]b
 func WithHttpHeader(key, value string) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.headers[key] = value
-	}
-}
-func WithHttpLevelMin(level TypeLevel) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.levelMin = level
 	}
 }
 func WithHttpMethod(method string) httpParams {
@@ -176,10 +176,10 @@ func (httpSink *HttpSink) Write(p []byte) (n int, err error) {
 	return httpSink.WriteWithAttributes(attributes, p)
 }
 func (httpSink *HttpSink) WriteWithAttributes(attributes writeAttributes, p []byte) (n int, err error) {
-	if attributes.typeLevel < httpSink.levelMin {
+	if attributes.typeLevel < httpSink.filterLevel {
 		return len(p), nil
 	}
-	if attributes.typeData != httpSink.typeFilter && httpSink.typeFilter > TypeData(defaultType) {
+	if attributes.typeData != httpSink.filterData && httpSink.filterData > TypeData(defaultType) {
 		return len(p), nil
 	}
 	if attributes.typeLevel != LevelError && attributes.typeLevel != LevelFatal {

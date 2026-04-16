@@ -796,9 +796,9 @@ func TestSinkHttp(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
-		WithHttpBatchDisabled(),
+		WithHttpDisabledBatch(),
+		WithHttpFilterLevel(LevelDebug),
 		WithHttpHeader("Content-Type", "application/json"),
-		WithHttpLevelMin(LevelDebug),
 		WithHttpMethod("POST"),
 	)
 	attributes := writeAttributes{
@@ -843,8 +843,8 @@ func TestSinkHttp_Batch(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
-		WithHttpLevelMin(LevelDebug),
 		WithHttpBatch(batchSize, batchInterval),
+		WithHttpFilterLevel(LevelDebug),
 	)
 	attributes := writeAttributes{
 		typeData:  DataLog,
@@ -882,9 +882,9 @@ func TestSinkHttp_Deduplication(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
-		WithHttpBatchDisabled(),
 		WithHttpDedupWindow(deduplication),
-		WithHttpLevelMin(LevelDebug),
+		WithHttpDisabledBatch(),
+		WithHttpFilterLevel(LevelDebug),
 	)
 	attributes := writeAttributes{
 		typeData:  DataLog,
@@ -922,8 +922,8 @@ func TestSinkHttp_RateLimit(t *testing.T) {
 	defer server.Close()
 	start := time.Now()
 	sink := NewHttpSink(server.URL,
-		WithHttpBatchDisabled(),
-		WithHttpLevelMin(LevelDebug),
+		WithHttpDisabledBatch(),
+		WithHttpFilterLevel(LevelDebug),
 		WithHttpRetry(retry, backoff),
 	)
 	attributes := writeAttributes{
@@ -962,8 +962,8 @@ func TestSinkHttp_Retry(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
-		WithHttpBatchDisabled(),
-		WithHttpLevelMin(LevelDebug),
+		WithHttpDisabledBatch(),
+		WithHttpFilterLevel(LevelDebug),
 		WithHttpRetry(retry, backoff),
 	)
 	attributes := writeAttributes{
@@ -991,8 +991,8 @@ func TestSinkHttp_Sampling(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
-		WithHttpBatchDisabled(),
-		WithHttpLevelMin(LevelDebug),
+		WithHttpDisabledBatch(),
+		WithHttpFilterLevel(LevelDebug),
 		WithHttpSampleRate(rate),
 	)
 	attributes := writeAttributes{

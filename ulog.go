@@ -77,6 +77,12 @@ const (
 // Публичные интерфейсы
 type Telemetry interface {
 	Close() error
+	SetExtractor(keys ...string)
+	SetFormat(format TypeFormat)
+	SetLevel(level TypeLevel)
+	SetMode(mode TypeMode, writer io.Writer, bufferSize ...int)
+	SetTheme(theme TypeTheme)
+	Sync() error
 	Debug(typeData TypeData, fields ...Field)
 	DebugWithContext(ctx context.Context, typeData TypeData, fields ...Field)
 	Error(typeData TypeData, fields ...Field)
@@ -87,12 +93,6 @@ type Telemetry interface {
 	InfoWithContext(ctx context.Context, typeData TypeData, fields ...Field)
 	Warn(typeData TypeData, fields ...Field)
 	WarnWithContext(ctx context.Context, typeData TypeData, fields ...Field)
-	SetExtractor(keys ...string)
-	SetFormat(format TypeFormat)
-	SetLevel(level TypeLevel)
-	SetMode(mode TypeMode, writer io.Writer, bufferSize ...int)
-	SetTheme(theme TypeTheme)
-	Sync() error
 }
 type SinkWriter interface {
 	io.Writer

@@ -40,6 +40,7 @@ type TelegramSink = HttpSink
 // Публичные конструкторы
 func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
+		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, p []byte) ([]byte, error) {
 			discordData := DiscordData{
 				AvatarURL: avatarURL,
@@ -50,13 +51,12 @@ func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) 
 			return json.Marshal(discordData)
 		}),
 		WithHttpHeader("Content-Type", "application/json"),
-		WithHttpLevelMin(LevelError),
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
 func NewPrometheusSink(endPoint string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
-		WithHttpFilter(DataMetric),
+		WithHttpFilterData(DataMetric),
 		WithHttpFormatter(func(attrs writeAttributes, p []byte) ([]byte, error) {
 			var data PrometheusData
 			if err := json.Unmarshal(p, &data); err != nil {
@@ -81,6 +81,7 @@ func NewPrometheusSink(endPoint string, params ...httpParams) *HttpSink {
 }
 func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
+		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, p []byte) ([]byte, error) {
 			slackData := SlackData{
 				Channel:   channel,
@@ -92,13 +93,13 @@ func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params
 			return json.Marshal(slackData)
 		}),
 		WithHttpHeader("Content-Type", "application/json"),
-		WithHttpLevelMin(LevelError),
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
 func NewTelegramSink(botToken, chatID string, params ...httpParams) *HttpSink {
 	endPoint := "https://api.telegram.org/bot" + botToken + "/sendMessage"
 	return NewHttpSink(endPoint, append([]httpParams{
+		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, p []byte) ([]byte, error) {
 			telegramData := TelegramData{
 				ChatID:    chatID,
@@ -108,7 +109,6 @@ func NewTelegramSink(botToken, chatID string, params ...httpParams) *HttpSink {
 			return json.Marshal(telegramData)
 		}),
 		WithHttpHeader("Content-Type", "application/json"),
-		WithHttpLevelMin(LevelError),
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
