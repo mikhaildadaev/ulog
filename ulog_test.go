@@ -621,7 +621,34 @@ func TestSinkHttpBatch(t *testing.T) {
 	// Дописать
 }
 func TestSinkHttpDeduplication(t *testing.T) {
-	// Дописать
+	var mutex sync.Mutex
+	var requestCount int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mutex.Lock()
+		requestCount++
+		mutex.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewHttpSink(server.URL,
+		WithHttpDeduplication(5*time.Second),
+		WithHttpLevelMin(LevelDebug),
+	)
+	attrs := writeAttributes{
+		typeData:  DataLog,
+		typeLevel: LevelInfo,
+	}
+	data := []byte(`{"message":"duplicate message"}`)
+	sink.WriteWithAttributes(attrs, data)
+	time.Sleep(10 * time.Millisecond)
+	sink.WriteWithAttributes(attrs, data)
+	time.Sleep(100 * time.Millisecond)
+	mutex.Lock()
+	count := requestCount
+	mutex.Unlock()
+	if count != 1 {
+		t.Errorf("Expected 1 request (deduplication), got %d", count)
+	}
 }
 func TestSinkHttpRateLimit(t *testing.T) {
 	var mutex sync.Mutex
