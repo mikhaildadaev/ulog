@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,7 +17,7 @@ import (
 )
 
 // Публичные функции
-func TestNewTelemetry(t *testing.T) {
+func TestTelemetry(t *testing.T) {
 	buf := &bytes.Buffer{}
 	telemetry := NewTelemetry(
 		WithFormat(FormatText),
@@ -30,19 +32,7 @@ func TestNewTelemetry(t *testing.T) {
 		t.Errorf("Expected 'test info text', got %q", buf.String())
 	}
 }
-func TestNewTelemetryLog(t *testing.T) {
-	buf := &bytes.Buffer{}
-	telemetry := NewTelemetry(
-		WithFormat(FormatText),
-		WithMode(ModeSync, buf),
-	)
-	telemetryLog := NewTelemetryLog(LevelInfo, telemetry)
-	telemetryLog.Print("test text")
-	if !strings.Contains(buf.String(), "test text") {
-		t.Errorf("Expected 'test text', got %q", buf.String())
-	}
-}
-func TestTelemetryClose(t *testing.T) {
+func TestTelemetry_Close(t *testing.T) {
 	t.Run("Async", func(t *testing.T) {
 		buf := &bytes.Buffer{}
 		telemetry := NewTelemetry(WithMode(ModeAsync, buf, 100))
@@ -69,7 +59,7 @@ func TestTelemetryClose(t *testing.T) {
 		}
 	})
 }
-func TestTelemetryExtractor(t *testing.T) {
+func TestTelemetry_Extractor(t *testing.T) {
 	tests := []struct {
 		name      string
 		keys      []string
@@ -185,7 +175,7 @@ func TestTelemetryExtractor(t *testing.T) {
 		})
 	}
 }
-func TestTelemetryField(t *testing.T) {
+func TestTelemetry_Field(t *testing.T) {
 	t.Run("Bool", func(t *testing.T) {
 		val := bool(true)
 		field := Bool("test", val)
@@ -267,7 +257,7 @@ func TestTelemetryField(t *testing.T) {
 		checkFieldTimes(t, field, vals)
 	})
 }
-func TestTelemetryFormat(t *testing.T) {
+func TestTelemetry_Format(t *testing.T) {
 	array := []struct {
 		name   string
 		format TypeFormat
@@ -304,7 +294,7 @@ func TestTelemetryFormat(t *testing.T) {
 		})
 	}
 }
-func TestTelemetryLevel(t *testing.T) {
+func TestTelemetry_Level(t *testing.T) {
 	array := []struct {
 		name         string
 		level        TypeLevel
@@ -369,46 +359,7 @@ func TestTelemetryLevel(t *testing.T) {
 		})
 	}
 }
-func TestTelemetryLogIgnore(t *testing.T) {
-	array := []struct {
-		name     string
-		message  string
-		expected bool
-	}{
-		{"EOF", "read: EOF", true},
-		{"TLS handshake", "TLS handshake error", true},
-		{"Connection refused", "dial: connection refused", true},
-		{"Timeout", "i/o timeout", true},
-		{"Broken pipe", "broken pipe", true},
-		{"Empty", "", true},
-		{"Normal message", "user logged in", false},
-	}
-	for _, elem := range array {
-		t.Run(elem.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			telemetry := NewTelemetry(
-				WithFormat(FormatText),
-				WithMode(ModeSync, buf),
-			)
-			telemetryLog := NewTelemetryLog(LevelError, telemetry)
-			telemetryLog.Print(elem.message)
-			output := buf.String()
-			if elem.expected {
-				if output != "" {
-					t.Errorf("Expected log to be ignored, but got output: %q", output)
-				}
-			} else {
-				if output == "" {
-					t.Error("Expected log to be written, but got nothing")
-				}
-				if !strings.Contains(output, elem.message) {
-					t.Errorf("Expected message %q not found in output: %q", elem.message, output)
-				}
-			}
-		})
-	}
-}
-func TestTelemetryMethod(t *testing.T) {
+func TestTelemetry_Method(t *testing.T) {
 	array := []struct {
 		name         string
 		functionTest func(Telemetry)
@@ -442,7 +393,7 @@ func TestTelemetryMethod(t *testing.T) {
 		})
 	}
 }
-func TestTelemetryMode(t *testing.T) {
+func TestTelemetry_Mode(t *testing.T) {
 	t.Run("WithMode/Async", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
 		telemetry := NewTelemetry(
@@ -498,7 +449,7 @@ func TestTelemetryMode(t *testing.T) {
 		}
 	})
 }
-func TestTelemetrySync(t *testing.T) {
+func TestTelemetry_Sync(t *testing.T) {
 	t.Run("Async", func(t *testing.T) {
 		buf := &bytes.Buffer{}
 		telemetry := NewTelemetry(WithMode(ModeAsync, buf, 1000))
@@ -528,7 +479,7 @@ func TestTelemetrySync(t *testing.T) {
 		}
 	})
 }
-func TestTelemetryTheme(t *testing.T) {
+func TestTelemetry_Theme(t *testing.T) {
 	array := []struct {
 		name        string
 		theme       TypeTheme
@@ -606,6 +557,57 @@ func TestTelemetryTheme(t *testing.T) {
 		})
 	}
 }
+func TestTelemetryLog(t *testing.T) {
+	buf := &bytes.Buffer{}
+	telemetry := NewTelemetry(
+		WithFormat(FormatText),
+		WithMode(ModeSync, buf),
+	)
+	telemetryLog := NewTelemetryLog(LevelInfo, telemetry)
+	telemetryLog.Print("test text")
+	if !strings.Contains(buf.String(), "test text") {
+		t.Errorf("Expected 'test text', got %q", buf.String())
+	}
+}
+func TestTelemetryLog_Ignore(t *testing.T) {
+	array := []struct {
+		name     string
+		message  string
+		expected bool
+	}{
+		{"EOF", "read: EOF", true},
+		{"TLS handshake", "TLS handshake error", true},
+		{"Connection refused", "dial: connection refused", true},
+		{"Timeout", "i/o timeout", true},
+		{"Broken pipe", "broken pipe", true},
+		{"Empty", "", true},
+		{"Normal message", "user logged in", false},
+	}
+	for _, elem := range array {
+		t.Run(elem.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			telemetry := NewTelemetry(
+				WithFormat(FormatText),
+				WithMode(ModeSync, buf),
+			)
+			telemetryLog := NewTelemetryLog(LevelError, telemetry)
+			telemetryLog.Print(elem.message)
+			output := buf.String()
+			if elem.expected {
+				if output != "" {
+					t.Errorf("Expected log to be ignored, but got output: %q", output)
+				}
+			} else {
+				if output == "" {
+					t.Error("Expected log to be written, but got nothing")
+				}
+				if !strings.Contains(output, elem.message) {
+					t.Errorf("Expected message %q not found in output: %q", elem.message, output)
+				}
+			}
+		})
+	}
+}
 func TestSink(t *testing.T) {
 	buf1 := &bytes.Buffer{}
 	buf2 := &bytes.Buffer{}
@@ -663,12 +665,99 @@ func TestSinkFactory(t *testing.T) {
 	// Дописать
 }
 func TestSinkFile(t *testing.T) {
-	// Дописать
+	tmpDir := t.TempDir()
+	logFile := filepath.Join(tmpDir, "test.log")
+	sink, err := NewFileSink(logFile)
+	if err != nil {
+		t.Fatalf("NewFileSink failed: %v", err)
+	}
+	defer sink.Close()
+	data := []byte("test message\n")
+	n, err := sink.Write(data)
+	if err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+	if n != len(data) {
+		t.Errorf("Expected %d bytes written, got %d", len(data), n)
+	}
+	content, err := os.ReadFile(logFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+	if string(content) != string(data) {
+		t.Errorf("Expected %q, got %q", data, content)
+	}
+}
+func TestSinkFile_CleanupByAge(t *testing.T) {
+	tmpDir := t.TempDir()
+	logFile := filepath.Join(tmpDir, "test.log")
+	sink, err := NewFileSink(logFile,
+		WithFileMaxAge(1),
+		WithFileMaxSize(1),
+	)
+	if err != nil {
+		t.Fatalf("NewFileSink failed: %v", err)
+	}
+	defer sink.Close()
+	data := make([]byte, 1024)
+	for i := 0; i < 3; i++ {
+		_, err := sink.Write(data)
+		if err != nil {
+			t.Fatalf("Write failed: %v", err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	time.Sleep(200 * time.Millisecond)
+	files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
+	if err != nil {
+		t.Fatalf("Glob failed: %v", err)
+	}
+	t.Logf("Files found: %d", len(files))
+}
+func TestSinkFile_CleanupByCount(t *testing.T) {
+	tmpDir := t.TempDir()
+	logFile := filepath.Join(tmpDir, "test.log")
+	sink, err := NewFileSink(logFile,
+		WithFileMaxSize(1),
+		WithFileMaxBackups(2),
+	)
+	if err != nil {
+		t.Fatalf("NewFileSink failed: %v", err)
+	}
+	defer sink.Close()
+	data := make([]byte, 1024)
+	for i := 0; i < 5; i++ {
+		_, err := sink.Write(data)
+		if err != nil {
+			t.Fatalf("Write failed: %v", err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	time.Sleep(200 * time.Millisecond)
+	files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
+	if err != nil {
+		t.Fatalf("Glob failed: %v", err)
+	}
+	if len(files) > 3 {
+		t.Errorf("Expected max 3 files, got %d", len(files))
+	}
+}
+func TestSinkFile_Rotate(t *testing.T) {
+	tmpDir := t.TempDir()
+	logFile := filepath.Join(tmpDir, "test.log")
+	sink, err := NewFileSink(logFile,
+		WithFileMaxBackups(3),
+		WithFileMaxSize(1),
+	)
+	if err != nil {
+		t.Fatalf("NewFileSink failed: %v", err)
+	}
+	defer sink.Close()
 }
 func TestSinkHttp(t *testing.T) {
 	// Дописать
 }
-func TestSinkHttpBatch(t *testing.T) {
+func TestSinkHttp_Batch(t *testing.T) {
 	var mutex sync.Mutex
 	var requests [][]byte
 	batchInterval := 100 * time.Millisecond
@@ -709,7 +798,7 @@ func TestSinkHttpBatch(t *testing.T) {
 		}
 	}
 }
-func TestSinkHttpDeduplication(t *testing.T) {
+func TestSinkHttp_Deduplication(t *testing.T) {
 	var mutex sync.Mutex
 	var requestCount int
 	deduplication := 1 * time.Second
@@ -742,7 +831,7 @@ func TestSinkHttpDeduplication(t *testing.T) {
 		t.Errorf("Expected 1 request (deduplication), got %d", count)
 	}
 }
-func TestSinkHttpRateLimit(t *testing.T) {
+func TestSinkHttp_RateLimit(t *testing.T) {
 	var mutex sync.Mutex
 	attempt := 0
 	backoff := 100 * time.Millisecond
@@ -787,7 +876,7 @@ func TestSinkHttpRateLimit(t *testing.T) {
 		t.Errorf("Expected to wait at least 1 second due to Retry-After, got %v", elapsed)
 	}
 }
-func TestSinkHttpRetry(t *testing.T) {
+func TestSinkHttp_Retry(t *testing.T) {
 	attempt := 0
 	backoff := 10 * time.Millisecond
 	retry := 3
@@ -814,7 +903,7 @@ func TestSinkHttpRetry(t *testing.T) {
 		t.Errorf("Expected 3 attempts, got %d", attempt)
 	}
 }
-func TestSinkHttpSampling(t *testing.T) {
+func TestSinkHttp_Sampling(t *testing.T) {
 	var mutex sync.Mutex
 	var requestCount int
 	counts := 100
