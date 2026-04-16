@@ -796,6 +796,7 @@ func TestSinkHttp(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
+		WithHttpBatchDisabled(),
 		WithHttpHeader("Content-Type", "application/json"),
 		WithHttpLevelMin(LevelDebug),
 		WithHttpMethod("POST"),
@@ -881,6 +882,7 @@ func TestSinkHttp_Deduplication(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
+		WithHttpBatchDisabled(),
 		WithHttpDedupWindow(deduplication),
 		WithHttpLevelMin(LevelDebug),
 	)
@@ -920,6 +922,7 @@ func TestSinkHttp_RateLimit(t *testing.T) {
 	defer server.Close()
 	start := time.Now()
 	sink := NewHttpSink(server.URL,
+		WithHttpBatchDisabled(),
 		WithHttpLevelMin(LevelDebug),
 		WithHttpRetry(retry, backoff),
 	)
@@ -959,6 +962,7 @@ func TestSinkHttp_Retry(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
+		WithHttpBatchDisabled(),
 		WithHttpLevelMin(LevelDebug),
 		WithHttpRetry(retry, backoff),
 	)
@@ -987,6 +991,7 @@ func TestSinkHttp_Sampling(t *testing.T) {
 	}))
 	defer server.Close()
 	sink := NewHttpSink(server.URL,
+		WithHttpBatchDisabled(),
 		WithHttpLevelMin(LevelDebug),
 		WithHttpSampleRate(rate),
 	)
