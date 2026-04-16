@@ -709,11 +709,9 @@ func TestSinkFile_CleanupByAge(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	time.Sleep(200 * time.Millisecond)
-	files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
-	if err != nil {
+	if filepath.Glob(filepath.Join(tmpDir, "test*.log*")); err != nil {
 		t.Fatalf("Glob failed: %v", err)
 	}
-	t.Logf("Files found: %d", len(files))
 }
 func TestSinkFile_CleanupByCount(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -766,7 +764,7 @@ func TestSinkFile_Rotate(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	if err := sink.Sync(); err != nil {
-		t.Logf("Sync error: %v", err)
+		t.Errorf("Sync error: %v", err)
 	}
 	time.Sleep(500 * time.Millisecond)
 	files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
