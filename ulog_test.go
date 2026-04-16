@@ -745,6 +745,8 @@ func TestSinkFile_CleanupByCount(t *testing.T) {
 func TestSinkFile_Rotate(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
+	initialFiles, _ := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
+	initialCount := len(initialFiles)
 	sink, err := NewFileSink(logFile,
 		WithFileMaxBackups(3),
 		WithFileMaxSize(1),
@@ -753,6 +755,25 @@ func TestSinkFile_Rotate(t *testing.T) {
 		t.Fatalf("NewFileSink failed: %v", err)
 	}
 	defer sink.Close()
+	data := make([]byte, 1024*1024)
+	for i := range data {
+		data[i] = 'A'
+	}
+	for i := 0; i < 3; i++ {
+		_, err := sink.Write(data)
+		if err != nil {
+			t.Fatalf("Write failed: %v", err)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	sink.Sync()
+	time.Sleep(200 * time.Millisecond)
+	finalFiles, _ := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
+	finalCount := len(finalFiles)
+	if finalCount <= initialCount {
+		t.Errorf("Expected file count to increase due to rotation, got %d -> %d",
+			initialCount, finalCount)
+	}
 }
 func TestSinkHttp(t *testing.T) {
 	// Дописать
