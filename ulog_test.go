@@ -617,9 +617,14 @@ func TestSink(t *testing.T) {
 		t.Errorf("Len() = %d, want 2", tee.Len())
 	}
 	tee.Write(data)
-	if buf1.String() != test_message || buf2.String() != test_message {
-		t.Error("Write failed")
+	if buf1.String() != test_message {
+		t.Errorf("WriteWithAttributes: buf1 should be empty (removed), got %q", buf1.String())
 	}
+	if buf2.String() != test_message {
+		t.Errorf("WriteWithAttributes: buf2 should be empty (removed), got %q", buf2.String())
+	}
+	buf1.Reset()
+	buf2.Reset()
 	tee.Add(buf3)
 	if tee.Len() != 3 {
 		t.Errorf("After Add, Len() = %d, want 3", tee.Len())
@@ -634,7 +639,22 @@ func TestSink(t *testing.T) {
 	}
 	attributes := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
 	tee.WriteWithAttributes(attributes, data)
-	tee.Close()
+	if buf1.String() != "" {
+		t.Errorf("WriteWithAttributes: buf1 should be empty (removed), got %q", buf1.String())
+	}
+	if buf2.String() != "" {
+		t.Errorf("WriteWithAttributes: buf2 should be empty (removed), got %q", buf2.String())
+	}
+	if buf3.String() != test_message {
+		t.Errorf("WriteWithAttributes: buf3 = %q, want %q", buf3.String(), test_message)
+	}
+	if buf4.String() != test_message {
+		t.Errorf("WriteWithAttributes: buf4 = %q, want %q", buf4.String(), test_message)
+	}
+	err := tee.Close()
+	if err != nil {
+		t.Errorf("Close() returned error: %v", err)
+	}
 }
 func TestSinkFactory(t *testing.T) {
 	// Дописать
