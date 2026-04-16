@@ -145,9 +145,6 @@ func WithHttpTimeout(timeout time.Duration) httpParams {
 }
 
 // Публичные методы
-func (rateLimitError *rateLimitError) Error() string {
-	return fmt.Sprintf("rate limited, retry after %v", rateLimitError.retryAfter)
-}
 func (httpSink *HttpSink) Close() error {
 	httpSink.batchMutex.Lock()
 	batchSize := httpSink.batchSize
@@ -335,4 +332,7 @@ func (httpSink *HttpSink) shouldSample() bool {
 	}
 	httpSink.sampleCounter++
 	return httpSink.sampleCounter%httpSink.sampleRate == 0
+}
+func (rateLimitError *rateLimitError) Error() string {
+	return fmt.Sprintf("rate limited, retry after %v", rateLimitError.retryAfter)
 }
