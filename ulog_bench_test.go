@@ -279,7 +279,7 @@ func Benchmark_TelemetryLog_Error_Single(b *testing.B) {
 		})
 	}
 }
-func BenchmarkTeeSink_Multi(b *testing.B) {
+func Benchmark_SinkFile_Multi(b *testing.B) {
 	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -325,7 +325,7 @@ func BenchmarkTeeSink_Multi(b *testing.B) {
 		})
 	}
 }
-func BenchmarkTeeSink_Single(b *testing.B) {
+func Benchmark_SinkFile_Single(b *testing.B) {
 	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -369,3 +369,5 @@ func BenchmarkTeeSink_Single(b *testing.B) {
 		})
 	}
 }
+func Benchmark_SinkHttp_Multi(b *testing.B)  {}
+func Benchmark_SinkHttp_Single(b *testing.B) {}
