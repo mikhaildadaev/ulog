@@ -21,6 +21,7 @@ type PrometheusData struct {
 	Name   string            `json:"name"`
 	Value  float64           `json:"value"`
 }
+type PrometheusSink = HttpSink
 type SlackData struct {
 	Channel   string `json:"channel,omitempty"`
 	IconEmoji string `json:"icon_emoji,omitempty"`
