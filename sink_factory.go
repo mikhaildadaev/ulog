@@ -4,6 +4,8 @@ package ulog
 
 import (
 	"encoding/json"
+	"strconv"
+	"strings"
 )
 
 // Публичные структуры
@@ -14,6 +16,11 @@ type DiscordData struct {
 	UserName  string `json:"username,omitempty"`
 }
 type DiscordSink = HttpSink
+type PrometheusData struct {
+	Labels map[string]string `json:"labels,omitempty"`
+	Name   string            `json:"name"`
+	Value  float64           `json:"value"`
+}
 type SlackData struct {
 	Channel   string `json:"channel,omitempty"`
 	IconEmoji string `json:"icon_emoji,omitempty"`
@@ -45,6 +52,31 @@ func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) 
 		WithHttpHeader("Content-Type", "application/json"),
 		WithHttpLevelMin(LevelError),
 		WithHttpMethod("POST"),
+	}, params...)...)
+}
+func NewPrometheusSink(endPoint string, params ...httpParams) *HttpSink {
+	return NewHttpSink(endPoint, append([]httpParams{
+		WithHttpFilter(DataMetric),
+		WithHttpFormatter(func(attrs writeAttributes, p []byte) ([]byte, error) {
+			var data PrometheusData
+			if err := json.Unmarshal(p, &data); err != nil {
+				return nil, err
+			}
+			var builder strings.Builder
+			builder.WriteString(data.Name)
+			for k, v := range data.Labels {
+				builder.WriteByte(',')
+				builder.WriteString(k)
+				builder.WriteString("=\"")
+				builder.WriteString(v)
+				builder.WriteByte('"')
+			}
+			builder.WriteByte(' ')
+			builder.WriteString(strconv.FormatFloat(data.Value, 'f', -1, 64))
+			builder.WriteByte('\n')
+			return []byte(builder.String()), nil
+		}),
+		WithHttpHeader("Content-Type", "text/plain"),
 	}, params...)...)
 }
 func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params ...httpParams) *HttpSink {
