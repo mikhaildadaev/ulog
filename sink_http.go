@@ -44,8 +44,16 @@ type HttpSink struct {
 // Публичные конструкторы
 func NewHttpSink(endPoint string, params ...httpParams) *HttpSink {
 	httpSink := &HttpSink{
-		batchChan:    make(chan struct{}),
-		client:       &http.Client{Timeout: 10 * time.Second},
+		batchChan: make(chan struct{}),
+		client: &http.Client{
+			Timeout: 10 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				MaxIdleConnsPerHost: 100,
+				IdleConnTimeout:     90 * time.Second,
+				DisableKeepAlives:   false,
+			},
+		},
 		endPoint:     endPoint,
 		formatter:    defaultformatter,
 		headers:      make(map[string]string),
@@ -72,6 +80,13 @@ func WithHttpBatch(size int, flushInterval time.Duration) httpParams {
 func WithHttpDedupWindow(window time.Duration) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.dedupWindow = window
+	}
+}
+func WithHttpDisableKeepAlive() httpParams {
+	return func(httpSink *HttpSink) {
+		if transport, ok := httpSink.client.Transport.(*http.Transport); ok {
+			transport.DisableKeepAlives = true
+		}
 	}
 }
 func WithHttpFilter(typeData TypeData) httpParams {
