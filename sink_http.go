@@ -44,7 +44,9 @@ type HttpSink struct {
 // Публичные конструкторы
 func NewHttpSink(endPoint string, params ...httpParams) *HttpSink {
 	httpSink := &HttpSink{
-		batchChan: make(chan struct{}),
+		batchChan:   make(chan struct{}),
+		batchSize:   100,
+		batchTicker: time.NewTicker(5 * time.Second),
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 			Transport: &http.Transport{
