@@ -363,30 +363,6 @@ func (universalTelemetry *universalTelemetry) InfoWithContext(context context.Co
 		universalTelemetry.writeText(context, attributes, fields)
 	}
 }
-func (universalTelemetry *universalTelemetry) Warn(typeData TypeData, fields ...Field) {
-	attributes := writeAttributes{
-		typeData:  typeData,
-		typeLevel: LevelWarn,
-	}
-	switch TypeFormat(universalTelemetry.format.Load()) {
-	case FormatJson:
-		universalTelemetry.writeJson(context.Background(), attributes, fields)
-	case FormatText:
-		universalTelemetry.writeText(context.Background(), attributes, fields)
-	}
-}
-func (universalTelemetry *universalTelemetry) WarnWithContext(context context.Context, typeData TypeData, fields ...Field) {
-	attributes := writeAttributes{
-		typeData:  typeData,
-		typeLevel: LevelWarn,
-	}
-	switch TypeFormat(universalTelemetry.format.Load()) {
-	case FormatJson:
-		universalTelemetry.writeJson(context, attributes, fields)
-	case FormatText:
-		universalTelemetry.writeText(context, attributes, fields)
-	}
-}
 func (universalTelemetry *universalTelemetry) SetExtractor(keys ...string) {
 	universalTelemetry.mutex.Lock()
 	defer universalTelemetry.mutex.Unlock()
@@ -475,6 +451,30 @@ func (universalTelemetry *universalTelemetry) Sync() error {
 		return syncer.Sync()
 	}
 	return nil
+}
+func (universalTelemetry *universalTelemetry) Warn(typeData TypeData, fields ...Field) {
+	attributes := writeAttributes{
+		typeData:  typeData,
+		typeLevel: LevelWarn,
+	}
+	switch TypeFormat(universalTelemetry.format.Load()) {
+	case FormatJson:
+		universalTelemetry.writeJson(context.Background(), attributes, fields)
+	case FormatText:
+		universalTelemetry.writeText(context.Background(), attributes, fields)
+	}
+}
+func (universalTelemetry *universalTelemetry) WarnWithContext(context context.Context, typeData TypeData, fields ...Field) {
+	attributes := writeAttributes{
+		typeData:  typeData,
+		typeLevel: LevelWarn,
+	}
+	switch TypeFormat(universalTelemetry.format.Load()) {
+	case FormatJson:
+		universalTelemetry.writeJson(context, attributes, fields)
+	case FormatText:
+		universalTelemetry.writeText(context, attributes, fields)
+	}
 }
 func (universalTelemetry *universalTelemetry) Write(p []byte) (n int, err error) {
 	universalTelemetry.mutex.RLock()

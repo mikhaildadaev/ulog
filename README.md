@@ -51,12 +51,6 @@ go get github.com/mikhaildadaev/ulog
 
 #### API
 - ulog.Close() error
-- ulog.SetExtractor(keys ...string)
-- ulog.SetFormat(format TypeFormat)
-- ulog.SetLevel(level TypeLevel)
-- ulog.SetMode(mode TypeMode, writer io.Writer, bufferSize ...int)
-- ulog.SetTheme(theme TypeTheme)
-- ulog.Sync() error
 - ulog.Debug(typeData TypeData, fields ...Field)
 - ulog.DebugWithContext(ctx context.Context, typeData TypeData, fields ...Field)
 - ulog.Error(typeData TypeData, fields ...Field)
@@ -65,6 +59,12 @@ go get github.com/mikhaildadaev/ulog
 - ulog.FatalWithContext(ctx context.Context, typeData TypeData, fields ...Field)
 - ulog.Info(typeData TypeData, fields ...Field)
 - ulog.InfoWithContext(ctx context.Context, typeData TypeData, fields ...Field)
+- ulog.SetExtractor(keys ...string)
+- ulog.SetFormat(format TypeFormat)
+- ulog.SetLevel(level TypeLevel)
+- ulog.SetMode(mode TypeMode, writer io.Writer, bufferSize ...int)
+- ulog.SetTheme(theme TypeTheme)
+- ulog.Sync() error
 - ulog.Warn(typeData TypeData, fields ...Field)
 - ulog.WarnWithContext(ctx context.Context, typeData TypeData, fields ...Field)
 
