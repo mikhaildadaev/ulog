@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -626,7 +629,38 @@ func TestSinkHttpRetry(t *testing.T) {
 	// Дописать
 }
 func TestSinkHttpSampling(t *testing.T) {
-	// Дописать
+	var mutex sync.Mutex
+	var requestCount int
+	counts := 100
+	rate := int32(10)
+	expected := counts / int(rate)
+	delta := expected / 2
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mutex.Lock()
+		requestCount++
+		mutex.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewHttpSink(server.URL,
+		WithHttpLevelMin(LevelDebug),
+		WithHttpSampleRate(rate),
+	)
+	attrs := writeAttributes{
+		typeData:  DataLog,
+		typeLevel: LevelInfo,
+	}
+	data := []byte(`{"message":"test"}`)
+	for i := 0; i < counts; i++ {
+		sink.WriteWithAttributes(attrs, data)
+	}
+	time.Sleep(100 * time.Millisecond)
+	mutex.Lock()
+	count := requestCount
+	mutex.Unlock()
+	if count < expected-delta || count > expected+delta {
+		t.Errorf("Expected ~10 requests, got %d", count)
+	}
 }
 
 // Приватные функции
