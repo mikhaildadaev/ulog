@@ -626,7 +626,31 @@ func TestSinkHttpRateLimit(t *testing.T) {
 	// Дописать
 }
 func TestSinkHttpRetry(t *testing.T) {
-	// Дописать
+	attempt := 0
+	backoff := 10 * time.Millisecond
+	retry := 3
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempt++
+		if attempt < retry {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewHttpSink(server.URL,
+		WithHttpLevelMin(LevelDebug),
+		WithHttpRetry(retry, backoff),
+	)
+	attributes := writeAttributes{
+		typeData:  DataLog,
+		typeLevel: LevelInfo,
+	}
+	data := []byte(`{"message":"test"}`)
+	sink.WriteWithAttributes(attributes, data)
+	if attempt != retry {
+		t.Errorf("Expected 3 attempts, got %d", attempt)
+	}
 }
 func TestSinkHttpSampling(t *testing.T) {
 	var mutex sync.Mutex
@@ -646,13 +670,13 @@ func TestSinkHttpSampling(t *testing.T) {
 		WithHttpLevelMin(LevelDebug),
 		WithHttpSampleRate(rate),
 	)
-	attrs := writeAttributes{
+	attributes := writeAttributes{
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
 	data := []byte(`{"message":"test"}`)
 	for i := 0; i < counts; i++ {
-		sink.WriteWithAttributes(attrs, data)
+		sink.WriteWithAttributes(attributes, data)
 	}
 	time.Sleep(100 * time.Millisecond)
 	mutex.Lock()
