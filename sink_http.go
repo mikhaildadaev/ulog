@@ -79,6 +79,12 @@ func WithHttpBatch(size int, flushInterval time.Duration) httpParams {
 		go httpSink.batchLoop()
 	}
 }
+func WithHttpBatchDisabled() httpParams {
+	return func(httpSink *HttpSink) {
+		httpSink.batchSize = 0
+		httpSink.batchTicker = nil
+	}
+}
 func WithHttpDedupWindow(window time.Duration) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.dedupWindow = window
