@@ -122,8 +122,9 @@ import (
 )
 
 func main() {
-    ctx := context.WithValue(context.Background(), "node_id", "123-abc")
-    ctx = context.WithValue(context.Background(), "trace_id", "abc-123")
+    ctx := context.Background()
+    ctx = context.WithValue(ctx, "node_id", "123-abc")
+    ctx = context.WithValue(ctx, "trace_id", "abc-123")
     // Universal telemetry async mode with JSON output
     telemetryAsync := ulog.NewTelemetry(
         ulog.WithMode(ulog.ModeAsync, os.Stdout, 10000),
