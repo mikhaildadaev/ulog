@@ -607,7 +607,23 @@ func TestTelemetryTheme(t *testing.T) {
 	}
 }
 func TestSink(t *testing.T) {
-	// Дописать
+	buf1 := &bytes.Buffer{}
+	buf2 := &bytes.Buffer{}
+	teeSink := NewTeeSink(buf1, buf2)
+	data := []byte(`{"message":"test"}`)
+	n, err := teeSink.Write(data)
+	if err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+	if n != len(data) {
+		t.Errorf("Expected %d bytes written, got %d", len(data), n)
+	}
+	if buf1.String() != string(data) {
+		t.Errorf("buf1: expected %q, got %q", data, buf1.String())
+	}
+	if buf2.String() != string(data) {
+		t.Errorf("buf2: expected %q, got %q", data, buf2.String())
+	}
 }
 func TestSinkFactory(t *testing.T) {
 	// Дописать
