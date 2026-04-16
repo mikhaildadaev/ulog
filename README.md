@@ -51,22 +51,22 @@ go get github.com/mikhaildadaev/ulog
 
 #### API
 - ulog.Close() error
-- ulog.Debug(typeData TypeData,, fields ...Field)
-- ulog.DebugWithContext(ctx context.Context, typeData TypeData,, fields ...Field)
-- ulog.Error(typeData TypeData,, fields ...Field)
-- ulog.ErrorWithContext(ctx context.Context, typeData TypeData,, fields ...Field)
-- ulog.Fatal(typeData TypeData,, fields ...Field)
-- ulog.FatalWithContext(ctx context.Context, typeData TypeData,, fields ...Field)
-- ulog.Info(typeData TypeData,, fields ...Field)
-- ulog.InfoWithContext(ctx context.Context, typeData TypeData,, fields ...Field)
-- ulog.Warn(typeData TypeData,, fields ...Field)
-- ulog.WarnWithContext(ctx context.Context, typeData TypeData,, fields ...Field)
 - ulog.SetExtractor(keys ...string)
 - ulog.SetFormat(format TypeFormat)
 - ulog.SetLevel(level TypeLevel)
 - ulog.SetMode(mode TypeMode, writer io.Writer, bufferSize ...int)
 - ulog.SetTheme(theme TypeTheme)
 - ulog.Sync() error
+- ulog.Debug(typeData TypeData, fields ...Field)
+- ulog.DebugWithContext(ctx context.Context, typeData TypeData, fields ...Field)
+- ulog.Error(typeData TypeData, fields ...Field)
+- ulog.ErrorWithContext(ctx context.Context, typeData TypeData, fields ...Field)
+- ulog.Fatal(typeData TypeData, fields ...Field)
+- ulog.FatalWithContext(ctx context.Context, typeData TypeData, fields ...Field)
+- ulog.Info(typeData TypeData, fields ...Field)
+- ulog.InfoWithContext(ctx context.Context, typeData TypeData, fields ...Field)
+- ulog.Warn(typeData TypeData, fields ...Field)
+- ulog.WarnWithContext(ctx context.Context, typeData TypeData, fields ...Field)
 
 ### Methods
 
@@ -122,40 +122,41 @@ import (
 )
 
 func main() {
-    ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
-    // Universal telemetryAsync with JSON output
+    ctx := context.WithValue(context.Background(), "node_id", "123-abc")
+    ctx = context.WithValue(context.Background(), "trace_id", "abc-123")
+    // Universal telemetry async mode with JSON output
     telemetryAsync := ulog.NewTelemetry(
         ulog.WithMode(ulog.ModeAsync, os.Stdout, 10000),
         ulog.WithFormat(ulog.FormatJson),
     )
     defer telemetryAsync.Close()
-    telemetryAsync.Debug("debugging request", ulog.String("path", "/api/user"))
-    telemetryAsync.DebugWithContext(ctx, "debugging request", ulog.String("path", "/api/user"))
-    telemetryAsync.Info("server started", ulog.Int("port", 8080))
-    telemetryAsync.InfoWithContext(ctx, "server started", ulog.Int("port", 8080))
-    telemetryAsync.Warn("high latency", ulog.Duration("latency", 150*time.Millisecond))
-    telemetryAsync.WarnWithContext(ctx, "high latency", ulog.Duration("latency", 150*time.Millisecond))
-    telemetryAsync.Error("database error", ulog.Error(nil))
-    telemetryAsync.ErrorWithContext(ctx, "database error", ulog.Error(nil))
+    telemetryAsync.Debug(DataLog, "debugging request", ulog.String("path", "/api/user"))
+    telemetryAsync.DebugWithContext(ctx, DataLog, "debugging request", ulog.String("path", "/api/user"))
+    telemetryAsync.Info(DataLog, "server started", ulog.Int("port", 8080))
+    telemetryAsync.InfoWithContext(ctx, DataLog, "server started", ulog.Int("port", 8080))
+    telemetryAsync.Warn(DataLog, "high latency", ulog.Duration("latency", 150*time.Millisecond))
+    telemetryAsync.WarnWithContext(ctx, DataLog, "high latency", ulog.Duration("latency", 150*time.Millisecond))
+    telemetryAsync.Error(DataLog, "database error", ulog.Error(nil))
+    telemetryAsync.ErrorWithContext(ctx, DataLog, "database error", ulog.Error(nil))
     telemetryAsync.Sync()
-    // Universal telemetrySync with colored text output
+    // Universal telemetry sync mode with colored text output
     telemetrySync := ulog.NewTelemetry(
-        ulog.WithMode(ulog.ModeSync, os.Stdout),
         ulog.WithFormat(ulog.FormatText),
+        ulog.WithMode(ulog.ModeSync, os.Stdout),
         ulog.WithTheme(ulog.ThemeDark),
     )
-    telemetrySync.Debug("debugging request", ulog.String("path", "/api/user"))
-    telemetrySync.DebugWithContext(ctx, "debugging request", ulog.String("path", "/api/user"))
-    telemetrySync.Info("server started", ulog.Int("port", 8080))
-    telemetrySync.InfoWithContext(ctx, "server started", ulog.Int("port", 8080))
-    telemetrySync.Warn("high latency", ulog.Duration("latency", 150*time.Millisecond))
-    telemetrySync.WarnWithContext(ctx, "high latency", ulog.Duration("latency", 150*time.Millisecond))
-    telemetrySync.Error("database error", ulog.Error(nil))
-    telemetrySync.ErrorWithContext(ctx, "database error", ulog.Error(nil))
+    telemetrySync.Debug(DataLog, "debugging request", ulog.String("path", "/api/user"))
+    telemetrySync.DebugWithContext(ctx, DataLog, "debugging request", ulog.String("path", "/api/user"))
+    telemetrySync.Info(DataLog, "server started", ulog.Int("port", 8080))
+    telemetrySync.InfoWithContext(ctx, DataLog, "server started", ulog.Int("port", 8080))
+    telemetrySync.Warn(DataLog, "high latency", ulog.Duration("latency", 150*time.Millisecond))
+    telemetrySync.WarnWithContext(ctx, DataLog, "high latency", ulog.Duration("latency", 150*time.Millisecond))
+    telemetrySync.Error(DataLog, "database error", ulog.Error(nil))
+    telemetrySync.ErrorWithContext(ctx, DataLog, "database error", ulog.Error(nil))
     // Standard logger adapter (writes only errors)
     telemetry := ulog.NewTelemetry(
-        ulog.WithMode(ulog.ModeSync, os.Stdout),
         ulog.WithFormat(ulog.FormatJson),
+        ulog.WithMode(ulog.ModeSync, os.Stdout),
     )
     telemetryLog := ulog.NewTelemetryLog(ulog.LevelError, telemetry)
     telemetryLog.Print("error from standard logger")
@@ -181,4 +182,5 @@ go test -race ./...
 
 ## Roadmap
 
-- [ ] **More `io.Writer` implementations** – Discord, File, Telegram, Slack, Loki, Elasticsearch, OpenTelemetry
+- [+] **More `io.Writer` implementations** – Discord, Prometheus, Slack, Telegram
+- [.] **More `io.Writer` implementations** – Elasticsearch, Loki, OpenTelemetry, Tempo
