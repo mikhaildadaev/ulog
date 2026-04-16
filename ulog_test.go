@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -618,7 +619,45 @@ func TestSinkHttp(t *testing.T) {
 	// Дописать
 }
 func TestSinkHttpBatch(t *testing.T) {
-	// Дописать
+	var mutex sync.Mutex
+	var requests [][]byte
+	batchInterval := 100 * time.Millisecond
+	batchSize := 3
+	delay := 200 * time.Millisecond
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		r.Body.Close()
+		mutex.Lock()
+		requests = append(requests, body)
+		mutex.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewHttpSink(server.URL,
+		WithHttpLevelMin(LevelDebug),
+		WithHttpBatch(batchSize, batchInterval),
+	)
+	attributes := writeAttributes{
+		typeData:  DataLog,
+		typeLevel: LevelInfo,
+	}
+	for i := 0; i < batchSize; i++ {
+		data := []byte(`{"message":"test",count:"` + strconv.Itoa(i) + `"}`)
+		sink.WriteWithAttributes(attributes, data)
+	}
+	time.Sleep(delay)
+	mutex.Lock()
+	requestCount := len(requests)
+	mutex.Unlock()
+	if requestCount != 1 {
+		t.Errorf("Expected 1 batch request, got %d", requestCount)
+	}
+	if requestCount > 0 {
+		bodyStr := string(requests[0])
+		if !strings.Contains(bodyStr, "0") || !strings.Contains(bodyStr, "1") || !strings.Contains(bodyStr, "2") {
+			t.Errorf("Batch should contain all messages: %s", bodyStr)
+		}
+	}
 }
 func TestSinkHttpDeduplication(t *testing.T) {
 	var mutex sync.Mutex
@@ -637,14 +676,14 @@ func TestSinkHttpDeduplication(t *testing.T) {
 		WithHttpDeduplication(deduplication),
 		WithHttpLevelMin(LevelDebug),
 	)
-	attrs := writeAttributes{
+	attributes := writeAttributes{
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
 	data := []byte(`{"message":"test"}`)
-	sink.WriteWithAttributes(attrs, data)
+	sink.WriteWithAttributes(attributes, data)
 	time.Sleep(shortDelay)
-	sink.WriteWithAttributes(attrs, data)
+	sink.WriteWithAttributes(attributes, data)
 	time.Sleep(mediumDelay)
 	mutex.Lock()
 	count := requestCount
@@ -676,12 +715,12 @@ func TestSinkHttpRateLimit(t *testing.T) {
 		WithHttpLevelMin(LevelDebug),
 		WithHttpRetry(retry, backoff),
 	)
-	attrs := writeAttributes{
+	attributes := writeAttributes{
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
 	data := []byte(`{"message":"test"}`)
-	_, err := sink.WriteWithAttributes(attrs, data)
+	_, err := sink.WriteWithAttributes(attributes, data)
 	if err != nil {
 		t.Fatalf("WriteWithAttributes failed: %v", err)
 	}
