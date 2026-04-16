@@ -709,8 +709,12 @@ func TestSinkFile_CleanupByAge(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	time.Sleep(200 * time.Millisecond)
-	if filepath.Glob(filepath.Join(tmpDir, "test*.log*")); err != nil {
+	files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
+	if err != nil {
 		t.Fatalf("Glob failed: %v", err)
+	}
+	if len(files) == 0 {
+		t.Error("No log files created")
 	}
 }
 func TestSinkFile_CleanupByCount(t *testing.T) {
