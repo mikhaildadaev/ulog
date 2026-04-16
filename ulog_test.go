@@ -9,9 +9,36 @@ import (
 	"time"
 )
 
-// Тесты публичных копонентов
-func TestClose(t *testing.T) {
-	t.Run("Close/Async", func(t *testing.T) {
+// Публичные функции
+func TestNewTelemetry(t *testing.T) {
+	buf := &bytes.Buffer{}
+	telemetry := NewTelemetry(
+		WithFormat(FormatText),
+		WithMode(ModeSync, buf),
+	)
+	if telemetry == nil {
+		t.Fatal("NewTelemetry returned nil")
+	}
+	telemetry.Info(DataLog, String("message", "test info text"))
+	telemetry.Sync()
+	if !strings.Contains(buf.String(), "test info text") {
+		t.Errorf("Expected 'test info text', got %q", buf.String())
+	}
+}
+func TestNewTelemetryLog(t *testing.T) {
+	buf := &bytes.Buffer{}
+	telemetry := NewTelemetry(
+		WithFormat(FormatText),
+		WithMode(ModeSync, buf),
+	)
+	telemetryLog := NewTelemetryLog(LevelInfo, telemetry)
+	telemetryLog.Print("test text")
+	if !strings.Contains(buf.String(), "test text") {
+		t.Errorf("Expected 'test text', got %q", buf.String())
+	}
+}
+func TestTelemetryClose(t *testing.T) {
+	t.Run("Async", func(t *testing.T) {
 		buf := &bytes.Buffer{}
 		telemetry := NewTelemetry(WithMode(ModeAsync, buf, 100))
 		telemetry.Info(DataLog, String("message", "test info text"))
@@ -24,7 +51,7 @@ func TestClose(t *testing.T) {
 			t.Error("Message not written after Close")
 		}
 	})
-	t.Run("Close/Sync", func(t *testing.T) {
+	t.Run("Sync", func(t *testing.T) {
 		buf := &bytes.Buffer{}
 		telemetry := NewTelemetry(WithMode(ModeSync, buf))
 		telemetry.Info(DataLog, String("message", "test info text"))
@@ -37,7 +64,7 @@ func TestClose(t *testing.T) {
 		}
 	})
 }
-func TestExtractor(t *testing.T) {
+func TestTelemetryExtractor(t *testing.T) {
 	tests := []struct {
 		name      string
 		keys      []string
@@ -153,7 +180,7 @@ func TestExtractor(t *testing.T) {
 		})
 	}
 }
-func TestField(t *testing.T) {
+func TestTelemetryField(t *testing.T) {
 	t.Run("Bool", func(t *testing.T) {
 		val := bool(true)
 		field := Bool("test", val)
@@ -235,7 +262,7 @@ func TestField(t *testing.T) {
 		checkFieldTimes(t, field, vals)
 	})
 }
-func TestFormat(t *testing.T) {
+func TestTelemetryFormat(t *testing.T) {
 	array := []struct {
 		name   string
 		format TypeFormat
@@ -272,43 +299,38 @@ func TestFormat(t *testing.T) {
 		})
 	}
 }
-func TestLevel(t *testing.T) {
+func TestTelemetryLevel(t *testing.T) {
 	array := []struct {
 		name         string
 		level        TypeLevel
 		functionTest func(Telemetry)
 		responseBool bool
 	}{
-		// DEBUG
-		{"DEBUG->DEBUG", LevelDebug, testDebug, true},
-		{"DEBUG->INFO", LevelDebug, testInfo, true},
-		{"DEBUG->WARN", LevelDebug, testWarn, true},
-		{"DEBUG->ERROR", LevelDebug, testError, true},
-		{"DEBUG->FATAL", LevelDebug, testFatal, true},
-		// INFO
-		{"INFO->DEBUG", LevelInfo, testDebug, false},
-		{"INFO->INFO", LevelInfo, testInfo, true},
-		{"INFO->WARN", LevelInfo, testWarn, true},
-		{"INFO->ERROR", LevelInfo, testError, true},
-		{"INFO->FATAL", LevelInfo, testFatal, true},
-		// WARN
-		{"WARN->DEBUG", LevelWarn, testDebug, false},
-		{"WARN->INFO", LevelWarn, testInfo, false},
-		{"WARN->WARN", LevelWarn, testWarn, true},
-		{"WARN->ERROR", LevelWarn, testError, true},
-		{"WARN->FATAL", LevelWarn, testFatal, true},
-		// ERROR
-		{"ERROR->DEBUG", LevelError, testDebug, false},
-		{"ERROR->INFO", LevelError, testInfo, false},
-		{"ERROR->WARN", LevelError, testWarn, false},
-		{"ERROR->ERROR", LevelError, testError, true},
-		{"ERROR->FATAL", LevelError, testFatal, true},
-		// FATAL
-		{"FATAL->DEBUG", LevelFatal, testDebug, false},
-		{"FATAL->INFO", LevelFatal, testInfo, false},
-		{"FATAL->WARN", LevelFatal, testWarn, false},
-		{"FATAL->ERROR", LevelFatal, testError, false},
-		{"FATAL->FATAL", LevelFatal, testFatal, true},
+		{"Debug->Debug", LevelDebug, testDebug, true},
+		{"Debug->Info", LevelDebug, testInfo, true},
+		{"Debug->Warn", LevelDebug, testWarn, true},
+		{"Debug->Error", LevelDebug, testError, true},
+		{"Debug->Fatal", LevelDebug, testFatal, true},
+		{"Error->Debug", LevelError, testDebug, false},
+		{"Error->Info", LevelError, testInfo, false},
+		{"Error->Warn", LevelError, testWarn, false},
+		{"Error->Error", LevelError, testError, true},
+		{"Error->Fatal", LevelError, testFatal, true},
+		{"Fatal->Debug", LevelFatal, testDebug, false},
+		{"Fatal->Info", LevelFatal, testInfo, false},
+		{"Fatal->Warn", LevelFatal, testWarn, false},
+		{"Fatal->Error", LevelFatal, testError, false},
+		{"Fatal->Fatal", LevelFatal, testFatal, true},
+		{"Info->Debug", LevelInfo, testDebug, false},
+		{"Info->Info", LevelInfo, testInfo, true},
+		{"Info->Warn", LevelInfo, testWarn, true},
+		{"Info->Error", LevelInfo, testError, true},
+		{"Info->Fatal", LevelInfo, testFatal, true},
+		{"Warn->Debug", LevelWarn, testDebug, false},
+		{"Warn->Info", LevelWarn, testInfo, false},
+		{"Warn->Warn", LevelWarn, testWarn, true},
+		{"Warn->Error", LevelWarn, testError, true},
+		{"Warn->Fatal", LevelWarn, testFatal, true},
 	}
 	for _, elem := range array {
 		t.Run("WithLevel/"+elem.name, func(t *testing.T) {
@@ -340,33 +362,6 @@ func TestLevel(t *testing.T) {
 				t.Error("Expected no log, but got output")
 			}
 		})
-	}
-}
-func TestTelemetry(t *testing.T) {
-	buf := &bytes.Buffer{}
-	telemetry := NewTelemetry(
-		WithFormat(FormatText),
-		WithMode(ModeSync, buf),
-	)
-	if telemetry == nil {
-		t.Fatal("NewTelemetry returned nil")
-	}
-	telemetry.Info(DataLog, String("message", "test info text"))
-	telemetry.Sync()
-	if !strings.Contains(buf.String(), "test info text") {
-		t.Errorf("Expected 'test info text', got %q", buf.String())
-	}
-}
-func TestTelemetryLog(t *testing.T) {
-	buf := &bytes.Buffer{}
-	telemetry := NewTelemetry(
-		WithFormat(FormatText),
-		WithMode(ModeSync, buf),
-	)
-	telemetryLog := NewTelemetryLog(LevelInfo, telemetry)
-	telemetryLog.Print("test text")
-	if !strings.Contains(buf.String(), "test text") {
-		t.Errorf("Expected 'test text', got %q", buf.String())
 	}
 }
 func TestTelemetryLogIgnore(t *testing.T) {
@@ -408,28 +403,23 @@ func TestTelemetryLogIgnore(t *testing.T) {
 		})
 	}
 }
-func TestMethod(t *testing.T) {
+func TestTelemetryMethod(t *testing.T) {
 	array := []struct {
 		name         string
 		functionTest func(Telemetry)
 		level        TypeLevel
 		responseBool bool
 	}{
-		// DEBUG
-		{"DEBUG", testDebug, LevelDebug, true},
-		{"DEBUG/WithContext", testDebugWithContext, LevelDebug, true},
-		// ERROR
-		{"ERROR", testError, LevelError, true},
-		{"ERROR/WithContext", testErrorWithContext, LevelError, true},
-		// FATAL
-		{"FATAL", testFatal, LevelFatal, true},
-		{"FATAL/WithContext", testFatalWithContext, LevelFatal, true},
-		// INFO
-		{"INFO", testInfo, LevelInfo, true},
-		{"INFO/WithContext", testInfoWithContext, LevelInfo, true},
-		// WARN
-		{"WARN", testWarn, LevelWarn, true},
-		{"WARN/WithContext", testWarnWithContext, LevelWarn, true},
+		{"Debug", testDebug, LevelDebug, true},
+		{"DebugWithContext", testDebugWithContext, LevelDebug, true},
+		{"Error", testError, LevelError, true},
+		{"ErrorWithContext", testErrorWithContext, LevelError, true},
+		{"Fatal", testFatal, LevelFatal, true},
+		{"FatalWithContext", testFatalWithContext, LevelFatal, true},
+		{"Info", testInfo, LevelInfo, true},
+		{"InfoWithContext", testInfoWithContext, LevelInfo, true},
+		{"Warn", testWarn, LevelWarn, true},
+		{"WarnWithContext", testWarnWithContext, LevelWarn, true},
 	}
 	for _, elem := range array {
 		t.Run(elem.name, func(t *testing.T) {
@@ -447,7 +437,7 @@ func TestMethod(t *testing.T) {
 		})
 	}
 }
-func TestMode(t *testing.T) {
+func TestTelemetryMode(t *testing.T) {
 	t.Run("WithMode/Async", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
 		telemetry := NewTelemetry(
@@ -503,7 +493,7 @@ func TestMode(t *testing.T) {
 		}
 	})
 }
-func TestSync(t *testing.T) {
+func TestTelemetrySync(t *testing.T) {
 	t.Run("Async", func(t *testing.T) {
 		buf := &bytes.Buffer{}
 		telemetry := NewTelemetry(WithMode(ModeAsync, buf, 1000))
@@ -533,7 +523,7 @@ func TestSync(t *testing.T) {
 		}
 	})
 }
-func TestTheme(t *testing.T) {
+func TestTelemetryTheme(t *testing.T) {
 	array := []struct {
 		name        string
 		theme       TypeTheme
@@ -610,6 +600,33 @@ func TestTheme(t *testing.T) {
 			testLevel("Warn", testWarn, elem.prefixWarn)
 		})
 	}
+}
+func TestSink(t *testing.T) {
+	// Дописать
+}
+func TestSinkFactory(t *testing.T) {
+	// Дописать
+}
+func TestSinkFile(t *testing.T) {
+	// Дописать
+}
+func TestSinkHttp(t *testing.T) {
+	// Дописать
+}
+func TestSinkHttpBatch(t *testing.T) {
+	// Дописать
+}
+func TestSinkHttpDeduplication(t *testing.T) {
+	// Дописать
+}
+func TestSinkHttpRateLimit(t *testing.T) {
+	// Дописать
+}
+func TestSinkHttpRetry(t *testing.T) {
+	// Дописать
+}
+func TestSinkHttpSampling(t *testing.T) {
+	// Дописать
 }
 
 // Приватные функции
