@@ -118,7 +118,6 @@ type Field struct {
 	valueTime      time.Time
 	valueTimes     []time.Time
 }
-
 type ContextExtractor func(context context.Context) []Field
 
 // Публичные конструкторы
