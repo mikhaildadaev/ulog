@@ -212,7 +212,15 @@ func defaultformatter(attributes writeAttributes, fields []Field) ([]byte, error
 	formatJson(buf, attributes, fields)
 	return buf.Bytes(), nil
 }
-func getMetric(fields []Field) (name string, value float64, labels map[string]string) {
+func getLogMessage(fields []Field) string {
+	for _, field := range fields {
+		if field.nameKey == "message" {
+			return field.valueString
+		}
+	}
+	return ""
+}
+func getMetricData(fields []Field) (name string, value float64, labels map[string]string) {
 	name = ""
 	value = 0
 	labels = make(map[string]string)
@@ -228,10 +236,34 @@ func getMetric(fields []Field) (name string, value float64, labels map[string]st
 	}
 	return name, value, labels
 }
-func getMessage(fields []Field) string {
-	for _, field := range fields {
-		if field.nameKey == "message" {
-			return field.valueString
+func getTraceID(fields []Field) string {
+	for _, f := range fields {
+		if f.nameKey == "trace_id" {
+			return f.valueString
+		}
+	}
+	return ""
+}
+func getTraceDuration(fields []Field) int64 {
+	for _, f := range fields {
+		if f.nameKey == "duration" {
+			return f.valueInt64
+		}
+	}
+	return 0
+}
+func getTraceName(fields []Field) string {
+	for _, f := range fields {
+		if f.nameKey == "name" {
+			return f.valueString
+		}
+	}
+	return ""
+}
+func getTraceSpanID(fields []Field) string {
+	for _, f := range fields {
+		if f.nameKey == "span_id" {
+			return f.valueString
 		}
 	}
 	return ""

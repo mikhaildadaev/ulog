@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Публичные структуры
@@ -37,6 +38,15 @@ type TelegramData struct {
 	ParseMode           string `json:"parse_mode,omitempty"`
 }
 type TelegramSink = HttpSink
+type TempoTrace struct {
+	Attributes map[string]any `json:"attributes,omitempty"`
+	Duration   int64          `json:"duration_ms"`
+	Name       string         `json:"name"`
+	Timestamp  time.Time      `json:"timestamp"`
+	TraceID    string         `json:"trace_id"`
+	SpanID     string         `json:"span_id"`
+}
+type TempoSink = HttpSink
 
 // Публичные конструкторы
 func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) *HttpSink {
@@ -45,7 +55,7 @@ func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) 
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			discordData := DiscordData{
 				AvatarURL: avatarURL,
-				Content:   getMessage(fields),
+				Content:   getLogMessage(fields),
 				TTS:       false,
 				UserName:  userName,
 			}
@@ -60,7 +70,7 @@ func NewPrometheusSink(endPoint string, params ...httpParams) *HttpSink {
 		WithHttpFilterData(DataMetric),
 		WithHttpFormatter(func(attrs writeAttributes, fields []Field) ([]byte, error) {
 			var builder strings.Builder
-			name, value, labels := getMetric(fields)
+			name, value, labels := getMetricData(fields)
 			builder.WriteString(name)
 			for k, v := range labels {
 				builder.WriteByte(',')
@@ -85,7 +95,7 @@ func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params
 				Channel:   channel,
 				IconEmoji: iconEmoji,
 				IconURL:   iconURL,
-				Text:      getMessage(fields),
+				Text:      getLogMessage(fields),
 				UserName:  userName,
 			}
 			return json.Marshal(slackData)
@@ -101,12 +111,28 @@ func NewTelegramSink(botToken, chatID string, params ...httpParams) *HttpSink {
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			telegramData := TelegramData{
 				ChatID:    chatID,
-				Text:      getMessage(fields),
+				Text:      getLogMessage(fields),
 				ParseMode: "HTML",
 			}
 			return json.Marshal(telegramData)
 		}),
 		WithHttpHeader("Content-Type", "application/json"),
 		WithHttpMethod("POST"),
+	}, params...)...)
+}
+func NewTempoSink(endPoint string, params ...httpParams) *HttpSink {
+	return NewHttpSink(endPoint, append([]httpParams{
+		WithHttpFilterData(DataTrace),
+		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
+			trace := TempoTrace{
+				Duration:  getTraceDuration(fields),
+				Name:      getTraceName(fields),
+				Timestamp: time.Now(),
+				TraceID:   getTraceID(fields),
+				SpanID:    getTraceSpanID(fields),
+			}
+			return json.Marshal(trace)
+		}),
+		WithHttpHeader("Content-Type", "application/json"),
 	}, params...)...)
 }
