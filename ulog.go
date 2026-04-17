@@ -359,15 +359,15 @@ func escapeJson(buf *bytes.Buffer, s string) {
 func formatJson(dataBuf *bytes.Buffer, attributes writeAttributes, fields []Field) {
 	time := time.Now()
 	dataBuf.WriteByte('{')
-	formatTimeJson(dataBuf, time)
+	formatJsonTime(dataBuf, time)
 	dataBuf.WriteByte(',')
-	formatPrefixJson(dataBuf, attributes.typeLevel, attributes.caller)
+	formatJsonPrefix(dataBuf, attributes.typeLevel, attributes.caller)
 	dataBuf.WriteByte(',')
-	formatDataJson(dataBuf, attributes.typeData, fields)
+	formatJsonData(dataBuf, attributes.typeData, fields)
 	dataBuf.WriteByte('}')
 	dataBuf.WriteByte('\n')
 }
-func formatDataJson(dataBuf *bytes.Buffer, typeData TypeData, fields []Field) {
+func formatJsonData(dataBuf *bytes.Buffer, typeData TypeData, fields []Field) {
 	dataBuf.WriteString(`"type":"`)
 	getTypeData(dataBuf, typeData)
 	dataBuf.WriteByte('"')
@@ -384,16 +384,45 @@ func formatDataJson(dataBuf *bytes.Buffer, typeData TypeData, fields []Field) {
 		}
 	}
 }
+func formatJsonPrefix(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
+	dataBuf.WriteString(`"level":"`)
+	switch level {
+	case LevelDebug:
+		dataBuf.WriteString(`debug`)
+	case LevelInfo:
+		dataBuf.WriteString(`info`)
+	case LevelWarn:
+		dataBuf.WriteString(`warn`)
+	case LevelError:
+		dataBuf.WriteString(`error`)
+	case LevelFatal:
+		dataBuf.WriteString(`fatal`)
+	}
+	dataBuf.WriteByte('"')
+	if caller != "" {
+		dataBuf.WriteString(`,"caller":"`)
+		escapeJson(dataBuf, caller)
+		dataBuf.WriteByte('"')
+	}
+}
+func formatJsonTime(dataBuf *bytes.Buffer, timestamp time.Time) {
+	dataBuf.WriteString(`"time":"`)
+	timeBuf := timePool.Get().([]byte)
+	timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05.000000-07:00")
+	dataBuf.Write(timeBuf)
+	timePool.Put(timeBuf)
+	dataBuf.WriteByte('"')
+}
 func formatText(dataBuf *bytes.Buffer, attributes writeAttributes, fields []Field) {
 	time := time.Now()
-	formatTimeText(dataBuf, time)
+	formatTextTime(dataBuf, time)
 	dataBuf.WriteByte(' ')
-	formatPrefixText(dataBuf, attributes.typeLevel, attributes.caller, attributes.theme)
+	formatTextPrefix(dataBuf, attributes.typeLevel, attributes.caller, attributes.theme)
 	dataBuf.WriteByte(' ')
-	formatDataText(dataBuf, attributes.typeData, fields, attributes.theme)
+	formatTextData(dataBuf, attributes.typeData, fields, attributes.theme)
 	dataBuf.WriteByte('\n')
 }
-func formatDataText(dataBuf *bytes.Buffer, typeData TypeData, fields []Field, theme colorTheme) {
+func formatTextData(dataBuf *bytes.Buffer, typeData TypeData, fields []Field, theme colorTheme) {
 	dataBuf.WriteString(theme.data)
 	dataBuf.WriteString(`type="`)
 	getTypeData(dataBuf, typeData)
@@ -407,6 +436,31 @@ func formatDataText(dataBuf *bytes.Buffer, typeData TypeData, fields []Field, th
 		}
 	}
 	dataBuf.WriteString(theme.reset)
+}
+func formatTextPrefix(dataBuf *bytes.Buffer, level TypeLevel, caller string, theme colorTheme) {
+	switch level {
+	case LevelDebug:
+		dataBuf.WriteString(theme.prefixDebug)
+	case LevelInfo:
+		dataBuf.WriteString(theme.prefixInfo)
+	case LevelWarn:
+		dataBuf.WriteString(theme.prefixWarn)
+	case LevelError:
+		dataBuf.WriteString(theme.prefixError)
+	case LevelFatal:
+		dataBuf.WriteString(theme.prefixFatal)
+	}
+	if caller != "" {
+		dataBuf.WriteByte(' ')
+		dataBuf.WriteString(theme.caller)
+		dataBuf.WriteString(caller)
+	}
+}
+func formatTextTime(dataBuf *bytes.Buffer, timestamp time.Time) {
+	timeBuf := timePool.Get().([]byte)
+	timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05.000000-07:00")
+	dataBuf.Write(timeBuf)
+	timePool.Put(timeBuf)
 }
 func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 	switch field.typeValue {
@@ -439,60 +493,6 @@ func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 	case FieldDurations:
 		formatValueDurations(dataBuf, field.valueDurations)
 	}
-}
-func formatPrefixJson(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
-	dataBuf.WriteString(`"level":"`)
-	switch level {
-	case LevelDebug:
-		dataBuf.WriteString(`debug`)
-	case LevelInfo:
-		dataBuf.WriteString(`info`)
-	case LevelWarn:
-		dataBuf.WriteString(`warn`)
-	case LevelError:
-		dataBuf.WriteString(`error`)
-	case LevelFatal:
-		dataBuf.WriteString(`fatal`)
-	}
-	dataBuf.WriteByte('"')
-	if caller != "" {
-		dataBuf.WriteString(`,"caller":"`)
-		escapeJson(dataBuf, caller)
-		dataBuf.WriteByte('"')
-	}
-}
-func formatPrefixText(dataBuf *bytes.Buffer, level TypeLevel, caller string, theme colorTheme) {
-	switch level {
-	case LevelDebug:
-		dataBuf.WriteString(theme.prefixDebug)
-	case LevelInfo:
-		dataBuf.WriteString(theme.prefixInfo)
-	case LevelWarn:
-		dataBuf.WriteString(theme.prefixWarn)
-	case LevelError:
-		dataBuf.WriteString(theme.prefixError)
-	case LevelFatal:
-		dataBuf.WriteString(theme.prefixFatal)
-	}
-	if caller != "" {
-		dataBuf.WriteByte(' ')
-		dataBuf.WriteString(theme.caller)
-		dataBuf.WriteString(caller)
-	}
-}
-func formatTimeJson(dataBuf *bytes.Buffer, timestamp time.Time) {
-	dataBuf.WriteString(`"time":"`)
-	timeBuf := timePool.Get().([]byte)
-	timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05.000000-07:00")
-	dataBuf.Write(timeBuf)
-	timePool.Put(timeBuf)
-	dataBuf.WriteByte('"')
-}
-func formatTimeText(dataBuf *bytes.Buffer, timestamp time.Time) {
-	timeBuf := timePool.Get().([]byte)
-	timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05.000000-07:00")
-	dataBuf.Write(timeBuf)
-	timePool.Put(timeBuf)
 }
 func formatValueBool(dataBuf *bytes.Buffer, v bool) {
 	dataBuf.WriteString(strconv.FormatBool(v))
