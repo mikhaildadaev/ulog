@@ -610,62 +610,57 @@ func TestTelemetryLog_Ignore(t *testing.T) {
 	}
 }
 
-//	func TestSink(t *testing.T) {
-//		buf1 := &bytes.Buffer{}
-//		buf2 := &bytes.Buffer{}
-//		buf3 := &bytes.Buffer{}
-//		buf4 := &bytes.Buffer{}
-//		data := []Field{
-//			String("message", "test"),
-//		}
-//		tee := NewTeeSink(buf1, buf2)
-//		if tee.Len() != 2 {
-//			t.Errorf("Len() = %d, want 2", tee.Len())
-//		}
-//		tee.Write([]byte(test_message_json))
-//		if buf1.String() != test_message_json {
-//			t.Errorf("WriteWithAttributes: buf1 should be empty (removed), got %q", buf1.String())
-//		}
-//		if buf2.String() != test_message_json {
-//			t.Errorf("WriteWithAttributes: buf2 should be empty (removed), got %q", buf2.String())
-//		}
-//		buf1.Reset()
-//		buf2.Reset()
-//		tee.Add(buf3)
-//		if tee.Len() != 3 {
-//			t.Errorf("After Add, Len() = %d, want 3", tee.Len())
-//		}
-//		tee.Remove(1)
-//		if tee.Len() != 2 {
-//			t.Errorf("After Remove, Len() = %d, want 2", tee.Len())
-//		}
-//		tee.Replace(0, buf4)
-//		if tee.Len() != 2 {
-//			t.Errorf("After Replace, Len() = %d, want 2", tee.Len())
-//		}
-//		attributes := writeAttributes{
-//			typeData:   DataLog,
-//			typeFormat: TypeFormat(FormatJson),
-//			typeLevel:  LevelInfo,
-//		}
-//		tee.WriteWithAttributes(attributes, data)
-//		if buf1.String() != "" {
-//			t.Errorf("WriteWithAttributes: buf1 should be empty (removed), got %q", buf1.String())
-//		}
-//		if buf2.String() != "" {
-//			t.Errorf("WriteWithAttributes: buf2 should be empty (removed), got %q", buf2.String())
-//		}
-//		if buf3.String() != test_message_json {
-//			t.Errorf("WriteWithAttributes: buf3 = %q, want %q", buf3.String(), test_message_json)
-//		}
-//		if buf4.String() != test_message_json {
-//			t.Errorf("WriteWithAttributes: buf4 = %q, want %q", buf4.String(), test_message_json)
-//		}
-//		err := tee.Close()
-//		if err != nil {
-//			t.Errorf("Close() returned error: %v", err)
-//		}
-//	}
+func TestSink(t *testing.T) {
+	buf1 := &bytes.Buffer{}
+	buf2 := &bytes.Buffer{}
+	buf3 := &bytes.Buffer{}
+	buf4 := &bytes.Buffer{}
+	data := `{"message":"test"}`
+	fields := []Field{
+		String("message", "test"),
+	}
+	tee := NewTeeSink(buf1, buf2)
+	if tee.Len() != 2 {
+		t.Errorf("Len() = %d, want 2", tee.Len())
+	}
+	tee.Write([]byte(data))
+	if buf1.String() != data {
+		t.Errorf("WriteWithAttributes: buf1 should be empty (removed), got %q", buf1.String())
+	}
+	if buf2.String() != data {
+		t.Errorf("WriteWithAttributes: buf2 should be empty (removed), got %q", buf2.String())
+	}
+	buf1.Reset()
+	buf2.Reset()
+	tee.Add(buf3)
+	if tee.Len() != 3 {
+		t.Errorf("After Add, Len() = %d, want 3", tee.Len())
+	}
+	tee.Remove(1)
+	if tee.Len() != 2 {
+		t.Errorf("After Remove, Len() = %d, want 2", tee.Len())
+	}
+	tee.Replace(0, buf4)
+	if tee.Len() != 2 {
+		t.Errorf("After Replace, Len() = %d, want 2", tee.Len())
+	}
+	attributes := writeAttributes{
+		typeData:   DataLog,
+		typeFormat: FormatJson,
+		typeLevel:  LevelInfo,
+	}
+	tee.WriteWithAttributes(attributes, fields)
+	if buf3.String() != "" {
+		t.Errorf("WriteWithAttributes: buf3 is empty")
+	}
+	if buf4.String() != "" {
+		t.Errorf("WriteWithAttributes: buf4 is empty")
+	}
+	err := tee.Close()
+	if err != nil {
+		t.Errorf("Close() returned error: %v", err)
+	}
+}
 func TestSinkFactory(t *testing.T) {
 	// Дописать
 }
@@ -809,8 +804,8 @@ func TestSinkHttp(t *testing.T) {
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
-	data := []byte(test_message_json)
-	_, err := sink.WriteWithAttributes(attributes, data)
+	fields := []Field{String("message", "test")}
+	_, err := sink.WriteWithAttributes(attributes, fields)
 	if err != nil {
 		t.Fatalf("WriteWithAttributes failed: %v", err)
 	}
@@ -855,8 +850,11 @@ func TestSinkHttp_Batch(t *testing.T) {
 		typeLevel: LevelInfo,
 	}
 	for i := 0; i < batchSize; i++ {
-		data := []byte(`{"message":"test",count:"` + strconv.Itoa(i) + `"}`)
-		sink.WriteWithAttributes(attributes, data)
+		fields := []Field{
+			String("message", "test"),
+			Int("count", i),
+		}
+		sink.WriteWithAttributes(attributes, fields)
 	}
 	time.Sleep(delay)
 	mutex.Lock()
@@ -894,10 +892,10 @@ func TestSinkHttp_Deduplication(t *testing.T) {
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
-	data := []byte(test_message_json)
-	sink.WriteWithAttributes(attributes, data)
+	fields := []Field{String("message", "test")}
+	sink.WriteWithAttributes(attributes, fields)
 	time.Sleep(shortDelay)
-	sink.WriteWithAttributes(attributes, data)
+	sink.WriteWithAttributes(attributes, fields)
 	time.Sleep(mediumDelay)
 	mutex.Lock()
 	count := requestCount
@@ -934,8 +932,8 @@ func TestSinkHttp_RateLimit(t *testing.T) {
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
-	data := []byte(test_message_json)
-	_, err := sink.WriteWithAttributes(attributes, data)
+	fields := []Field{String("message", "test")}
+	_, err := sink.WriteWithAttributes(attributes, fields)
 	if err != nil {
 		t.Fatalf("WriteWithAttributes failed: %v", err)
 	}
@@ -974,8 +972,8 @@ func TestSinkHttp_Retry(t *testing.T) {
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
-	data := []byte(test_message_json)
-	sink.WriteWithAttributes(attributes, data)
+	fields := []Field{String("message", "test")}
+	sink.WriteWithAttributes(attributes, fields)
 	if attempt != retry {
 		t.Errorf("Expected 3 attempts, got %d", attempt)
 	}
@@ -1003,9 +1001,9 @@ func TestSinkHttp_Sampling(t *testing.T) {
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
-	data := []byte(test_message_json)
+	fields := []Field{String("message", "test")}
 	for i := 0; i < counts; i++ {
-		sink.WriteWithAttributes(attributes, data)
+		sink.WriteWithAttributes(attributes, fields)
 	}
 	time.Sleep(100 * time.Millisecond)
 	mutex.Lock()
@@ -1015,12 +1013,6 @@ func TestSinkHttp_Sampling(t *testing.T) {
 		t.Errorf("Expected ~10 requests, got %d", count)
 	}
 }
-
-// Приватные переменные
-var (
-	test_message_json = `{"message":"test"}`
-	test_message_text = `message="test"`
-)
 
 // Приватные функции
 func checkExtractor(t *testing.T, elem struct {

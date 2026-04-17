@@ -42,10 +42,10 @@ type TelegramSink = HttpSink
 func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
 		WithHttpFilterLevel(LevelError),
-		WithHttpFormatter(func(attributes writeAttributes, p []byte) ([]byte, error) {
+		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			discordData := DiscordData{
 				AvatarURL: avatarURL,
-				Content:   string(p),
+				Content:   getMessage(fields),
 				TTS:       false,
 				UserName:  userName,
 			}
@@ -58,14 +58,11 @@ func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) 
 func NewPrometheusSink(endPoint string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
 		WithHttpFilterData(DataMetric),
-		WithHttpFormatter(func(attrs writeAttributes, p []byte) ([]byte, error) {
-			var data PrometheusData
-			if err := json.Unmarshal(p, &data); err != nil {
-				return nil, err
-			}
+		WithHttpFormatter(func(attrs writeAttributes, fields []Field) ([]byte, error) {
 			var builder strings.Builder
-			builder.WriteString(data.Name)
-			for k, v := range data.Labels {
+			name, value, labels := getMetric(fields)
+			builder.WriteString(name)
+			for k, v := range labels {
 				builder.WriteByte(',')
 				builder.WriteString(k)
 				builder.WriteString("=\"")
@@ -73,7 +70,7 @@ func NewPrometheusSink(endPoint string, params ...httpParams) *HttpSink {
 				builder.WriteByte('"')
 			}
 			builder.WriteByte(' ')
-			builder.WriteString(strconv.FormatFloat(data.Value, 'f', -1, 64))
+			builder.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
 			builder.WriteByte('\n')
 			return []byte(builder.String()), nil
 		}),
@@ -83,12 +80,12 @@ func NewPrometheusSink(endPoint string, params ...httpParams) *HttpSink {
 func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
 		WithHttpFilterLevel(LevelError),
-		WithHttpFormatter(func(attributes writeAttributes, p []byte) ([]byte, error) {
+		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			slackData := SlackData{
 				Channel:   channel,
 				IconEmoji: iconEmoji,
 				IconURL:   iconURL,
-				Text:      string(p),
+				Text:      getMessage(fields),
 				UserName:  userName,
 			}
 			return json.Marshal(slackData)
@@ -101,10 +98,10 @@ func NewTelegramSink(botToken, chatID string, params ...httpParams) *HttpSink {
 	endPoint := "https://api.telegram.org/bot" + botToken + "/sendMessage"
 	return NewHttpSink(endPoint, append([]httpParams{
 		WithHttpFilterLevel(LevelError),
-		WithHttpFormatter(func(attributes writeAttributes, p []byte) ([]byte, error) {
+		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			telegramData := TelegramData{
 				ChatID:    chatID,
-				Text:      string(p),
+				Text:      getMessage(fields),
 				ParseMode: "HTML",
 			}
 			return json.Marshal(telegramData)

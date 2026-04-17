@@ -29,7 +29,7 @@ type HttpSink struct {
 	endPoint        string
 	filterData      TypeData
 	filterLevel     TypeLevel
-	formatter       func(attributes writeAttributes, p []byte) ([]byte, error)
+	formatter       func(attributes writeAttributes, fields []Field) ([]byte, error)
 	headers         map[string]string
 	method          string
 	retryBackoff    time.Duration
@@ -107,7 +107,7 @@ func WithHttpFilterLevel(level TypeLevel) httpParams {
 		httpSink.filterLevel = level
 	}
 }
-func WithHttpFormatter(formatter func(attributes writeAttributes, p []byte) ([]byte, error)) httpParams {
+func WithHttpFormatter(formatter func(attributes writeAttributes, fields []Field) ([]byte, error)) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.formatter = formatter
 	}
@@ -166,30 +166,26 @@ func (httpSink *HttpSink) Sync() error {
 	return nil
 }
 func (httpSink *HttpSink) Write(p []byte) (n int, err error) {
-	attributes := writeAttributes{
-		typeData:  DataLog,
-		typeLevel: LevelDebug,
-	}
-	return httpSink.WriteWithAttributes(attributes, p)
+	return httpSink.sendWithRetry(p)
 }
-func (httpSink *HttpSink) WriteWithAttributes(attributes writeAttributes, p []byte) (n int, err error) {
+func (httpSink *HttpSink) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
 	if attributes.typeLevel < httpSink.filterLevel {
-		return len(p), nil
+		return 0, nil
 	}
 	if attributes.typeData != httpSink.filterData && httpSink.filterData > TypeData(defaultType) {
-		return len(p), nil
+		return 0, nil
 	}
 	if attributes.typeLevel != LevelError && attributes.typeLevel != LevelFatal {
 		if !httpSink.shouldSample() {
-			return len(p), nil
+			return 0, nil
 		}
-		if httpSink.isDuplicate(p) {
-			return len(p), nil
+		if httpSink.isDuplicate(fields) {
+			return 0, nil
 		}
 	}
-	body, err := httpSink.formatter(attributes, p)
+	body, err := httpSink.formatter(attributes, fields)
 	if err != nil {
-		return len(p), fmt.Errorf("formatter error: %w", err)
+		return 0, fmt.Errorf("formatter error: %w", err)
 	}
 	if httpSink.batchSize > 0 {
 		httpSink.batchMutex.Lock()
@@ -199,9 +195,9 @@ func (httpSink *HttpSink) WriteWithAttributes(attributes writeAttributes, p []by
 		if needFlush {
 			go httpSink.flush()
 		}
-		return len(p), nil
+		return len(body), nil
 	}
-	return len(p), httpSink.sendWithRetry(body)
+	return httpSink.sendWithRetry(body)
 }
 
 // Приватные структуры
@@ -211,8 +207,34 @@ type rateLimitError struct {
 type httpParams func(*HttpSink)
 
 // Приватные функции
-func defaultformatter(attributes writeAttributes, p []byte) ([]byte, error) {
-	return p, nil
+func defaultformatter(attributes writeAttributes, fields []Field) ([]byte, error) {
+	buf := &bytes.Buffer{}
+	formatJson(buf, attributes, fields)
+	return buf.Bytes(), nil
+}
+func getMetric(fields []Field) (name string, value float64, labels map[string]string) {
+	name = ""
+	value = 0
+	labels = make(map[string]string)
+	for _, field := range fields {
+		switch field.nameKey {
+		case "name":
+			name = field.valueString
+		case "value":
+			value = field.valueFloat64
+		default:
+			labels[field.nameKey] = field.valueString
+		}
+	}
+	return name, value, labels
+}
+func getMessage(fields []Field) string {
+	for _, field := range fields {
+		if field.nameKey == "message" {
+			return field.valueString
+		}
+	}
+	return ""
 }
 
 // Приватные методы
@@ -247,13 +269,14 @@ func (httpSink *HttpSink) flush() error {
 		}
 		body = bytes.Join(parts, []byte{'\n'})
 	}
-	return httpSink.sendWithRetry(body)
+	_, err := httpSink.sendWithRetry(body)
+	return err
 }
-func (httpSink *HttpSink) isDuplicate(p []byte) bool {
+func (httpSink *HttpSink) isDuplicate(fields []Field) bool {
 	if httpSink.dedupWindow <= 0 {
 		return false
 	}
-	hash := httpSink.hashMessage(p)
+	hash := httpSink.hashFields(fields)
 	if lastSeen, ok := httpSink.dedupCache.Load(hash); ok {
 		if time.Since(lastSeen.(time.Time)) < httpSink.dedupWindow {
 			return true
@@ -262,9 +285,14 @@ func (httpSink *HttpSink) isDuplicate(p []byte) bool {
 	httpSink.dedupCache.Store(hash, time.Now())
 	return false
 }
-func (httpSink *HttpSink) hashMessage(p []byte) uint64 {
+func (httpSink *HttpSink) hashFields(fields []Field) uint64 {
 	hash := fnv.New64a()
-	hash.Write(p)
+	for _, f := range fields {
+		hash.Write([]byte(f.nameKey))
+		hash.Write([]byte{0})
+		hash.Write([]byte(fmt.Sprintf("%v", f.valueString)))
+		hash.Write([]byte{0})
+	}
 	return hash.Sum64()
 }
 func (httpSink *HttpSink) send(body []byte) error {
@@ -299,12 +327,12 @@ func (httpSink *HttpSink) send(body []byte) error {
 	}
 	return nil
 }
-func (httpSink *HttpSink) sendWithRetry(body []byte) error {
+func (httpSink *HttpSink) sendWithRetry(body []byte) (int, error) {
 	var lastErr error
 	for i := 0; i <= httpSink.retryMax; i++ {
 		err := httpSink.send(body)
 		if err == nil {
-			return nil
+			return len(body), nil
 		}
 		lastErr = err
 		if i == httpSink.retryMax {
@@ -318,7 +346,7 @@ func (httpSink *HttpSink) sendWithRetry(body []byte) error {
 		}
 		time.Sleep(sleepDuration)
 	}
-	return fmt.Errorf("failed after %d retries: %w", httpSink.retryMax, lastErr)
+	return 0, fmt.Errorf("failed after %d retries: %w", httpSink.retryMax, lastErr)
 }
 func (httpSink *HttpSink) shouldSample() bool {
 	if httpSink.sampleRate <= 1 {
