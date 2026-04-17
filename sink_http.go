@@ -2,7 +2,7 @@
 // API может изменяться
 //
 // Планируется добавить:
-// - Circuit Breaker [защита от перегрузки]
+// - Circuit Breaker [защита от перегрузки внешнего API]
 package ulog
 
 import (
