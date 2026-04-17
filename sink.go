@@ -101,23 +101,25 @@ func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 	}
 	return len(p), nil
 }
-func (teeSink *TeeSink) WriteWithAttributes(attributes writeAttributes, p []byte) (n int, err error) {
+func (teeSink *TeeSink) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
 	teeSink.mutex.RLock()
 	defer teeSink.mutex.RUnlock()
+	if len(teeSink.writers) == 0 {
+		return 0, nil
+	}
 	var errors []error
 	for i, writer := range teeSink.writers {
 		if sink, ok := writer.(SinkWriter); ok {
-			if _, err := sink.WriteWithAttributes(attributes, p); err != nil {
+			_, err := sink.WriteWithAttributes(attributes, fields)
+			if err != nil {
 				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
 			}
 		} else {
-			if _, err := writer.Write(p); err != nil {
-				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
-			}
+			fmt.Fprintf(defaultWriterErr, "ulog: writer[%d] does not implement SinkWriter, skipping\n", i)
 		}
 	}
 	if len(errors) > 0 {
-		return len(p), fmt.Errorf("write errors: %v", errors)
+		return 0, fmt.Errorf("write errors: %v", errors)
 	}
-	return len(p), nil
+	return 0, nil
 }

@@ -1,6 +1,7 @@
 package ulog
 
 import (
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -98,8 +99,29 @@ func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 	}
 	return n, err
 }
-func (fileSink *FileSink) WriteWithAttributes(attributes writeAttributes, p []byte) (n int, err error) {
-	return fileSink.Write(p)
+func (fileSink *FileSink) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
+	fileSink.mutex.Lock()
+	defer fileSink.mutex.Unlock()
+	bufData := &bytes.Buffer{}
+	switch attributes.typeFormat {
+	case FormatJson:
+		formatJson(bufData, attributes, fields)
+	case FormatText:
+		formatText(bufData, attributes, fields)
+	default:
+		return 0, fmt.Errorf("unsupported format: %v", attributes.typeFormat)
+	}
+	data := bufData.Bytes()
+	if fileSink.currentSize+int64(len(data)) > fileSink.maxSize {
+		if err := fileSink.getRotateFile(); err != nil {
+			return 0, err
+		}
+	}
+	n, err = fileSink.file.Write(data)
+	if err == nil {
+		fileSink.currentSize += int64(n)
+	}
+	return n, err
 }
 
 // Приватные структуры

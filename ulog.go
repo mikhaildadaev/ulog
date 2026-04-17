@@ -96,7 +96,7 @@ type Telemetry interface {
 }
 type SinkWriter interface {
 	io.Writer
-	WriteWithAttributes(attributes writeAttributes, p []byte) (n int, err error)
+	WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error)
 }
 
 // Публичные структуры
@@ -253,8 +253,11 @@ type universalTelemetry struct {
 	writer    io.Writer
 }
 type writeAttributes struct {
-	typeData  TypeData
-	typeLevel TypeLevel
+	caller     string
+	theme      colorTheme
+	typeData   TypeData
+	typeFormat TypeFormat
+	typeLevel  TypeLevel
 }
 type telemetryOptions func(*universalTelemetry)
 
@@ -353,6 +356,17 @@ func escapeJson(buf *bytes.Buffer, s string) {
 		buf.WriteString(s[start:])
 	}
 }
+func formatJson(dataBuf *bytes.Buffer, attributes writeAttributes, fields []Field) {
+	time := time.Now()
+	dataBuf.WriteByte('{')
+	formatTimeJson(dataBuf, time)
+	dataBuf.WriteByte(',')
+	formatPrefixJson(dataBuf, attributes.typeLevel, attributes.caller)
+	dataBuf.WriteByte(',')
+	formatDataJson(dataBuf, attributes.typeData, fields)
+	dataBuf.WriteByte('}')
+	dataBuf.WriteByte('\n')
+}
 func formatDataJson(dataBuf *bytes.Buffer, typeData TypeData, fields []Field) {
 	dataBuf.WriteString(`"type":"`)
 	getTypeData(dataBuf, typeData)
@@ -369,6 +383,15 @@ func formatDataJson(dataBuf *bytes.Buffer, typeData TypeData, fields []Field) {
 			formatFieldValue(dataBuf, field)
 		}
 	}
+}
+func formatText(dataBuf *bytes.Buffer, attributes writeAttributes, fields []Field) {
+	time := time.Now()
+	formatTimeText(dataBuf, time)
+	dataBuf.WriteByte(' ')
+	formatPrefixText(dataBuf, attributes.typeLevel, attributes.caller, attributes.theme)
+	dataBuf.WriteByte(' ')
+	formatDataText(dataBuf, attributes.typeData, fields, attributes.theme)
+	dataBuf.WriteByte('\n')
 }
 func formatDataText(dataBuf *bytes.Buffer, typeData TypeData, fields []Field, theme colorTheme) {
 	dataBuf.WriteString(theme.data)
@@ -647,68 +670,33 @@ func (universalTelemetry *universalTelemetry) getTheme() colorTheme {
 	defer universalTelemetry.mutex.RUnlock()
 	return universalTelemetry.theme
 }
-func (universalTelemetry *universalTelemetry) writeJson(context context.Context, attributes writeAttributes, fields []Field) {
+func (universalTelemetry *universalTelemetry) route(context context.Context, attributes writeAttributes, fields []Field) {
 	if universalTelemetry.getLevel() > attributes.typeLevel {
 		return
 	}
 	if universalTelemetry.extractor != nil && context != nil {
 		fields = append(fields, universalTelemetry.extractor(context)...)
 	}
-	dataBuf := dataPool.Get().(*bytes.Buffer)
-	dataBuf.Reset()
-	defer dataPool.Put(dataBuf)
-	caller := universalTelemetry.getCaller(attributes.typeLevel)
-	time := time.Now()
-	dataBuf.WriteByte('{')
-	formatTimeJson(dataBuf, time)
-	dataBuf.WriteByte(',')
-	formatPrefixJson(dataBuf, attributes.typeLevel, caller)
-	dataBuf.WriteByte(',')
-	formatDataJson(dataBuf, attributes.typeData, fields)
-	dataBuf.WriteByte('}')
-	dataBuf.WriteByte('\n')
 	universalTelemetry.mutex.RLock()
 	writer := universalTelemetry.writer
 	universalTelemetry.mutex.RUnlock()
 	if sinks, ok := writer.(SinkWriter); ok {
-		_, err := sinks.WriteWithAttributes(attributes, dataBuf.Bytes())
+		_, err := sinks.WriteWithAttributes(attributes, fields)
 		if err != nil {
 			fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
 		}
 		return
 	}
-	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
-		fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
-	}
-}
-func (universalTelemetry *universalTelemetry) writeText(context context.Context, attributes writeAttributes, fields []Field) {
-	if universalTelemetry.getLevel() > attributes.typeLevel {
-		return
-	}
-	if universalTelemetry.extractor != nil && context != nil {
-		fields = append(fields, universalTelemetry.extractor(context)...)
-	}
 	dataBuf := dataPool.Get().(*bytes.Buffer)
 	dataBuf.Reset()
 	defer dataPool.Put(dataBuf)
-	caller := universalTelemetry.getCaller(attributes.typeLevel)
-	theme := universalTelemetry.getTheme()
-	time := time.Now()
-	formatTimeText(dataBuf, time)
-	dataBuf.WriteByte(' ')
-	formatPrefixText(dataBuf, attributes.typeLevel, caller, theme)
-	dataBuf.WriteByte(' ')
-	formatDataText(dataBuf, attributes.typeData, fields, theme)
-	dataBuf.WriteByte('\n')
-	universalTelemetry.mutex.RLock()
-	writer := universalTelemetry.writer
-	universalTelemetry.mutex.RUnlock()
-	if sinks, ok := writer.(SinkWriter); ok {
-		_, err := sinks.WriteWithAttributes(attributes, dataBuf.Bytes())
-		if err != nil {
-			fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
-		}
-		return
+	switch attributes.typeFormat {
+	case FormatJson:
+		formatJson(dataBuf, attributes, fields)
+	case FormatText:
+		formatText(dataBuf, attributes, fields)
+	default:
+		fmt.Fprintf(defaultWriterErr, "ulog: unsupported format: %v\n", attributes.typeFormat)
 	}
 	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
 		fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
