@@ -129,7 +129,7 @@ type fileParams func(*FileSink)
 
 // Приватные функции
 func (fileSink *FileSink) cleanupBackups() error {
-	pattern := fileSink.getBackupPattern()
+	pattern := fileSink.getBackupPattern() + ".gz"
 	files, err := filepath.Glob(pattern)
 	if err != nil {
 		return err
@@ -188,20 +188,38 @@ func (fileSink *FileSink) getBackupPattern() string {
 	return filepath.Join(dir, nameWithoutExt+"-*.log*")
 }
 func (fileSink *FileSink) getCompressFile(filename string) error {
-	file, err := os.Open(filename)
+	src, err := os.Open(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer src.Close()
+	tmpName := filename + ".gz.tmp"
+	dst, err := os.Create(tmpName)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	gzFilename := filename + ".gz"
-	gzFile, err := os.Create(gzFilename)
-	if err != nil {
+	defer dst.Close()
+	defer func() {
+		if err != nil {
+			os.Remove(tmpName)
+		}
+	}()
+	gz := gzip.NewWriter(dst)
+	defer gz.Close()
+	if _, err = io.Copy(gz, src); err != nil {
 		return err
 	}
-	defer gzFile.Close()
-	gzWriter := gzip.NewWriter(gzFile)
-	defer gzWriter.Close()
-	if _, err := io.Copy(gzWriter, file); err != nil {
+	if err = gz.Close(); err != nil {
+		return err
+	}
+	if err = dst.Sync(); err != nil {
+		return err
+	}
+	gzName := filename + ".gz"
+	if err = os.Rename(tmpName, gzName); err != nil {
 		return err
 	}
 	return os.Remove(filename)
