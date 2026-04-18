@@ -114,8 +114,6 @@ func (teeSink *TeeSink) WriteWithAttributes(attributes writeAttributes, fields [
 			if err != nil {
 				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
 			}
-		} else {
-			fmt.Fprintf(defaultWriterErr, "ulog: writer[%d] does not implement SinkWriter, skipping\n", i)
 		}
 	}
 	if len(errors) > 0 {
