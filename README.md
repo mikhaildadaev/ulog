@@ -140,7 +140,7 @@ func main() {
     telemetryAsync.Error(DataLog, "database error", ulog.Error(nil))
     telemetryAsync.ErrorWithContext(ctx, DataLog, "database error", ulog.Error(nil))
     telemetryAsync.Sync()
-    // Universal telemetry sync mode with colored text output
+    // Universal telemetry sync mode with TEXT output
     telemetrySync := ulog.NewTelemetry(
         ulog.WithFormat(ulog.FormatText),
         ulog.WithMode(ulog.ModeSync, os.Stdout),
@@ -183,5 +183,5 @@ go test -race ./...
 
 ## Roadmap
 
-- [+] **More `io.Writer` implementations** – Discord, Prometheus, Slack, Telegram
-- [.] **More `io.Writer` implementations** – Elasticsearch, Loki, OpenTelemetry, Tempo
+- [+] **More `io.Writer` implementations** – Discord, Prometheus, Slack, Telegram, Tempo
+- [.] **More `io.Writer` implementations** – Elasticsearch, Loki, OpenTelemetry
