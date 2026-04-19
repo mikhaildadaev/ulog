@@ -129,14 +129,14 @@ func NewTempoSink(endPoint string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
 		WithHttpFilterData(DataTrace),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			trace := TempoTrace{
+			tempoData := TempoTrace{
 				Duration:  getTraceDuration(fields),
 				Name:      getTraceName(fields),
 				Timestamp: time.Now(),
 				TraceID:   getTraceID(fields),
 				SpanID:    getTraceSpanID(fields),
 			}
-			return json.Marshal(trace)
+			return json.Marshal(tempoData)
 		}),
 		WithHttpHeader("Content-Type", "application/json"),
 	}, params...)...)
