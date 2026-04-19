@@ -56,6 +56,7 @@ type WechatSink = HttpSink
 // Публичные конструкторы
 func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
+		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			discordData := DiscordData{
@@ -94,6 +95,7 @@ func NewPrometheusSink(endPoint string, params ...httpParams) *HttpSink {
 }
 func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
+		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			slackData := SlackData{
@@ -112,6 +114,7 @@ func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params
 func NewTelegramSink(botToken, chatID string, params ...httpParams) *HttpSink {
 	endPoint := "https://api.telegram.org/bot" + botToken + "/sendMessage"
 	return NewHttpSink(endPoint, append([]httpParams{
+		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			telegramData := TelegramData{
