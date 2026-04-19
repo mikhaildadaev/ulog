@@ -104,7 +104,9 @@ func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 func (fileSink *FileSink) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
 	fileSink.mutex.Lock()
 	defer fileSink.mutex.Unlock()
-	bufData := &bytes.Buffer{}
+	bufData := dataPool.Get().(*bytes.Buffer)
+	bufData.Reset()
+	defer dataPool.Put(bufData)
 	switch attributes.typeFormat {
 	case FormatJson:
 		formatJson(bufData, attributes, fields)
