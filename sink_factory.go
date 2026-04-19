@@ -135,9 +135,9 @@ func NewTempoSink(endPoint string, params ...httpParams) *HttpSink {
 			tempoData := TempoTrace{
 				Duration:  getTraceDuration(fields),
 				Name:      getTraceName(fields),
+				SpanID:    getTraceSpanID(fields),
 				Timestamp: time.Now(),
 				TraceID:   getTraceID(fields),
-				SpanID:    getTraceSpanID(fields),
 			}
 			return json.Marshal(tempoData)
 		}),
