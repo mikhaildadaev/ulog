@@ -149,10 +149,9 @@ func NewWechatSink(endPoint string, params ...httpParams) *HttpSink {
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			content := getLogMessage(fields)
 			wechatData := WechatData{
+				Content: getLogMessage(fields),
 				MsgType: "markdown",
-				Content: content,
 			}
 			return json.Marshal(wechatData)
 		}),
