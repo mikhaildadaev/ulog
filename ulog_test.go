@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -1036,6 +1037,106 @@ func TestSinkHttp_Batch(t *testing.T) {
 			t.Errorf("Batch should contain all messages: %s", bodyStr)
 		}
 	}
+}
+func TestSinkHttp_Circuit(t *testing.T) {
+	newServer := func(behavior func(count int) int) (*httptest.Server, *int32) {
+		var count int32
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			c := int(atomic.AddInt32(&count, 1))
+			if behavior(c) >= 400 {
+				w.WriteHeader(behavior(c))
+			} else {
+				w.WriteHeader(http.StatusOK)
+			}
+		})), &count
+	}
+	t.Run("Disabled", func(t *testing.T) {
+		srv, cnt := newServer(func(int) int { return 500 })
+		defer srv.Close()
+		sink := NewHttpSink(srv.URL, WithHttpDisabledBatch(), WithHttpDisabledCircuit())
+		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
+		fields := []Field{String("msg", "test")}
+		for i := 0; i < 10; i++ {
+			sink.WriteWithAttributes(attrs, fields)
+		}
+		if atomic.LoadInt32(cnt) != 10 {
+			t.Errorf("requests = %d, want 10", *cnt)
+		}
+	})
+	t.Run("Close", func(t *testing.T) {
+		srv, _ := newServer(func(c int) int {
+			if c <= 2 {
+				return 500
+			}
+			return 200
+		})
+		defer srv.Close()
+		sink := NewHttpSink(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(2, 50*time.Millisecond))
+		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
+		fields := []Field{String("msg", "test")}
+		sink.WriteWithAttributes(attrs, fields)
+		sink.WriteWithAttributes(attrs, fields)
+		time.Sleep(60 * time.Millisecond)
+		sink.WriteWithAttributes(attrs, fields)
+		if atomic.LoadInt32(&sink.circuitState) != circuitStateClosed {
+			t.Error("should be Closed")
+		}
+	})
+	t.Run("HalfOpen", func(t *testing.T) {
+		srv, _ := newServer(func(c int) int {
+			return 500
+		})
+		defer srv.Close()
+		sink := NewHttpSink(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(2, 50*time.Millisecond))
+		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
+		fields := []Field{String("msg", "test")}
+		sink.WriteWithAttributes(attrs, fields)
+		sink.WriteWithAttributes(attrs, fields)
+		time.Sleep(60 * time.Millisecond)
+		sink.WriteWithAttributes(attrs, fields)
+		if atomic.LoadInt32(&sink.circuitState) != circuitStateOpen {
+			t.Error("should stay Open after HalfOpen failure")
+		}
+	})
+	t.Run("Open", func(t *testing.T) {
+		srv, cnt := newServer(func(int) int { return 500 })
+		defer srv.Close()
+		sink := NewHttpSink(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(2, time.Hour))
+		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
+		fields := []Field{String("msg", "test")}
+		sink.WriteWithAttributes(attrs, fields)
+		sink.WriteWithAttributes(attrs, fields)
+		if atomic.LoadInt32(&sink.circuitState) != circuitStateOpen {
+			t.Error("should be Open")
+		}
+		_, err := sink.WriteWithAttributes(attrs, fields)
+		if err == nil || err.Error() != "circuit breaker is open" {
+			t.Error("should be blocked")
+		}
+		if atomic.LoadInt32(cnt) != 2 {
+			t.Errorf("requests = %d, want 2", *cnt)
+		}
+	})
+	t.Run("Reset", func(t *testing.T) {
+		srv, _ := newServer(func(c int) int {
+			if c == 1 {
+				return 500
+			}
+			return 200
+		})
+		defer srv.Close()
+		sink := NewHttpSink(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(5, time.Hour))
+		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
+		fields := []Field{String("msg", "test")}
+		sink.WriteWithAttributes(attrs, fields)
+		if atomic.LoadInt32(&sink.circuitFailures) != 1 {
+			t.Error("failures should be 1")
+		}
+		sink.WriteWithAttributes(attrs, fields)
+		if atomic.LoadInt32(&sink.circuitFailures) != 0 {
+			t.Error("failures should be 0")
+		}
+	})
 }
 func TestSinkHttp_Deduplication(t *testing.T) {
 	var mutex sync.Mutex
