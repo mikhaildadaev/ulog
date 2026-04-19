@@ -664,6 +664,173 @@ func TestSink(t *testing.T) {
 func TestSinkFactory(t *testing.T) {
 	// Дописать
 }
+func TestSinkFactory_Discord(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		var data DiscordData
+		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			t.Errorf("failed to decode JSON: %v", err)
+		}
+		if data.UserName != "ULog Bot" {
+			t.Errorf("expected username 'ULog Bot', got '%s'", data.UserName)
+		}
+		if data.Content != "test message" {
+			t.Errorf("expected content 'test message', got '%s'", data.Content)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+	sink := NewDiscordSink(server.URL, "ULog Bot", "")
+	fields := []Field{
+		String("message", "test message"),
+	}
+	_, err := sink.WriteWithAttributes(
+		writeAttributes{typeLevel: LevelError, typeData: DataLog},
+		fields,
+	)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	sink.Sync()
+}
+func TestSinkFactory_Prometheus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "text/plain" {
+			t.Errorf("expected Content-Type: text/plain, got %s", r.Header.Get("Content-Type"))
+		}
+		body := make([]byte, 1024)
+		n, _ := r.Body.Read(body)
+		content := string(body[:n])
+		if content == "" {
+			t.Error("expected non-empty Prometheus metric")
+		}
+		expectedPattern := "http_requests_total"
+		if len(content) < len(expectedPattern) || content[:len(expectedPattern)] != expectedPattern {
+			t.Errorf("expected metric name 'http_requests_total', got '%s'", content)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewPrometheusSink(server.URL)
+	fields := []Field{
+		String("name", "http_requests_total"),
+		String("method", "GET"),
+		Float64("value", 42.0),
+	}
+	_, err := sink.WriteWithAttributes(
+		writeAttributes{typeData: DataMetric},
+		fields,
+	)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	sink.Sync()
+}
+func TestSinkFactory_Slack(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var data SlackData
+		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			t.Errorf("failed to decode JSON: %v", err)
+		}
+		if data.Channel != "#alerts" {
+			t.Errorf("expected channel '#alerts', got '%s'", data.Channel)
+		}
+		if data.UserName != "ULog" {
+			t.Errorf("expected username 'ULog', got '%s'", data.UserName)
+		}
+		if data.Text != "test message" {
+			t.Errorf("expected text 'test message', got '%s'", data.Text)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewSlackSink(server.URL, "ULog", ":robot:", "", "#alerts")
+	fields := []Field{
+		String("message", "test message"),
+	}
+	_, err := sink.WriteWithAttributes(
+		writeAttributes{typeLevel: LevelError, typeData: DataLog},
+		fields,
+	)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	sink.Sync()
+}
+func TestSinkFactory_Telegram(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("expected Content-Type: application/json, got %s", r.Header.Get("Content-Type"))
+		}
+		var data TelegramData
+		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			t.Errorf("failed to decode JSON: %v", err)
+		}
+		if data.ChatID != "test-chat-123" {
+			t.Errorf("expected chat_id 'test-chat-123', got '%s'", data.ChatID)
+		}
+		if data.Text != "test message" {
+			t.Errorf("expected text 'test message', got '%s'", data.Text)
+		}
+		if data.ParseMode != "HTML" {
+			t.Errorf("expected parse_mode 'HTML', got '%s'", data.ParseMode)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewTelegramSink("test-bot-token", "test-chat-123")
+	sink.endPoint = server.URL
+	fields := []Field{
+		String("message", "test message"),
+	}
+	_, err := sink.WriteWithAttributes(
+		writeAttributes{typeLevel: LevelError, typeData: DataLog},
+		fields,
+	)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	sink.Sync()
+}
+func TestSinkFactory_Wechat(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("expected Content-Type: application/json, got %s", r.Header.Get("Content-Type"))
+		}
+		var data WechatData
+		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			t.Errorf("failed to decode JSON: %v", err)
+		}
+		if data.MsgType != "markdown" {
+			t.Errorf("expected msgtype 'markdown', got '%s'", data.MsgType)
+		}
+		if data.Content != "test message" {
+			t.Errorf("expected content 'test message', got '%s'", data.Content)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewWechatSink(server.URL)
+	fields := []Field{
+		String("message", "test message"),
+	}
+	_, err := sink.WriteWithAttributes(
+		writeAttributes{typeLevel: LevelError, typeData: DataLog},
+		fields,
+	)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	sink.Sync()
+}
 func TestSinkFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
