@@ -40,9 +40,9 @@ type TempoTrace struct {
 	Attributes map[string]any `json:"attributes,omitempty"`
 	Duration   int64          `json:"duration_ms"`
 	Name       string         `json:"name"`
+	SpanID     string         `json:"span_id"`
 	Timestamp  time.Time      `json:"timestamp"`
 	TraceID    string         `json:"trace_id"`
-	SpanID     string         `json:"span_id"`
 }
 type TempoSink = HttpSink
 type WechatData struct {
