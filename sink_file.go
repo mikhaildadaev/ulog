@@ -21,6 +21,7 @@ type FileSink struct {
 	maxBackups  int
 	maxSize     int64
 	mutex       sync.Mutex
+	wg          sync.WaitGroup
 }
 
 // Публичные конструкторы
@@ -70,6 +71,7 @@ func WithFileMaxSize(sizeMB int) fileParams {
 
 // Публичные методы
 func (fileSink *FileSink) Close() error {
+	fileSink.wg.Wait()
 	fileSink.mutex.Lock()
 	defer fileSink.mutex.Unlock()
 	if fileSink.file != nil {
@@ -233,7 +235,9 @@ func (fileSink *FileSink) getRotateFile() error {
 	if err := os.Rename(fileSink.filename, backupName); err != nil {
 		return err
 	}
+	fileSink.wg.Add(1)
 	go func() {
+		defer fileSink.wg.Done()
 		if err := fileSink.getCompressFile(backupName); err != nil {
 			fmt.Fprintf(defaultWriterErr, "failed to compress %s: %v\n", backupName, err)
 		}
@@ -244,7 +248,9 @@ func (fileSink *FileSink) getRotateFile() error {
 	}
 	fileSink.file = file
 	fileSink.currentSize = 0
+	fileSink.wg.Add(1)
 	go func() {
+		defer fileSink.wg.Done()
 		if err := fileSink.cleanupBackups(); err != nil {
 			fmt.Fprintf(defaultWriterErr, "failed to cleanup backups: %v\n", err)
 		}
