@@ -12,41 +12,53 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 // Публичные структуры
 type HttpSink struct {
-	batchBuffer     [][]byte
-	batchChan       chan struct{}
-	batchMutex      sync.Mutex
-	batchSize       int
-	batchTicker     *time.Ticker
-	client          *http.Client
-	dedupCache      sync.Map
-	dedupTTL        time.Duration
-	dedupWindow     time.Duration
-	endPoint        string
-	filterData      TypeData
-	filterLevel     TypeLevel
-	formatter       func(attributes writeAttributes, fields []Field) ([]byte, error)
-	headers         map[string]string
-	method          string
-	retryBackoff    time.Duration
-	retryMax        int
-	sampleCounter   int32
-	sampleLastReset time.Time
-	sampleMutex     sync.Mutex
-	sampleRate      int32
-	sampleWindow    time.Duration
+	batchBuffer        [][]byte
+	batchChan          chan struct{}
+	batchMutex         sync.Mutex
+	batchSize          int
+	batchTicker        *time.Ticker
+	circuitEnabled     bool
+	circuitFailures    int32
+	circuitMaxFailures int
+	circuitLastFailure atomic.Int64
+	circuitMutex       sync.Mutex
+	circuitState       int32
+	circuitTimeout     time.Duration
+	client             *http.Client
+	dedupCache         sync.Map
+	dedupTTL           time.Duration
+	dedupWindow        time.Duration
+	endPoint           string
+	filterData         TypeData
+	filterLevel        TypeLevel
+	formatter          func(attributes writeAttributes, fields []Field) ([]byte, error)
+	headers            map[string]string
+	method             string
+	retryBackoff       time.Duration
+	retryMax           int
+	sampleCounter      int32
+	sampleLastReset    time.Time
+	sampleMutex        sync.Mutex
+	sampleRate         int32
+	sampleWindow       time.Duration
 }
 
 // Публичные конструкторы
 func NewHttpSink(endPoint string, params ...httpParams) *HttpSink {
 	httpSink := &HttpSink{
-		batchChan:   make(chan struct{}),
-		batchSize:   100,
-		batchTicker: time.NewTicker(5 * time.Second),
+		batchChan:          make(chan struct{}),
+		batchSize:          100,
+		batchTicker:        time.NewTicker(5 * time.Second),
+		circuitEnabled:     true,
+		circuitMaxFailures: 10,
+		circuitState:       circuitStateClosed,
+		circuitTimeout:     10 * time.Second,
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 			Transport: &http.Transport{
@@ -79,6 +91,14 @@ func WithHttpBatch(size int, flushInterval time.Duration) httpParams {
 		go httpSink.batchLoop()
 	}
 }
+func WithHttpCircuitBreaker(maxFailures int, timeout time.Duration) httpParams {
+	return func(httpSink *HttpSink) {
+		httpSink.circuitEnabled = true
+		httpSink.circuitMaxFailures = maxFailures
+		httpSink.circuitState = circuitStateClosed
+		httpSink.circuitTimeout = timeout
+	}
+}
 func WithHttpDedupWindow(window time.Duration) httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.dedupWindow = window
@@ -88,6 +108,11 @@ func WithHttpDisabledBatch() httpParams {
 	return func(httpSink *HttpSink) {
 		httpSink.batchSize = 0
 		httpSink.batchTicker = nil
+	}
+}
+func WithHttpDisabledCircuit() httpParams {
+	return func(httpSink *HttpSink) {
+		httpSink.circuitEnabled = false
 	}
 }
 func WithHttpDisableKeepAlive() httpParams {
@@ -200,6 +225,13 @@ func (httpSink *HttpSink) WriteWithAttributes(attributes writeAttributes, fields
 	return httpSink.sendWithRetry(body)
 }
 
+// Приватные константы
+const (
+	circuitStateClosed = iota
+	circuitStateOpen
+	circuitStateHalfOpen
+)
+
 // Приватные структуры
 type rateLimitError struct {
 	retryAfter time.Duration
@@ -279,6 +311,64 @@ func (httpSink *HttpSink) batchLoop() {
 			httpSink.flush()
 			return
 		}
+	}
+}
+func (httpSink *HttpSink) circuitAllow() bool {
+	if !httpSink.circuitEnabled {
+		return true
+	}
+	state := atomic.LoadInt32(&httpSink.circuitState)
+	switch state {
+	case circuitStateClosed:
+		return true
+	case circuitStateOpen:
+		lastFailure := httpSink.circuitLastFailure.Load()
+		if time.Now().UnixNano()-lastFailure > httpSink.circuitTimeout.Nanoseconds() {
+			httpSink.circuitMutex.Lock()
+			if atomic.LoadInt32(&httpSink.circuitState) == circuitStateOpen {
+				atomic.StoreInt32(&httpSink.circuitState, circuitStateHalfOpen)
+			}
+			httpSink.circuitMutex.Unlock()
+			return true
+		}
+		return false
+	case circuitStateHalfOpen:
+		return false
+	default:
+		return true
+	}
+}
+func (httpSink *HttpSink) circuitRecord(success bool) {
+	if !httpSink.circuitEnabled {
+		return
+	}
+	state := atomic.LoadInt32(&httpSink.circuitState)
+	switch state {
+	case circuitStateClosed:
+		if !success {
+			failures := atomic.AddInt32(&httpSink.circuitFailures, 1)
+			httpSink.circuitLastFailure.Store(time.Now().UnixNano())
+			if int(failures) >= httpSink.circuitMaxFailures {
+				httpSink.circuitMutex.Lock()
+				if atomic.LoadInt32(&httpSink.circuitState) == circuitStateClosed {
+					atomic.StoreInt32(&httpSink.circuitState, circuitStateOpen)
+				}
+				httpSink.circuitMutex.Unlock()
+			}
+		} else {
+			atomic.StoreInt32(&httpSink.circuitFailures, 0)
+		}
+	case circuitStateHalfOpen:
+		httpSink.circuitMutex.Lock()
+		defer httpSink.circuitMutex.Unlock()
+		if success {
+			atomic.StoreInt32(&httpSink.circuitState, circuitStateClosed)
+			atomic.StoreInt32(&httpSink.circuitFailures, 0)
+		} else {
+			atomic.StoreInt32(&httpSink.circuitState, circuitStateOpen)
+			httpSink.circuitLastFailure.Store(time.Now().UnixNano())
+		}
+	case circuitStateOpen:
 	}
 }
 func (httpSink *HttpSink) flush() error {
@@ -362,7 +452,11 @@ func (httpSink *HttpSink) send(body []byte) error {
 func (httpSink *HttpSink) sendWithRetry(body []byte) (int, error) {
 	var lastErr error
 	for i := 0; i <= httpSink.retryMax; i++ {
+		if !httpSink.circuitAllow() {
+			return 0, fmt.Errorf("circuit breaker is open")
+		}
 		err := httpSink.send(body)
+		httpSink.circuitRecord(err == nil)
 		if err == nil {
 			return len(body), nil
 		}
