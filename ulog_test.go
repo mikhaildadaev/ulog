@@ -798,6 +798,35 @@ func TestSinkFactory_Telegram(t *testing.T) {
 	}
 	sink.Sync()
 }
+func TestSinkFactory_Tempo(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var trace TempoTrace
+		json.NewDecoder(r.Body).Decode(&trace)
+		if trace.Duration != 100 {
+			t.Error("wrong duration")
+		}
+		if trace.Name != "test" {
+			t.Error("wrong name")
+		}
+		if trace.SpanID != "def" {
+			t.Error("wrong span_id")
+		}
+		if trace.TraceID != "abc" {
+			t.Error("wrong trace_id")
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewTempoSink(server.URL)
+	fields := []Field{
+		String("trace_id", "abc"),
+		String("span_id", "def"),
+		String("name", "test"),
+		Int64("duration", 100),
+	}
+	sink.WriteWithAttributes(writeAttributes{typeData: DataTrace}, fields)
+	sink.Sync()
+}
 func TestSinkFactory_Wechat(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
