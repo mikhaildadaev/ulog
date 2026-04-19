@@ -45,6 +45,13 @@ type TempoTrace struct {
 	SpanID     string         `json:"span_id"`
 }
 type TempoSink = HttpSink
+type WechatData struct {
+	Content             string   `json:"content"`
+	MsgType             string   `json:"msgtype"`
+	MentionedList       []string `json:"mentioned_list,omitempty"`
+	MentionedMobileList []string `json:"mentioned_mobile_list,omitempty"`
+}
+type WechatSink = HttpSink
 
 // Публичные конструкторы
 func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) *HttpSink {
@@ -132,5 +139,21 @@ func NewTempoSink(endPoint string, params ...httpParams) *HttpSink {
 			return json.Marshal(trace)
 		}),
 		WithHttpHeader("Content-Type", "application/json"),
+	}, params...)...)
+}
+func NewWechatSink(endPoint string, params ...httpParams) *HttpSink {
+	return NewHttpSink(endPoint, append([]httpParams{
+		WithHttpFilterData(DataLog),
+		WithHttpFilterLevel(LevelError),
+		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
+			content := getLogMessage(fields)
+			wechatData := WechatData{
+				MsgType: "markdown",
+				Content: content,
+			}
+			return json.Marshal(wechatData)
+		}),
+		WithHttpHeader("Content-Type", "application/json"),
+		WithHttpMethod("POST"),
 	}, params...)...)
 }
