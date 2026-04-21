@@ -183,5 +183,5 @@ go test -race ./...
 
 ## Roadmap
 
-- [+] **More `io.Writer` implementations** – Discord, Prometheus, Slack, Telegram, Tempo, Wechat
-- [.] **More `io.Writer` implementations** – Elasticsearch, Loki, OpenTelemetry
+- [+] **More `io.Writer` implementations** – Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, Wechat
+- [.] **More `io.Writer` implementations** – OpenTelemetry
