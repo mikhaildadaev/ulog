@@ -313,8 +313,20 @@ func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
 }
 
 // Приватные функции
-func getLevel(level TypeLevel) string {
-	switch level {
+func getData(typeData TypeData) string {
+	switch typeData {
+	case DataLog:
+		return "LOG"
+	case DataMetric:
+		return "METRIC"
+	case DataTrace:
+		return "TRACE"
+	default:
+		return "UNKNOWN"
+	}
+}
+func getLevel(typeLevel TypeLevel) string {
+	switch typeLevel {
 	case LevelDebug:
 		return "debug"
 	case LevelInfo:
