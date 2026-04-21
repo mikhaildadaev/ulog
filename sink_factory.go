@@ -16,11 +16,6 @@ type DiscordData struct {
 	UserName  string `json:"username,omitempty"`
 }
 type DiscordSink = HttpSink
-type PrometheusData struct {
-	Labels map[string]string `json:"labels,omitempty"`
-	Name   string            `json:"name"`
-	Value  float64           `json:"value"`
-}
 type LokiData struct {
 	Streams []struct {
 		Stream map[string]string `json:"stream"`
@@ -28,6 +23,11 @@ type LokiData struct {
 	} `json:"streams"`
 }
 type LokiSink = HttpSink
+type PrometheusData struct {
+	Labels map[string]string `json:"labels,omitempty"`
+	Name   string            `json:"name"`
+	Value  float64           `json:"value"`
+}
 type PrometheusSink = HttpSink
 type SlackData struct {
 	Channel   string `json:"channel,omitempty"`
