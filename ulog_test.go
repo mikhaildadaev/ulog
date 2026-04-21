@@ -696,6 +696,74 @@ func TestSinkFactory_Discord(t *testing.T) {
 	}
 	sink.Sync()
 }
+func TestSinkFactory_Loki(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Error("wrong method")
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Error("wrong Content-Type")
+		}
+		var data LokiData
+		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			t.Errorf("failed to decode JSON: %v", err)
+		}
+		if len(data.Streams) == 0 {
+			t.Error("expected at least one stream")
+			return
+		}
+		stream := data.Streams[0]
+		if stream.Stream["app"] != "test-app" {
+			t.Errorf("wrong app label: got '%s', want 'test-app'", stream.Stream["app"])
+		}
+		if stream.Stream["env"] != "test" {
+			t.Errorf("wrong env label: got '%s', want 'test'", stream.Stream["env"])
+		}
+		if stream.Stream["level"] != "error" {
+			t.Errorf("wrong level label: got '%s', want 'error'", stream.Stream["level"])
+		}
+		if stream.Stream["trace_id"] != "abc-123" {
+			t.Errorf("wrong trace_id label: got '%s', want 'abc-123'", stream.Stream["trace_id"])
+		}
+		if len(stream.Values) == 0 {
+			t.Error("expected at least one value")
+			return
+		}
+		value := stream.Values[0]
+		if len(value) != 2 {
+			t.Errorf("expected [timestamp, logLine], got %v", value)
+			return
+		}
+		if _, err := strconv.ParseInt(value[0], 10, 64); err != nil {
+			t.Errorf("timestamp should be numeric: %s", value[0])
+		}
+		if !strings.Contains(value[1], "test error message") {
+			t.Errorf("log line should contain message: %s", value[1])
+		}
+		if !strings.Contains(value[1], "user_id") || !strings.Contains(value[1], "12345") {
+			t.Errorf("log line should contain extra fields: %s", value[1])
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+	sink := NewLokiSink(server.URL, map[string]string{
+		"app": "test-app",
+		"env": "test",
+	})
+	fields := []Field{
+		String("message", "test error message"),
+		String("user_id", "12345"),
+		String("trace_id", "abc-123"),
+	}
+	_, err := sink.WriteWithAttributes(
+		writeAttributes{typeLevel: LevelError, typeData: DataLog},
+		fields,
+	)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	sink.Sync()
+}
 func TestSinkFactory_Prometheus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "text/plain" {
@@ -800,7 +868,7 @@ func TestSinkFactory_Telegram(t *testing.T) {
 }
 func TestSinkFactory_Tempo(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var trace TempoTrace
+		var trace TempoData
 		json.NewDecoder(r.Body).Decode(&trace)
 		if trace.Duration != 100 {
 			t.Error("wrong duration")
