@@ -117,7 +117,6 @@ func NewLokiSink(endPoint string, labels map[string]string, params ...httpParams
 				},
 			},
 		}
-
 		return json.Marshal(lokiData)
 	}
 	fullURL := strings.TrimSuffix(endPoint, "/") + "/loki/api/v1/push"
