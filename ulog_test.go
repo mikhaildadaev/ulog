@@ -801,7 +801,7 @@ func TestSinkFactory_Loki(t *testing.T) {
 		if stream.Stream["env"] != "test" {
 			t.Errorf("wrong env label: got '%s', want 'test'", stream.Stream["env"])
 		}
-		if stream.Stream["level"] != "error" {
+		if stream.Stream["level"] != "ERROR" {
 			t.Errorf("wrong level label: got '%s', want 'error'", stream.Stream["level"])
 		}
 		if stream.Stream["trace_id"] != "abc-123" {
