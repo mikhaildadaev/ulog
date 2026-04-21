@@ -16,6 +16,15 @@ type DiscordData struct {
 	UserName  string `json:"username,omitempty"`
 }
 type DiscordSink = HttpSink
+type KafkaData struct {
+	Headers   map[string]string `json:"headers,omitempty"`
+	Key       string            `json:"key,omitempty"`
+	Partition *int32            `json:"partition,omitempty"`
+	Timestamp time.Time         `json:"timestamp"`
+	Topic     string            `json:"topic,omitempty"`
+	Value     json.RawMessage   `json:"value"`
+}
+type KafkaSink = HttpSink
 type LokiData struct {
 	Streams []struct {
 		Stream map[string]string `json:"stream"`
@@ -76,6 +85,55 @@ func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) 
 			return json.Marshal(discordData)
 		}),
 		WithHttpHeader("Content-Type", "application/json"),
+		WithHttpMethod("POST"),
+	}, params...)...)
+}
+func NewKafkaSink(restProxyURL, topic string, params ...httpParams) *HttpSink {
+	endPoint := strings.TrimRight(restProxyURL, "/") + "/topics/" + topic
+	return NewHttpSink(endPoint, append([]httpParams{
+		WithHttpBatch(100, 5*time.Second),
+		WithHttpFilterData(DataLog),
+		WithHttpFilterLevel(LevelInfo),
+		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
+			valueData := make(map[string]any)
+			for _, field := range fields {
+				valueData[field.nameKey] = getLogField(field)
+			}
+			valueData["_level"] = getLevel(attributes.typeLevel)
+			valueData["_type"] = getData(attributes.typeData)
+			valueData["_timestamp"] = time.Now().Format(time.RFC3339Nano)
+			valueJSON, err := json.Marshal(valueData)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal value: %w", err)
+			}
+			key := ""
+			priorities := []string{"trace_id", "node_id", "user_id", "request_id"}
+			for _, k := range priorities {
+				for _, field := range fields {
+					if field.nameKey == k && field.typeValue == FieldString {
+						key = field.valueString
+						break
+					}
+				}
+				if key != "" {
+					break
+				}
+			}
+			records := struct {
+				Records []KafkaData `json:"records"`
+			}{
+				Records: []KafkaData{
+					{
+						Key:       key,
+						Value:     valueJSON,
+						Timestamp: time.Now(),
+					},
+				},
+			}
+			return json.Marshal(records)
+		}),
+		WithHttpHeader("Content-Type", "application/vnd.kafka.json.v2+json"),
+		WithHttpHeader("Accept", "application/vnd.kafka.v2+json"),
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
