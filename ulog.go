@@ -328,17 +328,17 @@ func getData(typeData TypeData) string {
 func getLevel(typeLevel TypeLevel) string {
 	switch typeLevel {
 	case LevelDebug:
-		return "debug"
+		return "DEBUG"
 	case LevelInfo:
-		return "info"
+		return "INFO"
 	case LevelWarn:
-		return "warn"
+		return "WARN"
 	case LevelError:
-		return "error"
+		return "ERROR"
 	case LevelFatal:
-		return "fatal"
+		return "FATAL"
 	default:
-		return "unknown"
+		return "UNKNOWN"
 	}
 }
 func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
