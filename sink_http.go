@@ -271,41 +271,41 @@ func defaultformatter(attributes writeAttributes, fields []Field) ([]byte, error
 	formatJson(buf, attributes, fields)
 	return buf.Bytes(), nil
 }
-func getLogField(f Field) interface{} {
-	switch f.typeValue {
+func getLogField(field Field) any {
+	switch field.typeValue {
 	case FieldString:
-		return f.valueString
+		return field.valueString
 	case FieldInt:
-		return f.valueInt
+		return field.valueInt
 	case FieldInt64:
-		return f.valueInt64
+		return field.valueInt64
 	case FieldFloat64:
-		return f.valueFloat64
+		return field.valueFloat64
 	case FieldBool:
-		return f.valueBool
+		return field.valueBool
 	case FieldDuration:
-		return f.valueDuration.String()
+		return field.valueDuration.String()
 	case FieldTime:
-		return f.valueTime.Format(time.RFC3339Nano)
+		return field.valueTime.Format(time.RFC3339Nano)
 	case FieldStrings:
-		return f.valueStrings
+		return field.valueStrings
 	case FieldInts:
-		return f.valueInts
+		return field.valueInts
 	case FieldInts64:
-		return f.valueInts64
+		return field.valueInts64
 	case FieldFloats64:
-		return f.valueFloats64
+		return field.valueFloats64
 	case FieldBools:
-		return f.valueBools
+		return field.valueBools
 	case FieldDurations:
-		result := make([]string, len(f.valueDurations))
-		for i, d := range f.valueDurations {
+		result := make([]string, len(field.valueDurations))
+		for i, d := range field.valueDurations {
 			result[i] = d.String()
 		}
 		return result
 	case FieldTimes:
-		result := make([]string, len(f.valueTimes))
-		for i, t := range f.valueTimes {
+		result := make([]string, len(field.valueTimes))
+		for i, t := range field.valueTimes {
 			result[i] = t.Format(time.RFC3339Nano)
 		}
 		return result
