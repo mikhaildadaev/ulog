@@ -313,6 +313,22 @@ func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
 }
 
 // Приватные функции
+func getLevel(level TypeLevel) string {
+	switch level {
+	case LevelDebug:
+		return "debug"
+	case LevelInfo:
+		return "info"
+	case LevelWarn:
+		return "warn"
+	case LevelError:
+		return "error"
+	case LevelFatal:
+		return "fatal"
+	default:
+		return "unknown"
+	}
+}
 func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 	unixSec := timestamp.Unix()
 	unixNano := timestamp.UnixNano()
