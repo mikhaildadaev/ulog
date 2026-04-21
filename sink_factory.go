@@ -44,7 +44,7 @@ type TelegramData struct {
 	ParseMode           string `json:"parse_mode,omitempty"`
 }
 type TelegramSink = HttpSink
-type TempoTrace struct {
+type TempoData struct {
 	Attributes map[string]any `json:"attributes,omitempty"`
 	Duration   int64          `json:"duration_ms"`
 	Name       string         `json:"name"`
@@ -188,7 +188,7 @@ func NewTempoSink(endPoint string, params ...httpParams) *HttpSink {
 	return NewHttpSink(endPoint, append([]httpParams{
 		WithHttpFilterData(DataTrace),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			tempoData := TempoTrace{
+			tempoData := TempoData{
 				Duration:  getTraceDuration(fields),
 				Name:      getTraceName(fields),
 				SpanID:    getTraceSpanID(fields),
