@@ -27,6 +27,7 @@ type HttpSink struct {
 	circuitTimeout     time.Duration
 	client             *http.Client
 	dedupCache         sync.Map
+	dedupStopChan      chan struct{}
 	dedupTTL           time.Duration
 	dedupWindow        time.Duration
 	endPoint           string
@@ -63,17 +64,21 @@ func NewHttpSink(endPoint string, params ...httpParams) *HttpSink {
 				DisableKeepAlives:   false,
 			},
 		},
-		endPoint:     endPoint,
-		filterData:   TypeData(defaultType),
-		filterLevel:  LevelError,
-		formatter:    defaultformatter,
-		headers:      make(map[string]string),
-		method:       "POST",
-		retryBackoff: time.Second,
-		retryMax:     0,
+		dedupStopChan: make(chan struct{}),
+		endPoint:      endPoint,
+		filterData:    TypeData(defaultType),
+		filterLevel:   LevelError,
+		formatter:     defaultformatter,
+		headers:       make(map[string]string),
+		method:        "POST",
+		retryBackoff:  time.Second,
+		retryMax:      0,
 	}
 	for _, param := range params {
 		param(httpSink)
+	}
+	if httpSink.dedupWindow > 0 {
+		go httpSink.cleanupDedupCache()
 	}
 	return httpSink
 }
@@ -166,6 +171,9 @@ func WithHttpTimeout(timeout time.Duration) httpParams {
 
 // Публичные методы
 func (httpSink *HttpSink) Close() error {
+	if httpSink.dedupStopChan != nil {
+		close(httpSink.dedupStopChan)
+	}
 	httpSink.batchMutex.Lock()
 	batchSize := httpSink.batchSize
 	ticker := httpSink.batchTicker
@@ -347,11 +355,16 @@ func (httpSink *HttpSink) circuitRecord(success bool) {
 				httpSink.circuitMutex.Lock()
 				if atomic.LoadInt32(&httpSink.circuitState) == circuitStateClosed {
 					atomic.StoreInt32(&httpSink.circuitState, circuitStateOpen)
+					atomic.StoreInt32(&httpSink.circuitFailures, 0)
 				}
 				httpSink.circuitMutex.Unlock()
 			}
 		} else {
-			atomic.StoreInt32(&httpSink.circuitFailures, 0)
+			httpSink.circuitMutex.Lock()
+			if atomic.LoadInt32(&httpSink.circuitState) == circuitStateClosed {
+				atomic.StoreInt32(&httpSink.circuitFailures, 0)
+			}
+			httpSink.circuitMutex.Unlock()
 		}
 	case circuitStateHalfOpen:
 		httpSink.circuitMutex.Lock()
@@ -364,6 +377,24 @@ func (httpSink *HttpSink) circuitRecord(success bool) {
 			httpSink.circuitLastFailure.Store(time.Now().UnixNano())
 		}
 	case circuitStateOpen:
+	}
+}
+func (httpSink *HttpSink) cleanupDedupCache() {
+	ticker := time.NewTicker(httpSink.dedupWindow)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			now := time.Now()
+			httpSink.dedupCache.Range(func(key, value any) bool {
+				if now.Sub(value.(time.Time)) > httpSink.dedupWindow {
+					httpSink.dedupCache.Delete(key)
+				}
+				return true
+			})
+		case <-httpSink.dedupStopChan:
+			return
+		}
 	}
 }
 func (httpSink *HttpSink) flush() error {
