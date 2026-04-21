@@ -246,9 +246,16 @@ func (fileSink *FileSink) getCompressFile(filename string) error {
 	}
 	gzName := filename + ".gz"
 	if err = os.Rename(tmpName, gzName); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
-	return os.Remove(filename)
+	err = os.Remove(filename)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }
 func (fileSink *FileSink) getRotateFile() error {
 	if !fileSink.rotating.CompareAndSwap(false, true) {
