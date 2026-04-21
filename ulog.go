@@ -31,7 +31,7 @@ type TypeTheme int
 // Публичные константы
 const (
 	Author  = "Mikhail Dadaev"
-	Version = "1.26.8"
+	Version = "1.26.9"
 )
 const (
 	DataLog TypeData = iota
