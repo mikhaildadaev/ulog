@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -21,6 +22,8 @@ type FileSink struct {
 	maxBackups  int
 	maxSize     int64
 	mutex       sync.Mutex
+	rotateMutex sync.Mutex
+	rotating    atomic.Bool
 	wg          sync.WaitGroup
 }
 
@@ -89,11 +92,17 @@ func (fileSink *FileSink) Sync() error {
 }
 func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 	fileSink.mutex.Lock()
-	defer fileSink.mutex.Unlock()
-	if fileSink.currentSize+int64(len(p)) > fileSink.maxSize {
+	needRotate := fileSink.currentSize+int64(len(p)) > fileSink.maxSize
+	fileSink.mutex.Unlock()
+	if needRotate {
 		if err := fileSink.getRotateFile(); err != nil {
 			return 0, err
 		}
+	}
+	fileSink.mutex.Lock()
+	defer fileSink.mutex.Unlock()
+	if fileSink.file == nil {
+		return 0, fmt.Errorf("file is nil")
 	}
 	n, err = fileSink.file.Write(p)
 	if err == nil {
@@ -102,8 +111,6 @@ func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 	return n, err
 }
 func (fileSink *FileSink) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
-	fileSink.mutex.Lock()
-	defer fileSink.mutex.Unlock()
 	bufData := dataPool.Get().(*bytes.Buffer)
 	bufData.Reset()
 	defer dataPool.Put(bufData)
@@ -116,10 +123,18 @@ func (fileSink *FileSink) WriteWithAttributes(attributes writeAttributes, fields
 		return 0, fmt.Errorf("unsupported format: %v", attributes.typeFormat)
 	}
 	data := bufData.Bytes()
-	if fileSink.currentSize+int64(len(data)) > fileSink.maxSize {
+	fileSink.mutex.Lock()
+	needRotate := fileSink.currentSize+int64(len(data)) > fileSink.maxSize
+	fileSink.mutex.Unlock()
+	if needRotate {
 		if err := fileSink.getRotateFile(); err != nil {
 			return 0, err
 		}
+	}
+	fileSink.mutex.Lock()
+	defer fileSink.mutex.Unlock()
+	if fileSink.file == nil {
+		return 0, fmt.Errorf("file is nil")
 	}
 	n, err = fileSink.file.Write(data)
 	if err == nil {
@@ -229,9 +244,16 @@ func (fileSink *FileSink) getCompressFile(filename string) error {
 	return os.Remove(filename)
 }
 func (fileSink *FileSink) getRotateFile() error {
-	if err := fileSink.file.Close(); err != nil {
-		return err
+	if !fileSink.rotating.CompareAndSwap(false, true) {
+		return nil
 	}
+	defer fileSink.rotating.Store(false)
+	fileSink.mutex.Lock()
+	if fileSink.file != nil {
+		fileSink.file.Close()
+		fileSink.file = nil
+	}
+	fileSink.mutex.Unlock()
 	timestamp := time.Now().Format("20060102-150405")
 	backupName := fileSink.getBackupName(timestamp)
 	if err := os.Rename(fileSink.filename, backupName); err != nil {
@@ -244,12 +266,14 @@ func (fileSink *FileSink) getRotateFile() error {
 			fmt.Fprintf(defaultWriterErr, "failed to compress %s: %v\n", backupName, err)
 		}
 	}()
-	file, err := os.OpenFile(fileSink.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	newFile, err := os.OpenFile(fileSink.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	fileSink.file = file
+	fileSink.mutex.Lock()
+	fileSink.file = newFile
 	fileSink.currentSize = 0
+	fileSink.mutex.Unlock()
 	fileSink.wg.Add(1)
 	go func() {
 		defer fileSink.wg.Done()
