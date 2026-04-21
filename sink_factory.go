@@ -2,6 +2,7 @@ package ulog
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,13 @@ type PrometheusData struct {
 	Name   string            `json:"name"`
 	Value  float64           `json:"value"`
 }
+type LokiData struct {
+	Streams []struct {
+		Stream map[string]string `json:"stream"`
+		Values [][]string        `json:"values"`
+	} `json:"streams"`
+}
+type LokiSink = HttpSink
 type PrometheusSink = HttpSink
 type SlackData struct {
 	Channel   string `json:"channel,omitempty"`
@@ -67,6 +75,55 @@ func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) 
 			}
 			return json.Marshal(discordData)
 		}),
+		WithHttpHeader("Content-Type", "application/json"),
+		WithHttpMethod("POST"),
+	}, params...)...)
+}
+func NewLokiSink(endPoint string, labels map[string]string, params ...httpParams) *HttpSink {
+	lokiFormatter := func(attributes writeAttributes, fields []Field) ([]byte, error) {
+		message := getLogMessage(fields)
+		level := getLevel(attributes.typeLevel)
+		streamLabels := make(map[string]string)
+		for k, v := range labels {
+			streamLabels[k] = v
+		}
+		streamLabels["level"] = level
+		if traceID := getTraceID(fields); traceID != "" {
+			streamLabels["trace_id"] = traceID
+		}
+		extraFields := make(map[string]interface{})
+		for _, f := range fields {
+			if f.nameKey == "message" {
+				continue
+			}
+			extraFields[f.nameKey] = getLogField(f)
+		}
+		var logLine string
+		if len(extraFields) > 0 {
+			extraJSON, _ := json.Marshal(extraFields)
+			logLine = fmt.Sprintf("%s %s", message, string(extraJSON))
+		} else {
+			logLine = message
+		}
+		timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
+		lokiData := LokiData{
+			Streams: []struct {
+				Stream map[string]string `json:"stream"`
+				Values [][]string        `json:"values"`
+			}{
+				{
+					Stream: streamLabels,
+					Values: [][]string{{timestamp, logLine}},
+				},
+			},
+		}
+
+		return json.Marshal(lokiData)
+	}
+	fullURL := strings.TrimSuffix(endPoint, "/") + "/loki/api/v1/push"
+	return NewHttpSink(fullURL, append([]httpParams{
+		WithHttpFilterData(DataLog),
+		WithHttpFormatter(lokiFormatter),
 		WithHttpHeader("Content-Type", "application/json"),
 		WithHttpMethod("POST"),
 	}, params...)...)
