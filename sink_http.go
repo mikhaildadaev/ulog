@@ -26,6 +26,7 @@ type HttpSink struct {
 	circuitState       int32
 	circuitTimeout     time.Duration
 	client             *http.Client
+	closed             bool
 	dedupCache         sync.Map
 	dedupStopChan      chan struct{}
 	dedupWindow        time.Duration
@@ -35,6 +36,7 @@ type HttpSink struct {
 	formatter          func(attributes writeAttributes, fields []Field) ([]byte, error)
 	headers            map[string]string
 	method             string
+	mutex              sync.Mutex
 	retryBackoff       time.Duration
 	retryMax           int
 	sampleCounter      int32
@@ -42,6 +44,7 @@ type HttpSink struct {
 	sampleMutex        sync.Mutex
 	sampleRate         int32
 	sampleWindow       time.Duration
+	wg                 sync.WaitGroup
 }
 
 // Публичные конструкторы
@@ -170,21 +173,40 @@ func WithHttpTimeout(timeout time.Duration) httpParams {
 
 // Публичные методы
 func (httpSink *HttpSink) Close() error {
+	httpSink.mutex.Lock()
+	if httpSink.closed {
+		httpSink.mutex.Unlock()
+		return nil
+	}
+	httpSink.closed = true
+	httpSink.mutex.Unlock()
 	if httpSink.batchSize > 0 {
-		httpSink.flush()
+		httpSink.wg.Add(1)
+		go func() {
+			defer httpSink.wg.Done()
+			httpSink.flush()
+		}()
 	}
 	if httpSink.dedupStopChan != nil {
 		close(httpSink.dedupStopChan)
 	}
 	httpSink.batchMutex.Lock()
-	batchSize := httpSink.batchSize
 	ticker := httpSink.batchTicker
 	httpSink.batchMutex.Unlock()
-	if batchSize > 0 {
+	if httpSink.batchSize > 0 {
 		close(httpSink.batchChan)
 		if ticker != nil {
 			ticker.Stop()
 		}
+	}
+	done := make(chan struct{})
+	go func() {
+		httpSink.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
 	}
 	httpSink.client.CloseIdleConnections()
 	return nil
