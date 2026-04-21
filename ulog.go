@@ -339,7 +339,6 @@ func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 	}
 	millis := (unixNano / 1_000_000) % 1000
 	micros := (unixNano / 1_000) % 1000
-	nanos := unixNano % 1_000_000
 	dataBuf.WriteByte('.')
 	dataBuf.WriteByte(byte('0' + (millis/100)%10))
 	dataBuf.WriteByte(byte('0' + (millis/10)%10))
@@ -347,9 +346,6 @@ func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 	dataBuf.WriteByte(byte('0' + (micros/100)%10))
 	dataBuf.WriteByte(byte('0' + (micros/10)%10))
 	dataBuf.WriteByte(byte('0' + micros%10))
-	dataBuf.WriteByte(byte('0' + (nanos/100)%10))
-	dataBuf.WriteByte(byte('0' + (nanos/10)%10))
-	dataBuf.WriteByte(byte('0' + nanos%10))
 	dataBuf.WriteString(timeCacheTZ)
 }
 func getTypeData(buf *bytes.Buffer, typeData TypeData) {
