@@ -98,11 +98,15 @@ func (fileSink *FileSink) Write(p []byte) (n int, err error) {
 			return 0, err
 		}
 	}
-	fileSink.mutex.Lock()
-	defer fileSink.mutex.Unlock()
-	if fileSink.file == nil {
-		return 0, fmt.Errorf("file is nil")
+	for {
+		fileSink.mutex.Lock()
+		if fileSink.file != nil {
+			break
+		}
+		fileSink.mutex.Unlock()
+		time.Sleep(time.Microsecond)
 	}
+	defer fileSink.mutex.Unlock()
 	n, err = fileSink.file.Write(p)
 	if err == nil {
 		fileSink.currentSize += int64(n)
@@ -130,11 +134,15 @@ func (fileSink *FileSink) WriteWithAttributes(attributes writeAttributes, fields
 			return 0, err
 		}
 	}
-	fileSink.mutex.Lock()
-	defer fileSink.mutex.Unlock()
-	if fileSink.file == nil {
-		return 0, fmt.Errorf("file is nil")
+	for {
+		fileSink.mutex.Lock()
+		if fileSink.file != nil {
+			break
+		}
+		fileSink.mutex.Unlock()
+		time.Sleep(time.Microsecond)
 	}
+	defer fileSink.mutex.Unlock()
 	n, err = fileSink.file.Write(data)
 	if err == nil {
 		fileSink.currentSize += int64(n)
