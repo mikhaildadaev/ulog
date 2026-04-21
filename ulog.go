@@ -268,8 +268,13 @@ var (
 			return new(bytes.Buffer)
 		},
 	}
-	osExit    = os.Exit
-	themeDark = colorTheme{
+	osExit          = os.Exit
+	timeCacheMu     sync.Mutex
+	timeCacheSec    int64
+	timeCachePrefix = make([]byte, 0, 32)
+	timeCacheTZ     string
+	timeOnce        sync.Once
+	themeDark       = colorTheme{
 		caller:      colorDarkBlue,
 		data:        colorDarkWhite,
 		prefixDebug: colorDarkCyan + "[DEBUG]",
@@ -308,6 +313,45 @@ func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
 }
 
 // Приватные функции
+func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
+	unixSec := timestamp.Unix()
+	unixNano := timestamp.UnixNano()
+	if atomic.LoadInt64(&timeCacheSec) == unixSec {
+		dataBuf.Write(timeCachePrefix)
+	} else {
+		timeCacheMu.Lock()
+		if timeCacheSec != unixSec {
+			timeBuf := timePool.Get().([]byte)
+			timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05")
+			timeCachePrefix = timeCachePrefix[:0]
+			timeCachePrefix = append(timeCachePrefix, timeBuf...)
+			timePool.Put(timeBuf)
+			timeOnce.Do(func() {
+				tzBuf := timePool.Get().([]byte)
+				tzBuf = timestamp.AppendFormat(tzBuf[:0], "-07:00")
+				timeCacheTZ = string(tzBuf)
+				timePool.Put(tzBuf)
+			})
+			atomic.StoreInt64(&timeCacheSec, unixSec)
+		}
+		timeCacheMu.Unlock()
+		dataBuf.Write(timeCachePrefix)
+	}
+	millis := (unixNano / 1_000_000) % 1000
+	micros := (unixNano / 1_000) % 1000
+	nanos := unixNano % 1_000_000
+	dataBuf.WriteByte('.')
+	dataBuf.WriteByte(byte('0' + (millis/100)%10))
+	dataBuf.WriteByte(byte('0' + (millis/10)%10))
+	dataBuf.WriteByte(byte('0' + millis%10))
+	dataBuf.WriteByte(byte('0' + (micros/100)%10))
+	dataBuf.WriteByte(byte('0' + (micros/10)%10))
+	dataBuf.WriteByte(byte('0' + micros%10))
+	dataBuf.WriteByte(byte('0' + (nanos/100)%10))
+	dataBuf.WriteByte(byte('0' + (nanos/10)%10))
+	dataBuf.WriteByte(byte('0' + nanos%10))
+	dataBuf.WriteString(timeCacheTZ)
+}
 func getTypeData(buf *bytes.Buffer, typeData TypeData) {
 	switch typeData {
 	case 0:
@@ -407,10 +451,7 @@ func formatJsonPrefix(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
 }
 func formatJsonTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 	dataBuf.WriteString(`"time":"`)
-	timeBuf := timePool.Get().([]byte)
-	timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05.000000-07:00")
-	dataBuf.Write(timeBuf)
-	timePool.Put(timeBuf)
+	getTime(dataBuf, timestamp)
 	dataBuf.WriteByte('"')
 }
 func formatText(dataBuf *bytes.Buffer, attributes writeAttributes, fields []Field) {
@@ -457,10 +498,7 @@ func formatTextPrefix(dataBuf *bytes.Buffer, level TypeLevel, caller string, the
 	}
 }
 func formatTextTime(dataBuf *bytes.Buffer, timestamp time.Time) {
-	timeBuf := timePool.Get().([]byte)
-	timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05.000000-07:00")
-	dataBuf.Write(timeBuf)
-	timePool.Put(timeBuf)
+	getTime(dataBuf, timestamp)
 }
 func formatFieldValue(dataBuf *bytes.Buffer, field Field) {
 	switch field.typeValue {
