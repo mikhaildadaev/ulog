@@ -271,6 +271,48 @@ func defaultformatter(attributes writeAttributes, fields []Field) ([]byte, error
 	formatJson(buf, attributes, fields)
 	return buf.Bytes(), nil
 }
+func getLogField(f Field) interface{} {
+	switch f.typeValue {
+	case FieldString:
+		return f.valueString
+	case FieldInt:
+		return f.valueInt
+	case FieldInt64:
+		return f.valueInt64
+	case FieldFloat64:
+		return f.valueFloat64
+	case FieldBool:
+		return f.valueBool
+	case FieldDuration:
+		return f.valueDuration.String()
+	case FieldTime:
+		return f.valueTime.Format(time.RFC3339Nano)
+	case FieldStrings:
+		return f.valueStrings
+	case FieldInts:
+		return f.valueInts
+	case FieldInts64:
+		return f.valueInts64
+	case FieldFloats64:
+		return f.valueFloats64
+	case FieldBools:
+		return f.valueBools
+	case FieldDurations:
+		result := make([]string, len(f.valueDurations))
+		for i, d := range f.valueDurations {
+			result[i] = d.String()
+		}
+		return result
+	case FieldTimes:
+		result := make([]string, len(f.valueTimes))
+		for i, t := range f.valueTimes {
+			result[i] = t.Format(time.RFC3339Nano)
+		}
+		return result
+	default:
+		return nil
+	}
+}
 func getLogMessage(fields []Field) string {
 	for _, field := range fields {
 		if field.nameKey == "message" {
