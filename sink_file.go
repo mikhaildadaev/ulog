@@ -22,7 +22,6 @@ type FileSink struct {
 	maxBackups  int
 	maxSize     int64
 	mutex       sync.Mutex
-	rotateMutex sync.Mutex
 	rotating    atomic.Bool
 	wg          sync.WaitGroup
 }
