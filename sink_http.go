@@ -28,7 +28,6 @@ type HttpSink struct {
 	client             *http.Client
 	dedupCache         sync.Map
 	dedupStopChan      chan struct{}
-	dedupTTL           time.Duration
 	dedupWindow        time.Duration
 	endPoint           string
 	filterData         TypeData
@@ -171,6 +170,9 @@ func WithHttpTimeout(timeout time.Duration) httpParams {
 
 // Публичные методы
 func (httpSink *HttpSink) Close() error {
+	if httpSink.batchSize > 0 {
+		httpSink.flush()
+	}
 	if httpSink.dedupStopChan != nil {
 		close(httpSink.dedupStopChan)
 	}
