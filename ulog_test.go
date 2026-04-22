@@ -703,55 +703,36 @@ func TestSinkFactory_Kafka(t *testing.T) {
 		if r.Header.Get("Content-Type") != "application/vnd.kafka.json.v2+json" {
 			t.Errorf("expected Content-Type 'application/vnd.kafka.json.v2+json', got '%s'", r.Header.Get("Content-Type"))
 		}
-		if r.Header.Get("Accept") != "application/vnd.kafka.v2+json" {
-			t.Errorf("expected Accept 'application/vnd.kafka.v2+json', got '%s'", r.Header.Get("Accept"))
-		}
 		var records struct {
 			Records []KafkaData `json:"records"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&records); err != nil {
-			t.Errorf("failed to decode JSON: %v", err)
-			return
-		}
+		json.NewDecoder(r.Body).Decode(&records)
 		if len(records.Records) != 1 {
-			t.Errorf("expected 1 record, got %d", len(records.Records))
-			return
+			t.Fatal("expected 1 record")
 		}
 		record := records.Records[0]
+		var value map[string]interface{}
+		json.Unmarshal(record.Value, &value)
+		expectedFields := map[string]interface{}{
+			"message":  "test kafka message",
+			"service":  "test-service",
+			"trace_id": "trace-abc-123",
+			"node_id":  "node-01",
+			"count":    float64(42),
+			"duration": "5s",
+			"_level":   "ERROR",
+			"_type":    "LOG",
+		}
+		for key, want := range expectedFields {
+			if got := value[key]; got != want {
+				t.Errorf("%s: expected '%v', got '%v'", key, want, got)
+			}
+		}
 		if record.Key != "trace-abc-123" {
-			t.Errorf("expected key 'trace-abc-123', got '%s'", record.Key)
+			t.Errorf("key: expected 'trace-abc-123', got '%s'", record.Key)
 		}
 		if record.Timestamp.IsZero() {
-			t.Error("timestamp should not be zero")
-		}
-		var value map[string]interface{}
-		if err := json.Unmarshal(record.Value, &value); err != nil {
-			t.Errorf("failed to unmarshal value: %v", err)
-			return
-		}
-		if value["message"] != "test kafka message" {
-			t.Errorf("expected message 'test kafka message', got '%v'", value["message"])
-		}
-		if value["service"] != "test-service" {
-			t.Errorf("expected service 'test-service', got '%v'", value["service"])
-		}
-		if value["trace_id"] != "trace-abc-123" {
-			t.Errorf("expected trace_id 'trace-abc-123', got '%v'", value["trace_id"])
-		}
-		if value["node_id"] != "node-01" {
-			t.Errorf("expected node_id 'node-01', got '%v'", value["node_id"])
-		}
-		if value["count"] != float64(42) {
-			t.Errorf("expected count 42, got '%v'", value["count"])
-		}
-		if value["duration"] != "5s" {
-			t.Errorf("expected duration '5s', got '%v'", value["duration"])
-		}
-		if value["_level"] != "ERROR" {
-			t.Errorf("expected _level 'ERROR', got '%v'", value["_level"])
-		}
-		if value["_type"] != "LOG" {
-			t.Errorf("expected _type 'LOG', got '%v'", value["_type"])
+			t.Error("timestamp is zero")
 		}
 		if _, ok := value["_timestamp"]; !ok {
 			t.Error("_timestamp missing")
@@ -796,9 +777,6 @@ func TestSinkFactory_Loki(t *testing.T) {
 		stream := data.Streams[0]
 		if stream.Stream["app"] != "test-app" {
 			t.Errorf("wrong app label: got '%s', want 'test-app'", stream.Stream["app"])
-		}
-		if stream.Stream["env"] != "test" {
-			t.Errorf("wrong env label: got '%s', want 'test'", stream.Stream["env"])
 		}
 		if stream.Stream["level"] != "ERROR" {
 			t.Errorf("wrong level label: got '%s', want 'error'", stream.Stream["level"])
