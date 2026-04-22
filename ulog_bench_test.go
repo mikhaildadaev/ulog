@@ -411,6 +411,7 @@ func Benchmark_SinkHttp_Multi(b *testing.B) {
 		b.Run(format.name, func(b *testing.B) {
 			sink := NewHttpSink(server.URL,
 				WithHttpDisabledBatch(),
+				WithHttpDisabledCircuit(),
 				WithHttpFilterLevel(LevelDebug),
 			)
 			tee := NewTeeSink(sink)
@@ -452,6 +453,7 @@ func Benchmark_SinkHttp_Single(b *testing.B) {
 		b.Run(format.name, func(b *testing.B) {
 			sink := NewHttpSink(server.URL,
 				WithHttpDisabledBatch(),
+				WithHttpDisabledCircuit(),
 				WithHttpFilterLevel(LevelDebug),
 			)
 			tee := NewTeeSink(sink)
