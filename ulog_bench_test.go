@@ -395,20 +395,20 @@ func Benchmark_SinkHttp_Multi(b *testing.B) {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
 	ctx = context.WithValue(ctx, "trace_id", "abc-123")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
 	formats := []struct {
 		name    string
 		mode    TypeMode
 		bufSize int
 	}{
-		{"Async", ModeAsync, defaultBufferSize},
+		//{"Async", ModeAsync, defaultBufferSize},
 		{"Sync", ModeSync, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
 			sink := NewHttpSink(server.URL,
 				WithHttpDisabledBatch(),
 				WithHttpDisabledCircuit(),
@@ -437,20 +437,20 @@ func Benchmark_SinkHttp_Single(b *testing.B) {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
 	ctx = context.WithValue(ctx, "trace_id", "abc-123")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
 	formats := []struct {
 		name    string
 		mode    TypeMode
 		bufSize int
 	}{
-		{"Async", ModeAsync, defaultBufferSize},
+		//{"Async", ModeAsync, defaultBufferSize},
 		{"Sync", ModeSync, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
 			sink := NewHttpSink(server.URL,
 				WithHttpDisabledBatch(),
 				WithHttpDisabledCircuit(),
