@@ -661,9 +661,6 @@ func TestSink(t *testing.T) {
 		t.Errorf("Close() returned error: %v", err)
 	}
 }
-func TestSinkFactory(t *testing.T) {
-	// Дописать
-}
 func TestSinkFactory_Discord(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
