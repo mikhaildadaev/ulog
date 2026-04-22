@@ -87,27 +87,27 @@ go get github.com/mikhaildadaev/ulog
 
 |         Level        |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |----------------------|-------|------------|--------------|---------------|--------|
-| **DebugWithContext** | Async |       5.8M |       180.70 |           536 |      3 |
-| **DebugWithContext** |  Sync |       6.3M |       203.30 |	       536 |      3 |
-| **ErrorWithContext** | Async |       2.0M |       578.30 |          1922 |      6 |
-| **ErrorWithContext** |  Sync |       3.2M |       372.10 |          1794 |      5 |
-|  **InfoWithContext** | Async |       2.3M |       555.90 |	      1922 |      6 |
-|  **InfoWithContext** |  Sync |       3.7M |       326.70 |	      1794 |      5 |
-|  **WarnWithContext** | Async |       2.4M |       470.70 |          1922 |      6 |
-|  **WarnWithContext** |  Sync |       4.0M |       299.90 |          1794 |      5 |
+| **DebugWithContext** | Async |       5.8M |      180.700 |           536 |      3 |
+| **DebugWithContext** |  Sync |       6.3M |      203.300 |	       536 |      3 |
+| **ErrorWithContext** | Async |       2.0M |      578.300 |          1922 |      6 |
+| **ErrorWithContext** |  Sync |       3.2M |      372.100 |          1794 |      5 |
+|  **InfoWithContext** | Async |       2.3M |      555.900 |	      1922 |      6 |
+|  **InfoWithContext** |  Sync |       3.7M |      326.700 |	      1794 |      5 |
+|  **WarnWithContext** | Async |       2.4M |      470.700 |          1922 |      6 |
+|  **WarnWithContext** |  Sync |       4.0M |      299.900 |          1794 |      5 |
 
 #### Single Thread
 
 |         Level        |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |----------------------|-------|------------|--------------|---------------|--------|
-| **DebugWithContext** | Async |       2.1M |       567.10 |	       536 |      3 |
-| **DebugWithContext** |  Sync |       2.1M |       562.60 |	       536 |      3 |
-| **ErrorWithContext** | Async |       1.0M |      1045.00 |	      1922 |      6 |
-| **ErrorWithContext** |  Sync |       1.4M |       875.10 |	      1794 |	  5 |
-|  **InfoWithContext** | Async |       1.0M |      1006.00 |          1922 |      6 |
-|  **InfoWithContext** |  Sync |       1.5M |       810.00 |	      1794 |      5 |
-|  **WarnWithContext** | Async |       1.2M |       953.60 |          1922 |      6 |
-|  **WarnWithContext** |  Sync |       1.5M |       790.50 |	      1794 |      5 |
+| **DebugWithContext** | Async |       2.1M |      567.100 |	       536 |      3 |
+| **DebugWithContext** |  Sync |       2.1M |      562.600 |	       536 |      3 |
+| **ErrorWithContext** | Async |       1.0M |     1045.000 |	      1922 |      6 |
+| **ErrorWithContext** |  Sync |       1.4M |      875.100 |	      1794 |	  5 |
+|  **InfoWithContext** | Async |       1.0M |     1006.000 |          1922 |      6 |
+|  **InfoWithContext** |  Sync |       1.5M |      810.000 |	      1794 |      5 |
+|  **WarnWithContext** | Async |       1.2M |      953.600 |          1922 |      6 |
+|  **WarnWithContext** |  Sync |       1.5M |      790.500 |	      1794 |      5 |
 
 > **Note:**
 > - Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context.
@@ -116,19 +116,34 @@ go get github.com/mikhaildadaev/ulog
 > - Real-world performance will depend on your output destination (file, network, etc.).
 > - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
-### File Write with rotation
+### File Write with rotation (Local)
 
 |   Thread   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |------------|-------|------------|--------------|---------------|--------|
-|  **Multi** | Async |       1.0M |         6,90 |          1962 |      6 |
-|  **Multi** |  Sync |     152,7K |         7,80 |          1801 |      5 |
-| **Single** | Async |     969,7K |         6,00 |          1962 |      6 |
-| **Single** |  Sync |     234,4K |         5,50 |          1798 |      5 |
+|  **Multi** | Async |       1.0M |        6,900 |          1962 |      6 |
+|  **Multi** |  Sync |     152,7K |        7,800 |          1801 |      5 |
+| **Single** | Async |     969,7K |        6,000 |          1962 |      6 |
+| **Single** |  Sync |     234,4K |        5,500 |          1798 |      5 |
 
 > **Note:**
 > - Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context.
 > - Writes structured JSON logs to a **real file** with **atomic rotation** enabled (`WithFileMaxSize(15)`).
 > - Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks.
+> - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
+
+### HTTP Write Overhead (Local)
+
+|   Thread   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|------------|-------|------------|--------------|---------------|--------|
+|  **Multi** | Async |       1,0M |       27,000 |         8,400 |     82 |
+|  **Multi** |  Sync |      45,4K |       26,400 |         9,100 |     89 |
+| **Single** | Async |     555,2K |       42,100 |         9,100 |     82 |
+| **Single** |  Sync |      13,6K |       82,500 |         9,400 |     85 |
+
+> **Note:**
+> - Benchmarks use `httptest.Server` to simulate HTTP endpoint.
+> - Measures full overhead: JSON formatting, context extraction, HTTP request/response.
+> - *Multi* benchmarks use `b.RunParallel` to simulate real-world concurrent load.
 > - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
 ## Usage
