@@ -129,7 +129,6 @@ go get github.com/mikhaildadaev/ulog
 > - Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context.
 > - Writes structured JSON logs to a **real file** with **atomic rotation** enabled (`WithFileMaxSize(15)`).
 > - Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks.
-> - *Single Sync* is the recommended production configuration for best latency.
 > - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
 ## Usage
