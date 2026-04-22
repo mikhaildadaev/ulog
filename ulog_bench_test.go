@@ -3,6 +3,8 @@ package ulog
 import (
 	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -389,43 +391,83 @@ func Benchmark_SinkFile_Single(b *testing.B) {
 		})
 	}
 }
-
-//func Benchmark_SinkHttp_Multi(b *testing.B) {
-// Дописать
-//}
-//func Benchmark_SinkHttp_Single(b *testing.B) {
-//	ctx := context.Background()
-//	ctx = context.WithValue(ctx, "node_id", "123-abc")
-//	ctx = context.WithValue(ctx, "trace_id", "abc-123")
-//	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//		w.WriteHeader(http.StatusOK)
-//	}))
-//	defer server.Close()
-//	sink := NewHttpSink(server.URL,
-//		WithHttpDisabledBatch(),
-//		WithHttpFilterLevel(LevelDebug),
-//	)
-//	formats := []struct {
-//		name    string
-//		mode    TypeMode
-//		bufSize int
-//	}{
-//		{"Async", ModeAsync, defaultBufferSize},
-//		{"Sync", ModeSync, 0},
-//	}
-//	for _, format := range formats {
-//		b.Run(format.name, func(b *testing.B) {
-//			tee := NewTeeSink(sink)
-//			telemetry := NewTelemetry(
-//				WithExtractor("node_id", "trace_id"),
-//				WithFormat(FormatJson),
-//				WithLevel(LevelDebug),
-//			)
-//			telemetry.SetMode(format.mode, tee, format.bufSize)
-//			b.ResetTimer()
-//			for i := 0; i < b.N; i++ {
-//				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
-//			}
-//		})
-//	}
-//}
+func Benchmark_SinkHttp_Multi(b *testing.B) {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	formats := []struct {
+		name    string
+		mode    TypeMode
+		bufSize int
+	}{
+		{"Async", ModeAsync, defaultBufferSize},
+		{"Sync", ModeSync, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			sink := NewHttpSink(server.URL,
+				WithHttpDisabledBatch(),
+				WithHttpFilterLevel(LevelDebug),
+			)
+			tee := NewTeeSink(sink)
+			telemetry := NewTelemetry(
+				WithExtractor("node_id", "trace_id"),
+				WithFormat(FormatJson),
+				WithLevel(LevelDebug),
+			)
+			if b.N == 1 {
+				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
+			}
+			telemetry.SetMode(format.mode, tee, format.bufSize)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
+				}
+			})
+		})
+	}
+}
+func Benchmark_SinkHttp_Single(b *testing.B) {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "node_id", "123-abc")
+	ctx = context.WithValue(ctx, "trace_id", "abc-123")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	formats := []struct {
+		name    string
+		mode    TypeMode
+		bufSize int
+	}{
+		{"Async", ModeAsync, defaultBufferSize},
+		{"Sync", ModeSync, 0},
+	}
+	for _, format := range formats {
+		b.Run(format.name, func(b *testing.B) {
+			sink := NewHttpSink(server.URL,
+				WithHttpDisabledBatch(),
+				WithHttpFilterLevel(LevelDebug),
+			)
+			tee := NewTeeSink(sink)
+			telemetry := NewTelemetry(
+				WithExtractor("node_id", "trace_id"),
+				WithFormat(FormatJson),
+				WithLevel(LevelDebug),
+			)
+			if b.N == 1 {
+				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
+			}
+			telemetry.SetMode(format.mode, tee, format.bufSize)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
+			}
+		})
+	}
+}
