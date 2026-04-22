@@ -6,18 +6,20 @@
 
 # ULOG Toolkit
 
-A high-performance, zero-dependency structured telemetry for Go with JSON and Text outputs, colored themes, async writer, and full context support.
+A high-performance, zero-dependency **Observability 2.0 platform** for Go.  
+One API for **Logs**, **Metrics**, and **Traces** with production-ready integrations out of the box. 
+Structured, colored, async, context-aware.
 
 ## Features
 
-- **Blazing fast** – nanoseconds per log, minimal allocations;
-- **Two output formats** – JSON (machine) and TEXT (human) with colors;
-- **Async writer** – non‑blocking logging with configurable buffer;
-- **Context‑aware** – automatic field extraction (trace_id, user_id, etc.);
-- **Structured fields** – type‑safe fields: `String()`, `Int()`, `Time()`, `Error()`, etc.;
-- **Fully configurable** – functional options: `WithLevel`, `WithTheme`, `WithMode`, etc.;
-- **Zero dependencies** – only standard library;
-- **Tested** – race‑free, high coverage, benchmarks included.
+- **Observability 2.0** – One API for Logs, Metrics, and Traces
+- **Blazing fast** – 180-580 ns/op, 5.8 µs file write with rotation
+- **Atomic file rotation** – Non-blocking, gzip compression, auto-cleanup
+- **Circuit Breaker** – Production-ready HTTP sink with retry, dedup, sampling
+- **8 ready integrations** – Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat
+- **Context-aware** – Automatic `trace_id` extraction
+- **Colored output** – Dark/Light themes with auto-detection
+- **Zero dependencies** – Only standard library
 
 ## Installation
 
@@ -166,9 +168,18 @@ func main() {
 
 ## Limits
 
-- Async buffer: if full, log is written synchronously (no blocking)
-- Caller information: only for LevelDebug (performance)
-- Field keys: any string, will be JSON-escaped
+- **Async buffer**: if full, log is written synchronously (no blocking)
+- **Caller information**: only for `LevelDebug` (performance optimization)
+- **Field keys**: any string, will be JSON-escaped
+- **Time precision**: microseconds (6 digits) – sufficient for 99% of use cases, reduces allocations
+- **Deduplication cache**: in-memory only, cleared periodically (no persistence across restarts)
+- **Circuit Breaker**: resets on application restart (no persistent state)
+- **File rotation**: checks size on each write; rotation triggered by first write exceeding limit
+- **HTTP batching**: messages may be lost if application crashes before flush
+- **Kafka sink**: uses REST Proxy API (not native Kafka protocol) – requires Confluent REST Proxy
+- **Loki sink**: uses HTTP API (`/loki/api/v1/push`) – labels must be pre-configured
+- **Context extraction**: only works with values stored via `context.WithValue()`
+- **Zero dependencies**: by design; no external libraries for features like Kafka native protocol
 
 ## Tests and Benchmarks
 
@@ -183,5 +194,4 @@ go test -race ./...
 
 ## Roadmap
 
-- [+] **More `io.Writer` implementations** – Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, Wechat
-- [.] **More `io.Writer` implementations** – OpenTelemetry
+- **More `io.Writer` implementations** – OpenTelemetry
