@@ -83,29 +83,29 @@ go get github.com/mikhaildadaev/ulog
 
 ### Multi Thread
 
-|   Level   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-----------|-------|------------|--------------|---------------|--------|
-| **Debug** | Async |       5.8M |   	 180.70 |           536 |      3 |
-| **Debug** |  Sync |       6.3M |    	 203.30 |	        536 |      3 |
-| **Error** | Async |       2.0M |       578.30 |          1922 |      6 |
-| **Error** |  Sync |       3.2M |       372.10 |          1794 |      5 |
-|  **Info** | Async |       2.3M |       555.90 |	       1922 |      6 |
-|  **Info** |  Sync |       3.7M |       326.70 |	       1794 |      5 |
-|  **Warn** | Async |       2.4M |       470.70 |          1922 |      6 |
-|  **Warn** |  Sync |       4.0M |    	 299.90 |          1794 |      5 |
+|         Level        |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|----------------------|-------|------------|--------------|---------------|--------|
+| **DebugWithContext** | Async |       5.8M |       180.70 |           536 |      3 |
+| **DebugWithContext** |  Sync |       6.3M |       203.30 |	       536 |      3 |
+| **ErrorWithContext** | Async |       2.0M |       578.30 |          1922 |      6 |
+| **ErrorWithContext** |  Sync |       3.2M |       372.10 |          1794 |      5 |
+|  **InfoWithContext** | Async |       2.3M |       555.90 |	      1922 |      6 |
+|  **InfoWithContext** |  Sync |       3.7M |       326.70 |	      1794 |      5 |
+|  **WarnWithContext** | Async |       2.4M |       470.70 |          1922 |      6 |
+|  **WarnWithContext** |  Sync |       4.0M |       299.90 |          1794 |      5 |
 
 ### Single Thread
 
-|   Level   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-----------|-------|------------|--------------|---------------|--------|
-| **Debug**	| Async |       2.1M |       567.10 |	        536 |      3 |
-| **Debug**	|  Sync |       2.1M |       562.60 |	        536 |      3 |
-| **Error**	| Async |       1.0M |      1045.00 |	       1922 |      6 |
-| **Error**	|  Sync |       1.4M |       875.10 |	       1794 |	   5 |
-|  **Info**	| Async |       1.0M |      1006.00 |	       1922 |      6 |
-|  **Info**	|  Sync |       1.5M |       810.00 |	       1794 |      5 |
-|  **Warn**	| Async |       1.2M |       953.60 |          1922 |      6 |
-|  **Warn**	|  Sync |       1.5M |       790.50 |	       1794 |      5 |
+|         Level        |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|----------------------|-------|------------|--------------|---------------|--------|
+| **DebugWithContext** | Async |       2.1M |       567.10 |	       536 |      3 |
+| **DebugWithContext** |  Sync |       2.1M |       562.60 |	       536 |      3 |
+| **ErrorWithContext** | Async |       1.0M |      1045.00 |	      1922 |      6 |
+| **ErrorWithContext** |  Sync |       1.4M |       875.10 |	      1794 |	  5 |
+|  **InfoWithContext** | Async |       1.0M |      1006.00 |          1922 |      6 |
+|  **InfoWithContext** |  Sync |       1.5M |       810.00 |	      1794 |      5 |
+|  **WarnWithContext** | Async |       1.2M |       953.60 |          1922 |      6 |
+|  **WarnWithContext** |  Sync |       1.5M |       790.50 |	      1794 |      5 |
 
 > **Note:**
 > - Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context.
