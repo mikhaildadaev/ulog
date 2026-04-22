@@ -259,6 +259,36 @@ const (
 	circuitStateHalfOpen
 )
 
+// Приватные переменные
+var fieldExtractor = map[TypeField]func(Field) any{
+	FieldString:   func(field Field) any { return field.valueString },
+	FieldInt:      func(field Field) any { return field.valueInt },
+	FieldInt64:    func(field Field) any { return field.valueInt64 },
+	FieldFloat64:  func(field Field) any { return field.valueFloat64 },
+	FieldBool:     func(field Field) any { return field.valueBool },
+	FieldDuration: func(field Field) any { return field.valueDuration.String() },
+	FieldTime:     func(field Field) any { return field.valueTime.Format(time.RFC3339Nano) },
+	FieldStrings:  func(field Field) any { return field.valueStrings },
+	FieldInts:     func(field Field) any { return field.valueInts },
+	FieldInts64:   func(field Field) any { return field.valueInts64 },
+	FieldFloats64: func(field Field) any { return field.valueFloats64 },
+	FieldBools:    func(field Field) any { return field.valueBools },
+	FieldDurations: func(field Field) any {
+		result := make([]string, len(field.valueDurations))
+		for i, d := range field.valueDurations {
+			result[i] = d.String()
+		}
+		return result
+	},
+	FieldTimes: func(field Field) any {
+		result := make([]string, len(field.valueTimes))
+		for i, t := range field.valueTimes {
+			result[i] = t.Format(time.RFC3339Nano)
+		}
+		return result
+	},
+}
+
 // Приватные структуры
 type rateLimitError struct {
 	retryAfter time.Duration
@@ -272,46 +302,10 @@ func defaultformatter(attributes writeAttributes, fields []Field) ([]byte, error
 	return buf.Bytes(), nil
 }
 func getLogField(field Field) any {
-	switch field.typeValue {
-	case FieldString:
-		return field.valueString
-	case FieldInt:
-		return field.valueInt
-	case FieldInt64:
-		return field.valueInt64
-	case FieldFloat64:
-		return field.valueFloat64
-	case FieldBool:
-		return field.valueBool
-	case FieldDuration:
-		return field.valueDuration.String()
-	case FieldTime:
-		return field.valueTime.Format(time.RFC3339Nano)
-	case FieldStrings:
-		return field.valueStrings
-	case FieldInts:
-		return field.valueInts
-	case FieldInts64:
-		return field.valueInts64
-	case FieldFloats64:
-		return field.valueFloats64
-	case FieldBools:
-		return field.valueBools
-	case FieldDurations:
-		result := make([]string, len(field.valueDurations))
-		for i, d := range field.valueDurations {
-			result[i] = d.String()
-		}
-		return result
-	case FieldTimes:
-		result := make([]string, len(field.valueTimes))
-		for i, t := range field.valueTimes {
-			result[i] = t.Format(time.RFC3339Nano)
-		}
-		return result
-	default:
-		return nil
+	if extractor, ok := fieldExtractor[field.typeValue]; ok {
+		return extractor(field)
 	}
+	return nil
 }
 func getLogMessage(fields []Field) string {
 	for _, field := range fields {

@@ -610,7 +610,6 @@ func TestTelemetryLog_Ignore(t *testing.T) {
 		})
 	}
 }
-
 func TestSink(t *testing.T) {
 	buf1 := &bytes.Buffer{}
 	buf2 := &bytes.Buffer{}
