@@ -114,6 +114,22 @@ go get github.com/mikhaildadaev/ulog
 > - Real-world performance will depend on your output destination (file, network, etc.).
 > - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
+### File Write with Rotation
+
+|    Type    |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|------------|-------|------------|--------------|---------------|--------|
+|  **Multi** | Async |       1.0M |         6,90 |          1962 |      6 |
+|  **Multi** |  Sync |     152,7K |         7,80 |          1801 |      5 |
+| **Single** | Async |     969,7K |         6,00 |          1962 |      6 |
+| **Single** |  Sync |     234,4K |         5,50 |          1798 |      5 |
+
+> **Note:**
+> - Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context.
+> - Writes structured JSON logs to a **real file** with **atomic rotation** enabled (`WithFileMaxSize(15)`).
+> - Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks.
+> - *Single Sync* is the recommended production configuration for best latency.
+> - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
+
 ## Usage
 
 ```go
