@@ -85,30 +85,30 @@ go get github.com/mikhaildadaev/ulog
 
 |   Level   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-----------|-------|------------|--------------|---------------|--------|
-| **Debug** | Async |       1.0B |   	   0.57 |             0 |      0 |
-| **Debug** |  Sync |       1.0B |    	   0.57 |	          0 |      0 |
-| **Error** | Async |       4.0M |       275.70 |           728 |      5 |
-| **Error** |  Sync |       6.0M |       200.20 |           616 |      4 |
-|  **Info** | Async |       4.1M |       273.70 |	        728 |      5 |
-|  **Info** |  Sync |       7.0M |       172.50 |	        616 |      4 |
-|  **Warn** | Async |       4.4M |       242.50 |           728 |      5 |
-|  **Warn** |  Sync |       6.9M |    	 164.20 |       	616 |      4 |
+| **Debug** | Async |       5.8M |   	 180.70 |           536 |      3 |
+| **Debug** |  Sync |       6.3M |    	 203.30 |	        536 |      3 |
+| **Error** | Async |       2.0M |       578.30 |          1922 |      6 |
+| **Error** |  Sync |       3.2M |       372.10 |          1794 |      5 |
+|  **Info** | Async |       2.3M |       555.90 |	       1922 |      6 |
+|  **Info** |  Sync |       3.7M |       326.70 |	       1794 |      5 |
+|  **Warn** | Async |       2.4M |       470.70 |          1922 |      6 |
+|  **Warn** |  Sync |       4.0M |    	 299.90 |          1794 |      5 |
 
 ### Single Thread
 
 |   Level   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-----------|-------|------------|--------------|---------------|--------|
-| **Debug**	| Async |     288.9M |         5.29 |	          0 |      0 |
-| **Debug**	|  Sync |     307.7M |         3.85 |	          0 |      0 |
-| **Error**	| Async |       1.4M |       824.20 |	        728 |      5 |
-| **Error**	|  Sync |       1.8M |       647.10 |	        616 |	   4 |
-|  **Info**	| Async |       1.4M |       826.50 |	        728 |      5 |
-|  **Info**	|  Sync |       1.8M |       634.70 |	        616 |      4 |
-|  **Warn**	| Async |       1.5M |       818.80 |           728 |      5 |
-|  **Warn**	|  Sync |       1.9M |       627.70 |	        616 |      3 |
+| **Debug**	| Async |       2.1M |       567.10 |	        536 |      3 |
+| **Debug**	|  Sync |       2.1M |       562.60 |	        536 |      3 |
+| **Error**	| Async |       1.0M |      1045.00 |	       1922 |      6 |
+| **Error**	|  Sync |       1.4M |       875.10 |	       1794 |	   5 |
+|  **Info**	| Async |       1.0M |      1006.00 |	       1922 |      6 |
+|  **Info**	|  Sync |       1.5M |       810.00 |	       1794 |      5 |
+|  **Warn**	| Async |       1.2M |       953.60 |          1922 |      6 |
+|  **Warn**	|  Sync |       1.5M |       790.50 |	       1794 |      5 |
 
 > **Note:**
-> - Benchmarks use `WithExtractor("trace_id")` to automatically extract from context.
+> - Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context.
 > - All benchmarks write to `io.Discard` (equivalent to `/dev/null` on Unix or `NUL` on Windows).
 > - This measures only the logging overhead (field formatting, JSON encoding, context extraction) without disk or network I/O.
 > - Real-world performance will depend on your output destination (file, network, etc.).
