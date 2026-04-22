@@ -81,7 +81,9 @@ go get github.com/mikhaildadaev/ulog
 
 ## Performance
 
-### Multi Thread
+### Core Write Performance
+
+#### Multi Thread
 
 |         Level        |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |----------------------|-------|------------|--------------|---------------|--------|
@@ -94,7 +96,7 @@ go get github.com/mikhaildadaev/ulog
 |  **WarnWithContext** | Async |       2.4M |       470.70 |          1922 |      6 |
 |  **WarnWithContext** |  Sync |       4.0M |       299.90 |          1794 |      5 |
 
-### Single Thread
+#### Single Thread
 
 |         Level        |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |----------------------|-------|------------|--------------|---------------|--------|
@@ -114,9 +116,9 @@ go get github.com/mikhaildadaev/ulog
 > - Real-world performance will depend on your output destination (file, network, etc.).
 > - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
-### File Write with Rotation
+### File Write with rotation
 
-|    Type    |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|   Thread   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |------------|-------|------------|--------------|---------------|--------|
 |  **Multi** | Async |       1.0M |         6,90 |          1962 |      6 |
 |  **Multi** |  Sync |     152,7K |         7,80 |          1801 |      5 |
