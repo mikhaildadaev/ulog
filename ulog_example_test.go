@@ -68,7 +68,7 @@ func ExampleNewTelemetryLog() {
 	// [ERROR] type="log" message="user john failed to login"
 	// [ERROR] type="log" message="another error message"
 }
-func Example_telemetryData() {
+func ExampleTelemetry_data() {
 	buf := &bytes.Buffer{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -114,7 +114,7 @@ func Example_telemetryData() {
 	//{"level":"info","type":"trace","span_id":"def","name":"login","duration":150}
 	//{"level":"info","type":"trace","span_id":"def","name":"login","duration":150,"node_id":"123-abc","trace_id":"abc-123"}
 }
-func Example_telemetryField() {
+func ExampleTelemetry_field() {
 	buf := &bytes.Buffer{}
 	telemetry := ulog.NewTelemetry(
 		ulog.WithFormat(ulog.FormatJson),
@@ -145,7 +145,7 @@ func Example_telemetryField() {
 	// Output:
 	//{"level":"info","type":"log","bool":true,"bools":[true,false],"duration":5s,"durations":[5s,10s],"error":"err","errors":["err1","err2"],"float64":3.14159,"floats64":[1.5,2.5],"int":42,"ints":[10,20,30],"int64":1234567890,"ints64":[1234567890,9876543210],"string":"str","strings":["str1","str2","str3"],"time":2026-04-22T12:00:00.000000+00:00,"times":[2026-04-22T12:00:00.000000+00:00,2025-04-22T12:00:00.000000+00:00]}
 }
-func Example_telemetryFormat() {
+func ExampleTelemetry_format() {
 	buf := &bytes.Buffer{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -167,7 +167,7 @@ func Example_telemetryFormat() {
 	// [INFO] type="log" message="test info text"
 	// {"level":"info","type":"log","message":"test info text","node_id":"123-abc","trace_id":"abc-123"}
 }
-func Example_telemetryLevel() {
+func ExampleTelemetry_level() {
 	buf := &bytes.Buffer{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -191,7 +191,7 @@ func Example_telemetryLevel() {
 	//{"level":"warn","type":"log","message":"test warn text","node_id":"123-abc","trace_id":"abc-123"}
 	//{"level":"error","type":"log","message":"test error text","node_id":"123-abc","trace_id":"abc-123"}
 }
-func Example_telemetryMode() {
+func ExampleTelemetry_mode() {
 	buf := &bytes.Buffer{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
