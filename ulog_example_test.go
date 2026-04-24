@@ -68,38 +68,7 @@ func ExampleNewTelemetryLog() {
 	// [ERROR] type="log" message="user john failed to login"
 	// [ERROR] type="log" message="another error message"
 }
-func Example_fields() {
-	buf := &bytes.Buffer{}
-	telemetry := ulog.NewTelemetry(
-		ulog.WithFormat(ulog.FormatJson),
-		ulog.WithMode(ulog.ModeSync, buf),
-	)
-	defer telemetry.Close()
-	telemetry.Info(ulog.DataLog,
-		ulog.Bool("bool", true),
-		ulog.Bools("bools", []bool{true, false}),
-		ulog.Duration("duration", 5*time.Second),
-		ulog.Durations("durations", []time.Duration{5 * time.Second, 10 * time.Second}),
-		ulog.Error(fmt.Errorf("err")),
-		ulog.Errors([]error{fmt.Errorf("err1"), fmt.Errorf("err2")}),
-		ulog.Float64("float64", 3.14159),
-		ulog.Floats64("floats64", []float64{1.5, 2.5}),
-		ulog.Int("int", 42),
-		ulog.Ints("ints", []int{10, 20, 30}),
-		ulog.Int64("int64", 1234567890),
-		ulog.Ints64("ints64", []int64{1234567890, 9876543210}),
-		ulog.String("string", "str"),
-		ulog.Strings("strings", []string{"str1", "str2", "str3"}),
-		ulog.Time("time", time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC)),
-		ulog.Times("times", []time.Time{time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC), time.Date(2025, 4, 22, 12, 0, 0, 0, time.UTC)}),
-	)
-	telemetry.Sync()
-	output := formatOutput(buf.String())
-	fmt.Print(output)
-	// Output:
-	//{"level":"info","type":"log","bool":true,"bools":[true,false],"duration":5s,"durations":[5s,10s],"error":"err","errors":["err1","err2"],"float64":3.14159,"floats64":[1.5,2.5],"int":42,"ints":[10,20,30],"int64":1234567890,"ints64":[1234567890,9876543210],"string":"str","strings":["str1","str2","str3"],"time":2026-04-22T12:00:00.000000+00:00,"times":[2026-04-22T12:00:00.000000+00:00,2025-04-22T12:00:00.000000+00:00]}
-}
-func Example_telemetryTypeData() {
+func Example_telemetryData() {
 	buf := &bytes.Buffer{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -145,7 +114,38 @@ func Example_telemetryTypeData() {
 	//{"level":"info","type":"trace","span_id":"def","name":"login","duration":150}
 	//{"level":"info","type":"trace","span_id":"def","name":"login","duration":150,"node_id":"123-abc","trace_id":"abc-123"}
 }
-func Example_telemetryTypeFormat() {
+func Example_telemetryField() {
+	buf := &bytes.Buffer{}
+	telemetry := ulog.NewTelemetry(
+		ulog.WithFormat(ulog.FormatJson),
+		ulog.WithMode(ulog.ModeSync, buf),
+	)
+	defer telemetry.Close()
+	telemetry.Info(ulog.DataLog,
+		ulog.Bool("bool", true),
+		ulog.Bools("bools", []bool{true, false}),
+		ulog.Duration("duration", 5*time.Second),
+		ulog.Durations("durations", []time.Duration{5 * time.Second, 10 * time.Second}),
+		ulog.Error(fmt.Errorf("err")),
+		ulog.Errors([]error{fmt.Errorf("err1"), fmt.Errorf("err2")}),
+		ulog.Float64("float64", 3.14159),
+		ulog.Floats64("floats64", []float64{1.5, 2.5}),
+		ulog.Int("int", 42),
+		ulog.Ints("ints", []int{10, 20, 30}),
+		ulog.Int64("int64", 1234567890),
+		ulog.Ints64("ints64", []int64{1234567890, 9876543210}),
+		ulog.String("string", "str"),
+		ulog.Strings("strings", []string{"str1", "str2", "str3"}),
+		ulog.Time("time", time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC)),
+		ulog.Times("times", []time.Time{time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC), time.Date(2025, 4, 22, 12, 0, 0, 0, time.UTC)}),
+	)
+	telemetry.Sync()
+	output := formatOutput(buf.String())
+	fmt.Print(output)
+	// Output:
+	//{"level":"info","type":"log","bool":true,"bools":[true,false],"duration":5s,"durations":[5s,10s],"error":"err","errors":["err1","err2"],"float64":3.14159,"floats64":[1.5,2.5],"int":42,"ints":[10,20,30],"int64":1234567890,"ints64":[1234567890,9876543210],"string":"str","strings":["str1","str2","str3"],"time":2026-04-22T12:00:00.000000+00:00,"times":[2026-04-22T12:00:00.000000+00:00,2025-04-22T12:00:00.000000+00:00]}
+}
+func Example_telemetryFormat() {
 	buf := &bytes.Buffer{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -167,7 +167,7 @@ func Example_telemetryTypeFormat() {
 	// [INFO] type="log" message="test info text"
 	// {"level":"info","type":"log","message":"test info text","node_id":"123-abc","trace_id":"abc-123"}
 }
-func Example_telemetryTypeLevel() {
+func Example_telemetryLevel() {
 	buf := &bytes.Buffer{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -191,7 +191,7 @@ func Example_telemetryTypeLevel() {
 	//{"level":"warn","type":"log","message":"test warn text","node_id":"123-abc","trace_id":"abc-123"}
 	//{"level":"error","type":"log","message":"test error text","node_id":"123-abc","trace_id":"abc-123"}
 }
-func Example_telemetryTypeMode() {
+func Example_telemetryMode() {
 	buf := &bytes.Buffer{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
