@@ -143,7 +143,7 @@ func ExampleTelemetry_field() {
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
-	//{"level":"info","type":"log","bool":true,"bools":[true,false],"duration":5s,"durations":[5s,10s],"error":"err","errors":["err1","err2"],"float64":3.14159,"floats64":[1.5,2.5],"int":42,"ints":[10,20,30],"int64":1234567890,"ints64":[1234567890,9876543210],"string":"str","strings":["str1","str2","str3"],"time":2026-04-22T12:00:00.000000+00:00,"times":[2026-04-22T12:00:00.000000+00:00,2025-04-22T12:00:00.000000+00:00]}
+	//{"level":"info","type":"log","bool":true,"bools":[true,false],"duration":"5s","durations":["5s","10s"],"error":"err","errors":["err1","err2"],"float64":3.14159,"floats64":[1.5,2.5],"int":42,"ints":[10,20,30],"int64":1234567890,"ints64":[1234567890,9876543210],"string":"str","strings":["str1","str2","str3"],"time":"2026-04-22T12:00:00.000000+00:00","times":["2026-04-22T12:00:00.000000+00:00","2025-04-22T12:00:00.000000+00:00"]}
 }
 func ExampleTelemetry_format() {
 	buf := &bytes.Buffer{}
@@ -224,7 +224,7 @@ func formatOutput(str string) string {
 		}
 		line = ansiRegex.ReplaceAllString(line, "")
 		if strings.HasPrefix(line, "{") {
-			re := regexp.MustCompile(`"(?:time|caller)":"[^"]*",?`)
+			re := regexp.MustCompile(`"(?:timestamp|caller)":"[^"]*",?`)
 			line = re.ReplaceAllString(line, "")
 			result = append(result, line)
 			continue
