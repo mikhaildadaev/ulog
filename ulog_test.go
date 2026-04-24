@@ -524,6 +524,7 @@ func TestTelemetry_Theme(t *testing.T) {
 			testLevel := func(level string, functionTest func(Telemetry), expectedPrefix string) {
 				buf := &bytes.Buffer{}
 				telemetry := NewTelemetry(
+					WithFormat(FormatText),
 					WithLevel(LevelDebug),
 					WithMode(ModeSync, buf),
 					WithTheme(elem.theme),
@@ -543,6 +544,7 @@ func TestTelemetry_Theme(t *testing.T) {
 			testLevel := func(level string, functionTest func(Telemetry), expectedPrefix string) {
 				buf := &bytes.Buffer{}
 				telemetry := NewTelemetry()
+				telemetry.SetFormat(FormatText)
 				telemetry.SetLevel(LevelDebug)
 				telemetry.SetMode(ModeSync, buf)
 				telemetry.SetTheme(elem.theme)
