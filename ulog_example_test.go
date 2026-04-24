@@ -25,31 +25,31 @@ func ExampleNewTelemetry() {
 		ulog.WithTheme(ulog.ThemeDark),
 	)
 	defer telemetry.Close()
-	telemetry.DebugWithContext(ctx, ulog.DataLog, ulog.String("message", "debug test text"))
-	telemetry.ErrorWithContext(ctx, ulog.DataLog, ulog.String("message", "error test text"))
-	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "info test text"))
-	telemetry.WarnWithContext(ctx, ulog.DataLog, ulog.String("message", "warn test text"))
+	telemetry.DebugWithContext(ctx, ulog.DataLog, ulog.String("message", "debug text"))
+	telemetry.ErrorWithContext(ctx, ulog.DataLog, ulog.String("message", "error text"))
+	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "info text"))
+	telemetry.WarnWithContext(ctx, ulog.DataLog, ulog.String("message", "warn text"))
 	telemetry.Sync()
 	telemetry.SetExtractor()
 	telemetry.SetFormat(ulog.FormatText)
 	telemetry.SetLevel(ulog.LevelDebug)
 	telemetry.SetMode(ulog.ModeSync, buf)
-	telemetry.Debug(ulog.DataLog, ulog.String("message", "debug test text"))
-	telemetry.Error(ulog.DataLog, ulog.String("message", "error test text"))
-	telemetry.Info(ulog.DataLog, ulog.String("message", "info test text"))
-	telemetry.Warn(ulog.DataLog, ulog.String("message", "warn test text"))
+	telemetry.Debug(ulog.DataLog, ulog.String("message", "debug text"))
+	telemetry.Error(ulog.DataLog, ulog.String("message", "error text"))
+	telemetry.Info(ulog.DataLog, ulog.String("message", "info text"))
+	telemetry.Warn(ulog.DataLog, ulog.String("message", "warn text"))
 	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
-	// {"level":"debug","type":"log","message":"debug test text","node_id":"123-abc","trace_id":"abc-123"}
-	// {"level":"error","type":"log","message":"error test text","node_id":"123-abc","trace_id":"abc-123"}
-	// {"level":"info","type":"log","message":"info test text","node_id":"123-abc","trace_id":"abc-123"}
-	// {"level":"warn","type":"log","message":"warn test text","node_id":"123-abc","trace_id":"abc-123"}
-	// [DEBUG] type="log" message="debug test text"
-	// [ERROR] type="log" message="error test text"
-	// [INFO] type="log" message="info test text"
-	// [WARN] type="log" message="warn test text"
+	// {"level":"debug","type":"log","message":"debug text","node_id":"123-abc","trace_id":"abc-123"}
+	// {"level":"error","type":"log","message":"error text","node_id":"123-abc","trace_id":"abc-123"}
+	// {"level":"info","type":"log","message":"info text","node_id":"123-abc","trace_id":"abc-123"}
+	// {"level":"warn","type":"log","message":"warn text","node_id":"123-abc","trace_id":"abc-123"}
+	// [DEBUG] type="log" message="debug text"
+	// [ERROR] type="log" message="error text"
+	// [INFO] type="log" message="info text"
+	// [WARN] type="log" message="warn text"
 }
 func ExampleNewTelemetryLog() {
 	buf := &bytes.Buffer{}
@@ -157,16 +157,16 @@ func ExampleTelemetry_format() {
 		ulog.WithMode(ulog.ModeSync, buf),
 	)
 	defer telemetry.Close()
-	telemetry.Info(ulog.DataLog, ulog.String("message", "test info text"))
+	telemetry.Info(ulog.DataLog, ulog.String("message", "info text"))
 	telemetry.Sync()
 	telemetry.SetFormat(ulog.FormatJson)
-	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "test info text"))
+	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "info text"))
 	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
-	// [INFO] type="log" message="test info text"
-	// {"level":"info","type":"log","message":"test info text","node_id":"123-abc","trace_id":"abc-123"}
+	// [INFO] type="log" message="info text"
+	// {"level":"info","type":"log","message":"info text","node_id":"123-abc","trace_id":"abc-123"}
 }
 func ExampleTelemetry_level() {
 	buf := &bytes.Buffer{}
@@ -179,18 +179,18 @@ func ExampleTelemetry_level() {
 		ulog.WithMode(ulog.ModeSync, buf),
 	)
 	defer telemetry.Close()
-	telemetry.DebugWithContext(ctx, ulog.DataLog, ulog.String("message", "debug test text"))
-	telemetry.ErrorWithContext(ctx, ulog.DataLog, ulog.String("message", "error test text"))
-	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "info test text"))
-	telemetry.WarnWithContext(ctx, ulog.DataLog, ulog.String("message", "warn test text"))
+	telemetry.DebugWithContext(ctx, ulog.DataLog, ulog.String("message", "debug text"))
+	telemetry.ErrorWithContext(ctx, ulog.DataLog, ulog.String("message", "error text"))
+	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "info text"))
+	telemetry.WarnWithContext(ctx, ulog.DataLog, ulog.String("message", "warn text"))
 	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
-	//{"level":"debug","type":"log","message":"debug test text","node_id":"123-abc","trace_id":"abc-123"}
-	//{"level":"error","type":"log","message":"error test text","node_id":"123-abc","trace_id":"abc-123"}
-	//{"level":"info","type":"log","message":"info test text","node_id":"123-abc","trace_id":"abc-123"}
-	//{"level":"warn","type":"log","message":"warn test text","node_id":"123-abc","trace_id":"abc-123"}
+	//{"level":"debug","type":"log","message":"debug text","node_id":"123-abc","trace_id":"abc-123"}
+	//{"level":"error","type":"log","message":"error text","node_id":"123-abc","trace_id":"abc-123"}
+	//{"level":"info","type":"log","message":"info text","node_id":"123-abc","trace_id":"abc-123"}
+	//{"level":"warn","type":"log","message":"warn text","node_id":"123-abc","trace_id":"abc-123"}
 }
 func ExampleTelemetry_mode() {
 	buf := &bytes.Buffer{}
@@ -202,16 +202,16 @@ func ExampleTelemetry_mode() {
 		ulog.WithMode(ulog.ModeAsync, buf, 1000),
 	)
 	defer telemetry.Close()
-	telemetry.Info(ulog.DataLog, ulog.String("message", "test info text"))
+	telemetry.Info(ulog.DataLog, ulog.String("message", "info text"))
 	telemetry.Sync()
 	telemetry.SetMode(ulog.ModeSync, buf)
-	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "test info text"))
+	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "info text"))
 	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
-	// {"level":"info","type":"log","message":"test info text"}
-	// {"level":"info","type":"log","message":"test info text","node_id":"123-abc","trace_id":"abc-123"}
+	// {"level":"info","type":"log","message":"info text"}
+	// {"level":"info","type":"log","message":"info text","node_id":"123-abc","trace_id":"abc-123"}
 }
 
 // Вспомогательные функции
