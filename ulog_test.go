@@ -19,7 +19,7 @@ import (
 )
 
 // Публичные функции
-func TestTelemetry(t *testing.T) {
+func Test_Telemetry(t *testing.T) {
 	buf := &bytes.Buffer{}
 	telemetry := NewTelemetry(
 		WithFormat(FormatText),
@@ -34,7 +34,7 @@ func TestTelemetry(t *testing.T) {
 		t.Errorf("Expected 'test info text', got %q", buf.String())
 	}
 }
-func TestTelemetry_Close(t *testing.T) {
+func Test_Telemetry_Close(t *testing.T) {
 	t.Run("Async", func(t *testing.T) {
 		buf := &bytes.Buffer{}
 		telemetry := NewTelemetry(WithMode(ModeAsync, buf, 100))
@@ -61,7 +61,7 @@ func TestTelemetry_Close(t *testing.T) {
 		}
 	})
 }
-func TestTelemetry_Extractor(t *testing.T) {
+func Test_Telemetry_Extractor(t *testing.T) {
 	tests := []struct {
 		name      string
 		keys      []string
@@ -177,7 +177,7 @@ func TestTelemetry_Extractor(t *testing.T) {
 		})
 	}
 }
-func TestTelemetry_Field(t *testing.T) {
+func Test_Telemetry_Field(t *testing.T) {
 	t.Run("Bool", func(t *testing.T) {
 		val := bool(true)
 		field := Bool("test", val)
@@ -259,7 +259,7 @@ func TestTelemetry_Field(t *testing.T) {
 		checkFieldTimes(t, field, vals)
 	})
 }
-func TestTelemetry_Format(t *testing.T) {
+func Test_Telemetry_Format(t *testing.T) {
 	array := []struct {
 		name   string
 		format TypeFormat
@@ -296,7 +296,7 @@ func TestTelemetry_Format(t *testing.T) {
 		})
 	}
 }
-func TestTelemetry_Level(t *testing.T) {
+func Test_Telemetry_Level(t *testing.T) {
 	array := []struct {
 		name         string
 		level        TypeLevel
@@ -361,7 +361,7 @@ func TestTelemetry_Level(t *testing.T) {
 		})
 	}
 }
-func TestTelemetry_Method(t *testing.T) {
+func Test_Telemetry_Method(t *testing.T) {
 	array := []struct {
 		name         string
 		functionTest func(Telemetry)
@@ -395,7 +395,7 @@ func TestTelemetry_Method(t *testing.T) {
 		})
 	}
 }
-func TestTelemetry_Mode(t *testing.T) {
+func Test_Telemetry_Mode(t *testing.T) {
 	t.Run("WithMode/Async", func(t *testing.T) {
 		writerBuf := &bytes.Buffer{}
 		telemetry := NewTelemetry(
@@ -451,7 +451,7 @@ func TestTelemetry_Mode(t *testing.T) {
 		}
 	})
 }
-func TestTelemetry_Sync(t *testing.T) {
+func Test_Telemetry_Sync(t *testing.T) {
 	t.Run("Async", func(t *testing.T) {
 		buf := &bytes.Buffer{}
 		telemetry := NewTelemetry(WithMode(ModeAsync, buf, 1000))
@@ -481,7 +481,7 @@ func TestTelemetry_Sync(t *testing.T) {
 		}
 	})
 }
-func TestTelemetry_Theme(t *testing.T) {
+func Test_Telemetry_Theme(t *testing.T) {
 	array := []struct {
 		name        string
 		theme       TypeTheme
@@ -561,7 +561,7 @@ func TestTelemetry_Theme(t *testing.T) {
 		})
 	}
 }
-func TestTelemetryLog(t *testing.T) {
+func Test_TelemetryLog(t *testing.T) {
 	buf := &bytes.Buffer{}
 	telemetry := NewTelemetry(
 		WithFormat(FormatText),
@@ -573,7 +573,7 @@ func TestTelemetryLog(t *testing.T) {
 		t.Errorf("Expected 'test text', got %q", buf.String())
 	}
 }
-func TestTelemetryLog_Ignore(t *testing.T) {
+func Test_TelemetryLog_Ignore(t *testing.T) {
 	array := []struct {
 		name     string
 		message  string
@@ -612,7 +612,7 @@ func TestTelemetryLog_Ignore(t *testing.T) {
 		})
 	}
 }
-func TestSink(t *testing.T) {
+func Test_Sink(t *testing.T) {
 	buf1 := &bytes.Buffer{}
 	buf2 := &bytes.Buffer{}
 	buf3 := &bytes.Buffer{}
@@ -663,7 +663,7 @@ func TestSink(t *testing.T) {
 		t.Errorf("Close() returned error: %v", err)
 	}
 }
-func TestSinkFactory_Discord(t *testing.T) {
+func Test_SinkFactory_Discord(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
@@ -694,7 +694,7 @@ func TestSinkFactory_Discord(t *testing.T) {
 	}
 	sink.Sync()
 }
-func TestSinkFactory_Kafka(t *testing.T) {
+func Test_SinkFactory_Kafka(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
@@ -757,7 +757,7 @@ func TestSinkFactory_Kafka(t *testing.T) {
 	}
 	sink.Sync()
 }
-func TestSinkFactory_Loki(t *testing.T) {
+func Test_SinkFactory_Loki(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Error("wrong method")
@@ -822,7 +822,7 @@ func TestSinkFactory_Loki(t *testing.T) {
 	}
 	sink.Sync()
 }
-func TestSinkFactory_Prometheus(t *testing.T) {
+func Test_SinkFactory_Prometheus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "text/plain" {
 			t.Errorf("expected Content-Type: text/plain, got %s", r.Header.Get("Content-Type"))
@@ -855,7 +855,7 @@ func TestSinkFactory_Prometheus(t *testing.T) {
 	}
 	sink.Sync()
 }
-func TestSinkFactory_Slack(t *testing.T) {
+func Test_SinkFactory_Slack(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var data SlackData
 		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
@@ -886,7 +886,7 @@ func TestSinkFactory_Slack(t *testing.T) {
 	}
 	sink.Sync()
 }
-func TestSinkFactory_Telegram(t *testing.T) {
+func Test_SinkFactory_Telegram(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
@@ -924,7 +924,7 @@ func TestSinkFactory_Telegram(t *testing.T) {
 	}
 	sink.Sync()
 }
-func TestSinkFactory_Tempo(t *testing.T) {
+func Test_SinkFactory_Tempo(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var trace TempoData
 		json.NewDecoder(r.Body).Decode(&trace)
@@ -953,7 +953,7 @@ func TestSinkFactory_Tempo(t *testing.T) {
 	sink.WriteWithAttributes(writeAttributes{typeData: DataTrace}, fields)
 	sink.Sync()
 }
-func TestSinkFactory_Wechat(t *testing.T) {
+func Test_SinkFactory_Wechat(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
@@ -987,7 +987,7 @@ func TestSinkFactory_Wechat(t *testing.T) {
 	}
 	sink.Sync()
 }
-func TestSinkFile(t *testing.T) {
+func Test_SinkFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
 	sink, err := NewFileSink(logFile)
@@ -1011,7 +1011,7 @@ func TestSinkFile(t *testing.T) {
 		t.Errorf("Expected %q, got %q", data, content)
 	}
 }
-func TestSinkFile_CleanupByAge(t *testing.T) {
+func Test_SinkFile_CleanupByAge(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
 	sink, err := NewFileSink(logFile,
@@ -1039,7 +1039,7 @@ func TestSinkFile_CleanupByAge(t *testing.T) {
 		t.Error("No log files created")
 	}
 }
-func TestSinkFile_CleanupByCount(t *testing.T) {
+func Test_SinkFile_CleanupByCount(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
 	sink, err := NewFileSink(logFile,
@@ -1067,7 +1067,7 @@ func TestSinkFile_CleanupByCount(t *testing.T) {
 		t.Errorf("Expected max 3 files, got %d", len(files))
 	}
 }
-func TestSinkFile_Rotate(t *testing.T) {
+func Test_SinkFile_Rotate(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
 	sink, err := NewFileSink(logFile,
@@ -1101,7 +1101,7 @@ func TestSinkFile_Rotate(t *testing.T) {
 		t.Error("No log files created")
 	}
 }
-func TestSinkHttp(t *testing.T) {
+func Test_SinkHttp(t *testing.T) {
 	var mutex sync.Mutex
 	var receivedBody []byte
 	var receivedMethod string
@@ -1149,7 +1149,7 @@ func TestSinkHttp(t *testing.T) {
 		t.Errorf("Expected message 'test', got %v", body["message"])
 	}
 }
-func TestSinkHttp_Batch(t *testing.T) {
+func Test_SinkHttp_Batch(t *testing.T) {
 	var mutex sync.Mutex
 	var requests [][]byte
 	batchInterval := 100 * time.Millisecond
@@ -1193,7 +1193,7 @@ func TestSinkHttp_Batch(t *testing.T) {
 		}
 	}
 }
-func TestSinkHttp_Circuit(t *testing.T) {
+func Test_SinkHttp_Circuit(t *testing.T) {
 	newServer := func(behavior func(count int) int) (*httptest.Server, *int32) {
 		var count int32
 		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1293,7 +1293,7 @@ func TestSinkHttp_Circuit(t *testing.T) {
 		}
 	})
 }
-func TestSinkHttp_Deduplication(t *testing.T) {
+func Test_SinkHttp_Deduplication(t *testing.T) {
 	var mutex sync.Mutex
 	var requestCount int
 	deduplication := 1 * time.Second
@@ -1327,7 +1327,7 @@ func TestSinkHttp_Deduplication(t *testing.T) {
 		t.Errorf("Expected 1 request (deduplication), got %d", count)
 	}
 }
-func TestSinkHttp_RateLimit(t *testing.T) {
+func Test_SinkHttp_RateLimit(t *testing.T) {
 	var mutex sync.Mutex
 	attempt := 0
 	backoff := 100 * time.Millisecond
@@ -1373,7 +1373,7 @@ func TestSinkHttp_RateLimit(t *testing.T) {
 		t.Errorf("Expected to wait at least 1 second due to Retry-After, got %v", elapsed)
 	}
 }
-func TestSinkHttp_Retry(t *testing.T) {
+func Test_SinkHttp_Retry(t *testing.T) {
 	attempt := 0
 	backoff := 10 * time.Millisecond
 	retry := 3
@@ -1401,7 +1401,7 @@ func TestSinkHttp_Retry(t *testing.T) {
 		t.Errorf("Expected 3 attempts, got %d", attempt)
 	}
 }
-func TestSinkHttp_Sampling(t *testing.T) {
+func Test_SinkHttp_Sampling(t *testing.T) {
 	var mutex sync.Mutex
 	var requestCount int
 	counts := 100
