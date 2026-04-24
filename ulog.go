@@ -211,7 +211,7 @@ const (
 // Приватные переменные
 var (
 	defaultBufferSize = 10000
-	defaultFormat     = FormatText
+	defaultFormat     = FormatJson
 	defaultLevel      = LevelInfo
 	defaultMode       = ModeSync
 	defaultType       = -1
