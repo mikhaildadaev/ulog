@@ -85,3 +85,10 @@ go.work
 go.work.sum
 /bin/
 /dist/
+
+# Node specific
+node_modules/
+
+# VitePress specific
+docs/.vitepress/dist/
+docs/.vitepress/cache/
