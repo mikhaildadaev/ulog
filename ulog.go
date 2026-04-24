@@ -482,7 +482,7 @@ func formatJsonPrefix(dataBuf *bytes.Buffer, level TypeLevel, caller string) {
 	}
 }
 func formatJsonTime(dataBuf *bytes.Buffer, timestamp time.Time) {
-	dataBuf.WriteString(`"time":"`)
+	dataBuf.WriteString(`"timestamp":"`)
 	getTime(dataBuf, timestamp)
 	dataBuf.WriteByte('"')
 }
@@ -578,7 +578,9 @@ func formatValueBools(dataBuf *bytes.Buffer, v []bool) {
 	dataBuf.WriteByte(']')
 }
 func formatValueDuration(dataBuf *bytes.Buffer, v time.Duration) {
+	dataBuf.WriteByte('"')
 	dataBuf.WriteString(v.String())
+	dataBuf.WriteByte('"')
 }
 func formatValueDurations(dataBuf *bytes.Buffer, v []time.Duration) {
 	dataBuf.WriteByte('[')
@@ -586,7 +588,9 @@ func formatValueDurations(dataBuf *bytes.Buffer, v []time.Duration) {
 		if i > 0 {
 			dataBuf.WriteByte(',')
 		}
+		dataBuf.WriteByte('"')
 		dataBuf.WriteString(d.String())
+		dataBuf.WriteByte('"')
 	}
 	dataBuf.WriteByte(']')
 }
@@ -647,7 +651,9 @@ func formatValueStrings(dataBuf *bytes.Buffer, v []string) {
 	dataBuf.WriteByte(']')
 }
 func formatValueTime(dataBuf *bytes.Buffer, v time.Time) {
+	dataBuf.WriteByte('"')
 	dataBuf.Write(v.AppendFormat(nil, "2006-01-02T15:04:05.000000-07:00"))
+	dataBuf.WriteByte('"')
 }
 func formatValueTimes(dataBuf *bytes.Buffer, v []time.Time) {
 	dataBuf.WriteByte('[')
@@ -655,7 +661,9 @@ func formatValueTimes(dataBuf *bytes.Buffer, v []time.Time) {
 		if i > 0 {
 			dataBuf.WriteByte(',')
 		}
+		dataBuf.WriteByte('"')
 		dataBuf.Write(t.AppendFormat(nil, "2006-01-02T15:04:05.000000-07:00"))
+		dataBuf.WriteByte('"')
 	}
 	dataBuf.WriteByte(']')
 }
