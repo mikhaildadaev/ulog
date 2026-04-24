@@ -18,37 +18,38 @@ func ExampleNewTelemetry() {
 	ctx = context.WithValue(ctx, "node_id", "123-abc")
 	ctx = context.WithValue(ctx, "trace_id", "abc-123")
 	telemetry := ulog.NewTelemetry(
-		ulog.WithFormat(ulog.FormatText),
+		ulog.WithExtractor("node_id", "trace_id"),
+		ulog.WithFormat(ulog.FormatJson),
 		ulog.WithLevel(ulog.LevelDebug),
 		ulog.WithMode(ulog.ModeAsync, buf, 1000),
 		ulog.WithTheme(ulog.ThemeDark),
 	)
 	defer telemetry.Close()
-	telemetry.Debug(ulog.DataLog, ulog.String("message", "test debug text"))
-	telemetry.Info(ulog.DataLog, ulog.String("message", "test info text"))
-	telemetry.Warn(ulog.DataLog, ulog.String("message", "test warn text"))
-	telemetry.Error(ulog.DataLog, ulog.String("message", "test error text"))
-	telemetry.Sync()
-	telemetry.SetExtractor("node_id", "trace_id")
-	telemetry.SetFormat(ulog.FormatJson)
-	telemetry.SetLevel(ulog.LevelDebug)
-	telemetry.SetMode(ulog.ModeSync, buf)
 	telemetry.DebugWithContext(ctx, ulog.DataLog, ulog.String("message", "test debug text"))
 	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "test info text"))
 	telemetry.WarnWithContext(ctx, ulog.DataLog, ulog.String("message", "test warn text"))
 	telemetry.ErrorWithContext(ctx, ulog.DataLog, ulog.String("message", "test error text"))
 	telemetry.Sync()
+	telemetry.SetExtractor()
+	telemetry.SetFormat(ulog.FormatText)
+	telemetry.SetLevel(ulog.LevelDebug)
+	telemetry.SetMode(ulog.ModeSync, buf)
+	telemetry.Debug(ulog.DataLog, ulog.String("message", "test debug text"))
+	telemetry.Info(ulog.DataLog, ulog.String("message", "test info text"))
+	telemetry.Warn(ulog.DataLog, ulog.String("message", "test warn text"))
+	telemetry.Error(ulog.DataLog, ulog.String("message", "test error text"))
+	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
-	// [DEBUG] type="log" message="test debug text"
-	// [INFO] type="log" message="test info text"
-	// [WARN] type="log" message="test warn text"
-	// [ERROR] type="log" message="test error text"
 	// {"level":"debug","type":"log","message":"test debug text","node_id":"123-abc","trace_id":"abc-123"}
 	// {"level":"info","type":"log","message":"test info text","node_id":"123-abc","trace_id":"abc-123"}
 	// {"level":"warn","type":"log","message":"test warn text","node_id":"123-abc","trace_id":"abc-123"}
 	// {"level":"error","type":"log","message":"test error text","node_id":"123-abc","trace_id":"abc-123"}
+	// [DEBUG] type="log" message="test debug text"
+	// [INFO] type="log" message="test info text"
+	// [WARN] type="log" message="test warn text"
+	// [ERROR] type="log" message="test error text"
 }
 func ExampleNewTelemetryLog() {
 	buf := &bytes.Buffer{}
