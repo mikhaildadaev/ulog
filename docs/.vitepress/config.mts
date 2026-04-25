@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
 export default defineConfig({
   appearance: 'dark',
+  base: '/ulog/',
   locales: {
     root: {
       description: 'A high-performance, zero-dependency platform for logs, metrics, and traces.',
