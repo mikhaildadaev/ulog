@@ -25,31 +25,45 @@ func ExampleNewTelemetry() {
 		ulog.WithTheme(ulog.ThemeDark),
 	)
 	defer telemetry.Close()
-	telemetry.DebugWithContext(ctx, ulog.DataLog, ulog.String("message", "debug text"))
-	telemetry.ErrorWithContext(ctx, ulog.DataLog, ulog.String("message", "error text"))
-	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "info text"))
-	telemetry.WarnWithContext(ctx, ulog.DataLog, ulog.String("message", "warn text"))
+	telemetry.InfoWithContext(ctx, ulog.DataLog,
+		ulog.String("message", "info text"),
+	)
+	telemetry.InfoWithContext(ctx, ulog.DataMetric,
+		ulog.String("name", "payments"),
+		ulog.Float64("value", 99.99),
+	)
+	telemetry.InfoWithContext(ctx, ulog.DataTrace,
+		ulog.String("name", "payment_processing"),
+		ulog.Int64("duration", 150),
+		ulog.String("span_id", "span-456"),
+	)
 	telemetry.Sync()
 	telemetry.SetExtractor()
 	telemetry.SetFormat(ulog.FormatText)
 	telemetry.SetLevel(ulog.LevelDebug)
 	telemetry.SetMode(ulog.ModeSync, buf)
-	telemetry.Debug(ulog.DataLog, ulog.String("message", "debug text"))
-	telemetry.Error(ulog.DataLog, ulog.String("message", "error text"))
-	telemetry.Info(ulog.DataLog, ulog.String("message", "info text"))
-	telemetry.Warn(ulog.DataLog, ulog.String("message", "warn text"))
+	telemetry.Info(ulog.DataLog,
+		ulog.String("message", "info text"),
+	)
+	telemetry.Info(ulog.DataMetric,
+		ulog.String("name", "payments"),
+		ulog.Float64("value", 99.99),
+	)
+	telemetry.Info(ulog.DataTrace,
+		ulog.String("name", "payment_processing"),
+		ulog.Int64("duration", 150),
+		ulog.String("span_id", "span-456"),
+	)
 	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
-	// {"level":"debug","type":"log","message":"debug text","node_id":"123-abc","trace_id":"abc-123"}
-	// {"level":"error","type":"log","message":"error text","node_id":"123-abc","trace_id":"abc-123"}
 	// {"level":"info","type":"log","message":"info text","node_id":"123-abc","trace_id":"abc-123"}
-	// {"level":"warn","type":"log","message":"warn text","node_id":"123-abc","trace_id":"abc-123"}
-	// [DEBUG] type="log" message="debug text"
-	// [ERROR] type="log" message="error text"
+	// {"level":"info","type":"metric","name":"payments","value":99.99,"node_id":"123-abc","trace_id":"abc-123"}
+	// {"level":"info","type":"trace","name":"payment_processing","duration":150,"span_id":"span-456","node_id":"123-abc","trace_id":"abc-123"}
 	// [INFO] type="log" message="info text"
-	// [WARN] type="log" message="warn text"
+	// [INFO] type="metric" name="payments" value=99.99
+	// [INFO] type="trace" name="payment_processing" duration=150 span_id="span-456"
 }
 func ExampleNewTelemetryLog() {
 	buf := &bytes.Buffer{}
@@ -81,9 +95,11 @@ func ExampleTelemetry_data() {
 	defer telemetry.Close()
 	// DataLog
 	telemetry.Info(ulog.DataLog,
-		ulog.String("message", "user login"))
+		ulog.String("message", "user login"),
+	)
 	telemetry.InfoWithContext(ctx, ulog.DataLog,
-		ulog.String("message", "user login"))
+		ulog.String("message", "user login"),
+	)
 	// DataMetric
 	telemetry.Info(ulog.DataMetric,
 		ulog.String("name", "logins"),
