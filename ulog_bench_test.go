@@ -21,8 +21,8 @@ func Benchmark_Telemetry_Debug_Multi(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
+		{"Async", ModeAsync, DefaultWriterNull, defaultBufferSize},
+		{"Sync", ModeSync, DefaultWriterNull, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
@@ -52,8 +52,8 @@ func Benchmark_Telemetry_Debug_Single(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
+		{"Async", ModeAsync, DefaultWriterNull, defaultBufferSize},
+		{"Sync", ModeSync, DefaultWriterNull, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
@@ -79,8 +79,8 @@ func Benchmark_Telemetry_Error_Multi(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
+		{"Async", ModeAsync, DefaultWriterNull, defaultBufferSize},
+		{"Sync", ModeSync, DefaultWriterNull, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
@@ -110,8 +110,8 @@ func Benchmark_Telemetry_Error_Single(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
+		{"Async", ModeAsync, DefaultWriterNull, defaultBufferSize},
+		{"Sync", ModeSync, DefaultWriterNull, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
@@ -139,8 +139,8 @@ func Benchmark_Telemetry_Info_Multi(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
+		{"Async", ModeAsync, DefaultWriterNull, defaultBufferSize},
+		{"Sync", ModeSync, DefaultWriterNull, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
@@ -170,8 +170,8 @@ func Benchmark_Telemetry_Info_Single(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
+		{"Async", ModeAsync, DefaultWriterNull, defaultBufferSize},
+		{"Sync", ModeSync, DefaultWriterNull, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
@@ -199,8 +199,8 @@ func Benchmark_Telemetry_Warn_Multi(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
+		{"Async", ModeAsync, DefaultWriterNull, defaultBufferSize},
+		{"Sync", ModeSync, DefaultWriterNull, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
@@ -230,8 +230,8 @@ func Benchmark_Telemetry_Warn_Single(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
+		{"Async", ModeAsync, DefaultWriterNull, defaultBufferSize},
+		{"Sync", ModeSync, DefaultWriterNull, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
@@ -256,8 +256,8 @@ func Benchmark_TelemetryLog_Error_Multi(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
+		{"Async", ModeAsync, DefaultWriterNull, defaultBufferSize},
+		{"Sync", ModeSync, DefaultWriterNull, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
@@ -281,8 +281,8 @@ func Benchmark_TelemetryLog_Error_Single(b *testing.B) {
 		writer     io.Writer
 		bufferSize int
 	}{
-		{"Async", ModeAsync, io.Discard, defaultBufferSize},
-		{"Sync", ModeSync, io.Discard, 0},
+		{"Async", ModeAsync, DefaultWriterNull, defaultBufferSize},
+		{"Sync", ModeSync, DefaultWriterNull, 0},
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {

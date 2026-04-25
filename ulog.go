@@ -84,8 +84,9 @@ const (
 
 // Публичные переменные
 var (
-	DefaultWriterErr = os.Stderr
-	DefaultWriterOut = os.Stdout
+	DefaultWriterErr  = os.Stderr
+	DefaultWriterNull = io.Discard
+	DefaultWriterOut  = os.Stdout
 )
 
 // Публичные интерфейсы
