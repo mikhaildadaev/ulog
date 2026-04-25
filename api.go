@@ -252,7 +252,7 @@ func (universalTelemetry *universalTelemetry) Close() error {
 		}
 	}
 	if closer, ok := writer.(io.Closer); ok {
-		if writer == defaultWriterErr || writer == defaultWriterOut {
+		if writer == DefaultWriterErr || writer == DefaultWriterOut {
 			return nil
 		}
 		return closer.Close()

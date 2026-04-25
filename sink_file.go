@@ -174,7 +174,7 @@ func (fileSink *FileSink) cleanupBackups() error {
 	if fileSink.maxBackups > 0 && len(files) > fileSink.maxBackups {
 		for _, file := range files[fileSink.maxBackups:] {
 			if err := os.Remove(file); err != nil {
-				fmt.Fprintf(defaultWriterErr, "failed to remove old backup %s: %v\n", file, err)
+				fmt.Fprintf(DefaultWriterErr, "failed to remove old backup %s: %v\n", file, err)
 			}
 		}
 		files = files[:fileSink.maxBackups]
@@ -188,7 +188,7 @@ func (fileSink *FileSink) cleanupBackups() error {
 			}
 			if info.ModTime().Before(cutoff) {
 				if err := os.Remove(file); err != nil {
-					fmt.Fprintf(defaultWriterErr, "failed to remove old backup %s: %v\n", file, err)
+					fmt.Fprintf(DefaultWriterErr, "failed to remove old backup %s: %v\n", file, err)
 				}
 			}
 		}
@@ -277,7 +277,7 @@ func (fileSink *FileSink) getRotateFile() error {
 	go func() {
 		defer fileSink.wg.Done()
 		if err := fileSink.getCompressFile(backupName); err != nil {
-			fmt.Fprintf(defaultWriterErr, "failed to compress %s: %v\n", backupName, err)
+			fmt.Fprintf(DefaultWriterErr, "failed to compress %s: %v\n", backupName, err)
 		}
 	}()
 	newFile, err := os.OpenFile(fileSink.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
@@ -292,7 +292,7 @@ func (fileSink *FileSink) getRotateFile() error {
 	go func() {
 		defer fileSink.wg.Done()
 		if err := fileSink.cleanupBackups(); err != nil {
-			fmt.Fprintf(defaultWriterErr, "failed to cleanup backups: %v\n", err)
+			fmt.Fprintf(DefaultWriterErr, "failed to cleanup backups: %v\n", err)
 		}
 	}()
 	return nil

@@ -82,6 +82,12 @@ const (
 	ThemeLight
 )
 
+// Публичные переменные
+var (
+	DefaultWriterErr = os.Stderr
+	DefaultWriterOut = os.Stdout
+)
+
 // Публичные интерфейсы
 type Telemetry interface {
 	Close() error
@@ -133,7 +139,7 @@ func NewTelemetry(options ...telemetryOptions) Telemetry {
 	universalTelemetry := &universalTelemetry{
 		mode:   defaultMode,
 		theme:  getDefaultTheme(),
-		writer: defaultWriterOut,
+		writer: DefaultWriterOut,
 	}
 	universalTelemetry.format.Store(int32(defaultFormat))
 	universalTelemetry.level.Store(int32(getDefaultLevel()))
@@ -215,8 +221,6 @@ var (
 	defaultLevel      = LevelInfo
 	defaultMode       = ModeSync
 	defaultType       = -1
-	defaultWriterErr  = os.Stderr
-	defaultWriterOut  = os.Stdout
 )
 var ignoredErrors = [][]byte{
 	[]byte("EOF"),
@@ -709,7 +713,7 @@ func getDefaultTheme() colorTheme {
 func (asyncWriter *asyncWriter) run() {
 	for buf := range asyncWriter.ch {
 		if _, err := asyncWriter.writer.Write(buf); err != nil {
-			fmt.Fprintf(defaultWriterErr, "ulog: async write failed: %v\n", err)
+			fmt.Fprintf(DefaultWriterErr, "ulog: async write failed: %v\n", err)
 		}
 		asyncWriter.wg.Done()
 	}
@@ -761,7 +765,7 @@ func (universalTelemetry *universalTelemetry) route(context context.Context, att
 	if sinks, ok := writer.(SinkWriter); ok {
 		_, err := sinks.WriteWithAttributes(attributes, fields)
 		if err != nil {
-			fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
+			fmt.Fprintf(DefaultWriterErr, "ulog: failed to write: %v\n", err)
 		}
 		return
 	}
@@ -774,9 +778,9 @@ func (universalTelemetry *universalTelemetry) route(context context.Context, att
 	case FormatText:
 		formatText(dataBuf, attributes, fields)
 	default:
-		fmt.Fprintf(defaultWriterErr, "ulog: unsupported format: %v\n", attributes.typeFormat)
+		fmt.Fprintf(DefaultWriterErr, "ulog: unsupported format: %v\n", attributes.typeFormat)
 	}
 	if _, err := writer.Write(dataBuf.Bytes()); err != nil {
-		fmt.Fprintf(defaultWriterErr, "ulog: failed to write: %v\n", err)
+		fmt.Fprintf(DefaultWriterErr, "ulog: failed to write: %v\n", err)
 	}
 }
