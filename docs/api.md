@@ -13,8 +13,8 @@ ULOG provides a unified API for **Logs**, **Metrics**, and **Traces**.
     - [Options](/core_options-examples) — All formats, levels, modes and switching.
     - [Reference](/core_reference-examples) — All formats, levels, modes and switching.
 - **Sink**
-    - [File](/sink_file-examples) — Atomic file rotation with gzip compression.
-    - [HTTP](/sink_http-examples) — HTTP delivery with Circuit Breaker, retry, and batching.
+    - [File](/sinkfile_main-examples) — Atomic file rotation with gzip compression.
+    - [HTTP](/sinkhttp_main-examples) — HTTP delivery with Circuit Breaker, retry, and batching.
 
 ## Key Features
 
