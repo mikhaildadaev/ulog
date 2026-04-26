@@ -58,6 +58,10 @@ export default defineConfig({
                     link: '/sinkhttp_main-examples' 
                   },
                   { 
+                    text: 'Factories', 
+                    link: '/sinkhttp_factories-examples' 
+                  },
+                  { 
                     text: 'Params', 
                     link: '/sinkhttp_params-examples' 
                   }

@@ -30,8 +30,8 @@ telemetry.Sync()
 
 ## Params
 
-| Name                         | Default | Description                             |
-|------------------------------|---------|-----------------------------------------|
-| `WithFileMaxAge(number)`     |      30 | Maximum days to keep old log files      |
-| `WithFileMaxBackups(number)` |      10 | Maximum number of old log files to keep |
-| `WithFileMaxSize(number)`    |     100 | Maximum file size (MB) before rotation  |
+| Name                         | Description                             | Default | 
+|------------------------------|-----------------------------------------|---------|
+| `WithFileMaxAge(number)`     | Maximum days to keep old log files      |      30 |
+| `WithFileMaxBackups(number)` | Maximum number of old log files to keep |      10 |
+| `WithFileMaxSize(number)`    | Maximum file size (MB) before rotation  |     100 |

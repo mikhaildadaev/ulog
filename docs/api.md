@@ -15,8 +15,9 @@ ULOG provides a unified API for **Logs**, **Metrics**, and **Traces**.
 - **FileSink**
     - [Main](/sinkfile_main-examples) — Atomic file rotation with gzip compression.
     - [Params](/sinkfile_params-examples) — Configuration: MaxSize, MaxBackups, MaxAge.
-- **HTTPSink**
+- **HttpSink**
     - [Main](/sinkhttp_main-examples) — HTTP delivery.
+    - [Factories](/sinkhttp_factories-examples) — Ready-to-use integrations: Telegram, Discord, Slack, Loki, Kafka, Prometheus, Tempo, WeChat.
     - [Params](/sinkhttp_params-examples) — Configuration: Batching, Circuit Breaker, Dedup, Sampling, Retry.
 
 ## Key Features
