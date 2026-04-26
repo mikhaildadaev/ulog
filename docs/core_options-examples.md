@@ -64,21 +64,21 @@ telemetry := ulog.NewTelemetry(
 )
 defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
-    ulog.String("message", "info text"),
+    ulog.String("message", "json message"),
 )
 telemetry.Sync()
 telemetry.SetFormat(ulog.FormatText)
 telemetry.Info(ulog.DataLog,
-    ulog.String("message", "info text"),
+    ulog.String("message", "text message"),
 )
 telemetry.Sync()
 ```
 Output:
 ```json
-{"level":"info","type":"log","message":"info text"}
+{"level":"info","type":"log","message":"json message"}
 ```
 ```text
-[INFO] type="log" message="info text"
+[INFO] type="log" message="text message"
 ```
 
 ## Level
@@ -89,25 +89,25 @@ telemetry := ulog.NewTelemetry(
 )
 defer telemetry.Close()
 telemetry.Debug(ulog.DataLog,
-    ulog.String("message", "debug text"),
+    ulog.String("message", "debug message"),
 )
 telemetry.Error(ulog.DataLog,
-    ulog.String("message", "error text"),
+    ulog.String("message", "error message"),
 )
 telemetry.Info(ulog.DataLog,
-    ulog.String("message", "info text"),
+    ulog.String("message", "info message"),
 )
 telemetry.Warn(ulog.DataLog,
-    ulog.String("message", "warn text"),
+    ulog.String("message", "warn message"),
 )
 telemetry.Sync()
 ```
 Output:
 ```json
-{"level":"debug","type":"log","message":"debug text"}
-{"level":"error","type":"log","message":"error text"}
-{"level":"info","type":"log","message":"info text"}
-{"level":"warn","type":"log","message":"warn text"}
+{"level":"debug","type":"log","message":"debug message"}
+{"level":"error","type":"log","message":"error message"}
+{"level":"info","type":"log","message":"info message"}
+{"level":"warn","type":"log","message":"warn message"}
 ```
 
 ## Mode
@@ -118,19 +118,19 @@ telemetry := ulog.NewTelemetry(
 )
 defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
-    ulog.String("message", "async text"),
+    ulog.String("message", "async message"),
 )
 telemetry.Sync()
 telemetry.SetMode(ulog.ModeSync, ulog.DefaultWriterOut)
 telemetry.Info(ulog.DataLog,
-    ulog.String("message", "sync text"),
+    ulog.String("message", "sync message"),
 )
 telemetry.Sync()
 ```
 Output:
 ```json
-{"level":"info","type":"log","message":"async text"}
-{"level":"info","type":"log","message":"sync text"}
+{"level":"info","type":"log","message":"async message"}
+{"level":"info","type":"log","message":"sync message"}
 ```
 
 ## Theme
@@ -142,17 +142,17 @@ telemetry := ulog.NewTelemetry(
 )
 defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
-    ulog.String("message", "dark theme text"),
+    ulog.String("message", "dark message"),
 )
 telemetry.Sync()
 telemetry.SetTheme(ulog.ThemeLight)
 telemetry.Info(ulog.DataLog,
-    ulog.String("message", "light theme text"),
+    ulog.String("message", "light message"),
 )
 telemetry.Sync()
 ```
 Output:
 ```text
-[INFO] type="log" message="dark theme text"
-[INFO] type="log" message="light theme text"
+[INFO] type="log" message="dark message"
+[INFO] type="log" message="light message"
 ```

@@ -10,11 +10,14 @@ ULOG provides a unified API for **Logs**, **Metrics**, and **Traces**.
 
 - **Core**
     - [Main](/core_main-examples) — Telemetry setup, configuration, and standard logger adapter.
-    - [Options](/core_options-examples) — All formats, levels, modes and switching.
-    - [Reference](/core_reference-examples) — All formats, levels, modes and switching.
-- **Sink**
-    - [File](/sinkfile_main-examples) — Atomic file rotation with gzip compression.
-    - [HTTP](/sinkhttp_main-examples) — HTTP delivery with Circuit Breaker, retry, and batching.
+    - [Options](/core_options-examples) — All configuration options: Extractor, Format, Level, Mode, Theme.
+    - [Reference](/core_reference-examples) — All data types and 16 field constructors.
+- **FileSink**
+    - [Main](/sinkfile_main-examples) — Atomic file rotation with gzip compression.
+    - [Params](/sinkfile_params-examples) — Configuration: MaxSize, MaxBackups, MaxAge.
+- **HTTPSink**
+    - [Main](/sinkhttp_main-examples) — HTTP delivery.
+    - [Params](/sinkhttp_params-examples) — Configuration: Batching, Circuit Breaker, Dedup, Sampling, Retry.
 
 ## Key Features
 

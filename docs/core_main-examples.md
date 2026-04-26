@@ -19,7 +19,7 @@ telemetry := ulog.NewTelemetry(
 )
 defer telemetry.Close()
 telemetry.InfoWithContext(ctx, ulog.DataLog, 
-    ulog.String("message", "info text"),
+    ulog.String("message", "text"),
 )
 telemetry.InfoWithContext(ctx, ulog.DataMetric, 
     ulog.String("name", "payments"),
@@ -34,10 +34,10 @@ telemetry.Sync()
 telemetry.SetExtractor()
 telemetry.SetFormat(ulog.FormatText)
 telemetry.SetLevel(ulog.LevelDebug)
-telemetry.SetMode(ulog.ModeSync, buf)
+telemetry.SetMode(ulog.ModeSync, ulog.DefaultWriterOut)
 telemetry.SetTheme(ulog.ThemeDark),
 telemetry.Info(ulog.DataLog,
-	ulog.String("message", "info text"),
+	ulog.String("message", "text"),
 )
 telemetry.Info(ulog.DataMetric,
 	ulog.String("name", "payments"),
@@ -52,12 +52,12 @@ telemetry.Sync()
 ```
 Output:
 ```json
-{"level":"info","type":"log","message":"info text","node_id":"123-abc","trace_id":"abc-123"}
+{"level":"info","type":"log","message":"text","node_id":"123-abc","trace_id":"abc-123"}
 {"level":"info","type":"metric","name":"payments","value":99.99,"node_id":"123-abc","trace_id":"abc-123"}
 {"level":"info","type":"trace","name":"payment_processing","duration":150,"span_id":"span-456","node_id":"123-abc","trace_id":"abc-123"}
 ```
 ```text
-[INFO] type="log" message="info text"
+[INFO] type="log" message="text"
 [INFO] type="metric" name="payments" value=99.99
 [INFO] type="trace" name="payment_processing" duration=150 span_id="span-456"
 ```
@@ -83,17 +83,17 @@ Output:
 
 ## Options
 
-| Name                                                 | Values                                                             | Default      | Description                                                                     |
-|------------------------------------------------------|--------------------------------------------------------------------|--------------|---------------------------------------------------------------------------------|
-| [`WithExtractor()`](/core_options-examples#extractor)| `keys ...string`                                                   |              | Auto-extract fields from `context.Context` by key names                         |
-| [`WithFormat()`](/core_options-examples#format)      | `FormatJson`, `FormatText`                                         | `FormatText` | Output format: structured JSON or human-readable TEXT with optional ANSI colors |
-| [`WithLevel()`](/core_options-examples#level)        | `LevelDebug`, `LevelError`, `LevelFatal`, `LevelInfo`, `LevelWarn` | `LevelInfo`  | Minimum log severity. Only messages at or above this level are written          |
-| [`WithMode()`](/core_options-examples#mode)          | `ModeAsync`, `ModeSync`                                            | `ModeSync`   | Write mode: non-blocking `ModeAsync` with buffer or blocking `ModeSync`         |
-| [`WithTheme()`](/core_options-examples#theme)        | `ThemeDark`, `ThemeLight`                                          | `ThemeDark`  | ANSI color theme for TEXT output: optimized for dark or light terminals         |
+| Name                                                 | Description                                                                     | Values                                                             | Default      |
+|------------------------------------------------------|---------------------------------------------------------------------------------|--------------------------------------------------------------------|--------------|
+| [`WithExtractor()`](/core_options-examples#extractor)| Auto-extract fields from `context.Context` by key names                         | `keys ...string`                                                   |              |
+| [`WithFormat()`](/core_options-examples#format)      | Output format: structured JSON or human-readable TEXT with optional ANSI colors | `FormatJson`, `FormatText`                                         | `FormatJson` |
+| [`WithLevel()`](/core_options-examples#level)        | Minimum log severity. Only messages at or above this level are written          | `LevelDebug`, `LevelError`, `LevelFatal`, `LevelInfo`, `LevelWarn` | `LevelInfo`  |
+| [`WithMode()`](/core_options-examples#mode)          | Write mode: non-blocking `ModeAsync` with buffer or blocking `ModeSync`         | `ModeAsync`, `ModeSync`                                            | `ModeSync`   |
+| [`WithTheme()`](/core_options-examples#theme)        | ANSI color theme for TEXT output: optimized for dark or light terminals         | `ThemeDark`, `ThemeLight`                                          | `ThemeDark`  |
 
 ## Reference
 
-| Name                                        | Values                                                                                                                                                     | Description                                    |
-|---------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|
-| [`TypeData`](/core_reference-examples#data)  | `DataLog`, `DataMetric`, `DataTrace`                                                                                                                       | Log messages, Prometheus metrics, Tempo traces |
-| [`TypeField`](/core_reference-examples#field) | `Bool`, `Bools`, `Duration`, `Durations`, `Error`, `Errors`, `Float64`, `Floats64`, `Int`, `Ints`, `Int64`, `Ints64`, `String`, `Strings`, `Time`, `Times` | 16 type-safe field constructors                |
+| Name                                          | Description                                    | Values                                                                                                                                                     |
+|-----------------------------------------------|------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`TypeData`](/core_reference-examples#data)   | Log messages, Prometheus metrics, Tempo traces | `DataLog`, `DataMetric`, `DataTrace`                                                                                                                       |
+| [`TypeField`](/core_reference-examples#field) | 16 type-safe field constructors                | `Bool`, `Bools`, `Duration`, `Durations`, `Error`, `Errors`, `Float64`, `Floats64`, `Int`, `Ints`, `Int64`, `Ints64`, `String`, `Strings`, `Time`, `Times` |
