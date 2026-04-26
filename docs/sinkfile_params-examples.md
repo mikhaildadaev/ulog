@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / FileSink / Params
+# FileSink / Params
 
 ## MaxAge
 ## MaxBackups

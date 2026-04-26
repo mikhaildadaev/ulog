@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / HttpSink / Params
+# HttpSink / Params
 
 ## Batch
 ## CircuitBreaker

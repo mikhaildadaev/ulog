@@ -1,4 +1,4 @@
-# API / HttpSink / Main
+# HttpSink / Main
 
 ## NewHttpSink
 

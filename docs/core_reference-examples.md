@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / Core / Reference
+# Core / Reference
 
 ## Data
 One API for three signal types: logs, metrics, and traces

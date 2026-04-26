@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / FileSink / Main
+# FileSink / Main
 
 ## NewFileSink
 Atomic file rotation with gzip compression. Non-blocking — your service won't stall during rotation

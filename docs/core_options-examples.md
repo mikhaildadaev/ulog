@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / Core / Options
+# Core / Options
 
 ## Extractor
 Automatic context extraction. Fields from `context.Context` are added to every log, metric, and trace automatically

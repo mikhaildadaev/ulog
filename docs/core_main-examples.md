@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / Core / Main
+# Core / Main
 
 ## NewTelemetry
 Telemetry instance with all configuration options
