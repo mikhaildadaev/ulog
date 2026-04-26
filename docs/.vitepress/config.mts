@@ -101,11 +101,20 @@ export default defineConfig({
                 ] 
               },
               { 
-                text: 'Приёмники', 
+                text: 'Файловый приёмник', 
                 collapsed: true,
                 items: [
-                  { text: 'Файл', link: '/ru/sink_file-examples' },
-                  { text: 'HTTP', link: '/ru/sink_http-examples' }
+                  { text: 'Основное', link: '/ru/sinkfile_main-examples' },
+                  { text: 'Параметры', link: '/ru/sinkfile_params-examples' }
+                ] 
+              },
+              { 
+                text: 'HTTP приёмник', 
+                collapsed: true,
+                items: [
+                  { text: 'Основное', link: '/ru/sinkhttp_main-examples' },
+                  { text: 'Фабрики', link: '/ru/sinkhttp_factories-examples' },
+                  { text: 'Параметры', link: '/ru/sinkhttp_params-examples' }
                 ] 
               }
             ]
@@ -137,16 +146,25 @@ export default defineConfig({
                 collapsed: true,
                 items: [
                   { text: '主要', link: '/zh/core_main-examples' },
-                  { text: '类型', link: '/zh/core_options-examples' },
-                  { text: '字段', link: '/zh/core_reference-examples' }
+                  { text: '选项', link: '/zh/core_options-examples' },
+                  { text: '格式', link: '/zh/core_reference-examples' }
                 ] 
               },
               { 
-                text: '接收器', 
+                text: '文件接收器', 
                 collapsed: true,
                 items: [
-                  { text: '文件', link: '/zh/sink_file-examples' },
-                  { text: 'HTTP', link: '/zh/sink_http-examples' }
+                  { text: '主要', link: '/zh/sinkfile_main-examples' },
+                  { text: '参数', link: '/zh/sinkfile_params-examples' }
+                ] 
+              },
+              { 
+                text: 'HTTP 接收器', 
+                collapsed: true,
+                items: [
+                  { text: '主要', link: '/zh/sinkhttp_main-examples' },
+                  { text: '工厂', link: '/zh/sinkhttp_factories-examples' },
+                  { text: '参数', link: '/zh/sinkhttp_params-examples' }
                 ] 
               }
             ]
