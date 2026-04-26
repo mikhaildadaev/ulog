@@ -7,18 +7,21 @@ outline: deep
 ## NewFileSink
 Atomic file rotation with gzip compression. Non-blocking — your service won't stall during rotation
 ```go
+var writer io.Writer = ulog.DefaultWriterOut
 fileSink, err := ulog.NewFileSink("app.log",
     ulog.WithFileMaxAge(30),
     ulog.WithFileMaxBackups(10),
     ulog.WithFileMaxSize(100),
 )
 if err != nil {
-    panic(err)
+    fmt.Fprintf(ulog.DefaultWriterErr, "ulog: %v — using stdout instead\n", err)
+} else {
+    defer fileSink.Close()
+    writer = fileSink
 }
-defer fileSink.Close()
 telemetry := ulog.NewTelemetry(
     ulog.WithFormat(ulog.FormatJson),
-    ulog.WithMode(ulog.ModeAsync, fileSink, 10000),
+    ulog.WithMode(ulog.ModeAsync, writer, 10000),
 )
 defer telemetry.Close()
 telemetry.Error(ulog.DataLog,
