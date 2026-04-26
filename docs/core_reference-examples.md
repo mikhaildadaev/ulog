@@ -4,6 +4,10 @@ outline: deep
 
 # Core / Reference
 
+::: warning
+This page is under development
+:::
+
 ## Data
 One API for three signal types: logs, metrics, and traces
 ### Log

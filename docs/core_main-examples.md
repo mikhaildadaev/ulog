@@ -4,6 +4,10 @@ outline: deep
 
 # Core / Main
 
+::: warning
+This page is under development
+:::
+
 ## NewTelemetry
 Telemetry instance with all configuration options
 ```go

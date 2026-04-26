@@ -4,6 +4,10 @@ outline: deep
 
 # Core / Options
 
+::: warning
+This page is under development
+:::
+
 ## Extractor
 Automatic context extraction. Fields from `context.Context` are added to every log, metric, and trace automatically
 ```go

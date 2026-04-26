@@ -4,6 +4,10 @@ outline: deep
 
 # FileSink / Main
 
+::: warning
+This page is under development
+:::
+
 ## NewFileSink
 Atomic file rotation with gzip compression. Non-blocking — your service won't stall during rotation
 ```go

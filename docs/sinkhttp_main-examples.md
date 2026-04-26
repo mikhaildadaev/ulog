@@ -1,5 +1,9 @@
 # HttpSink / Main
 
+::: warning
+This page is under development
+:::
+
 ## NewHttpSink
 Creates an HTTP sink for sending logs to a remote endpoint with **Batching**, **Circuit Breaker**, **Deduplication**, **Retry**, and **Sampling** built in
 ```go
