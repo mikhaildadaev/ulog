@@ -133,6 +133,14 @@ export default defineConfig({
           {
             items: [
               { 
+                text: 'Go', 
+                link: '/ru/go' 
+              },
+              { 
+                text: 'Бенчмарки', 
+                link: '/ru/benchmarks' 
+              },
+              { 
                 text: 'Ядро', 
                 collapsed: true,
                 items: [
@@ -219,6 +227,14 @@ export default defineConfig({
         sidebar: [
           {
             items: [
+              { 
+                text: 'Go', 
+                link: '/zh/go' 
+              },
+              { 
+                text: 'Benchmarks', 
+                link: '/zh/benchmarks' 
+              },
               { 
                 text: '核心', 
                 collapsed: true,
