@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / FileSink / Main
+# API / SinkFile / Main
 
 ::: warning
 This page is under development
@@ -37,8 +37,8 @@ telemetry.Sync()
 
 ## Params
 
-| Name                         | Description                             | Default | 
-|------------------------------|-----------------------------------------|---------|
-| `WithFileMaxAge(number)`     | Maximum days to keep old log files      |      30 |
-| `WithFileMaxBackups(number)` | Maximum number of old log files to keep |      10 |
-| `WithFileMaxSize(number)`    | Maximum file size (MB) before rotation  |     100 |
+| Name                                                                    | Description                             | Default | 
+|-------------------------------------------------------------------------|-----------------------------------------|---------|
+| [`WithFileMaxAge(number)`](/en/sinkfile_params-examples#maxage)         | Maximum days to keep old log files      |      30 |
+| [`WithFileMaxBackups(number)`](/en/sinkfile_params-examples#maxbackups) | Maximum number of old log files to keep |      10 |
+| [`WithFileMaxSize(number)`](/en/sinkfile_params-examples#maxsize)       | Maximum file size (MB) before rotation  |     100 |

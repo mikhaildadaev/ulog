@@ -1,4 +1,8 @@
-# API / HttpSink / Factories
+---
+outline: deep
+---
+
+# API / SinkHttp / Factories
 
 ::: warning
 This page is under development

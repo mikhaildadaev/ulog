@@ -4,27 +4,28 @@ export default defineConfig({
   base: '/ulog/',
   locales: {
     root: {
-      description: 'A high-performance, zero-dependency platform for logs, metrics, and traces.',
+      description: 'A high-performance, zero-dependency platform for logs, metrics and traces.',
       label: 'English',
       lang: 'en',
+      link: '/en/',
       title: 'ULOG',
       themeConfig: {
         nav: [
           { 
             text: 'Home', 
-            link: '/' 
+            link: '/en/' 
           },
           { 
             text: 'Go', 
-            link: '/go' 
+            link: '/en/go' 
           },
           { 
             text: 'Benchmarks', 
-            link: '/benchmarks' 
+            link: '/en/benchmarks' 
           },
           { 
             text: 'API', 
-            link: '/core_main-examples' 
+            link: '/en/core_main-examples' 
           },
         ],
         sidebar: [
@@ -32,11 +33,11 @@ export default defineConfig({
             items: [
               { 
                 text: 'Go', 
-                link: '/go' 
+                link: '/en/go' 
               },
               { 
                 text: 'Benchmarks', 
-                link: '/benchmarks' 
+                link: '/en/benchmarks' 
               },
               { 
                 text: 'API', 
@@ -48,47 +49,47 @@ export default defineConfig({
                     items: [
                       { 
                         text: 'Main', 
-                        link: '/core_main-examples' 
+                        link: '/en/core_main-examples' 
                       },
                       { 
                         text: 'Options', 
-                        link: '/core_options-examples' 
+                        link: '/en/core_options-examples' 
                       },
                       { 
                         text: 'Reference', 
-                        link: '/core_reference-examples' 
+                        link: '/en/core_reference-examples' 
                       }
                     ] 
                   },
                   {
-                    text: 'FileSink',
+                    text: 'SinkFile',
                     collapsed: true, 
                     items: [
                       { 
                         text: 'Main', 
-                        link: '/sinkfile_main-examples' 
+                        link: '/en/sinkfile_main-examples' 
                       },
                       { 
                         text: 'Params', 
-                        link: '/sinkfile_params-examples' 
+                        link: '/en/sinkfile_params-examples' 
                       }
                     ]
                   },
                   {
-                    text: 'HTTPSink', 
+                    text: 'SinkHttp', 
                     collapsed: true,
                     items: [
                       { 
                         text: 'Main', 
-                        link: '/sinkhttp_main-examples' 
+                        link: '/en/sinkhttp_main-examples' 
                       },
                       { 
                         text: 'Factories', 
-                        link: '/sinkhttp_factories-examples' 
+                        link: '/en/sinkhttp_factories-examples' 
                       },
                       { 
                         text: 'Params', 
-                        link: '/sinkhttp_params-examples' 
+                        link: '/en/sinkhttp_params-examples' 
                       }
                     ]
                   }
@@ -104,16 +105,29 @@ export default defineConfig({
       }
     },
     ru: {
-      description: 'Высокопроизводительная платформа для логов, метрик и трейсов без зависимостей.',
+      description: 'Высокопроизводительная платформа без зависимостей для логов, метрик и трейсов.',
       label: 'Русский',
       lang: 'ru',
       link: '/ru/',
       title: 'ULOG',
       themeConfig: {
         nav: [
-          { text: 'Главная', link: '/ru/' },
-          { text: 'API', link: '/ru/api' },
-          { text: 'Бенчмарки', link: '/ru/benchmarks' },
+          { 
+            text: 'Главная', 
+            link: '/ru/' 
+          },
+          { 
+            text: 'Go', 
+            link: '/ru/go' 
+          },
+          { 
+            text: 'Бенчмарки', 
+            link: '/ru/benchmarks' 
+          },
+          { 
+            text: 'API', 
+            link: '/ru/api' 
+          },
         ],
         sidebar: [
           {
@@ -122,26 +136,50 @@ export default defineConfig({
                 text: 'Ядро', 
                 collapsed: true,
                 items: [
-                  { text: 'Основное', link: '/ru/core_main-examples' },
-                  { text: 'Опции', link: '/ru/core_options-examples' },
-                  { text: 'Форматы', link: '/ru/core_reference-examples' }
+                  { 
+                    text: 'Основное', 
+                    link: '/ru/core_main-examples' 
+                  },
+                  { 
+                    text: 'Опции', 
+                    link: '/ru/core_options-examples' 
+                  },
+                  { 
+                    text: 'Форматы', 
+                    link: '/ru/core_reference-examples' 
+                  }
                 ] 
               },
               { 
                 text: 'Файловый приёмник', 
                 collapsed: true,
                 items: [
-                  { text: 'Основное', link: '/ru/sinkfile_main-examples' },
-                  { text: 'Параметры', link: '/ru/sinkfile_params-examples' }
+                  { 
+                    text: 'Основное', 
+                    link: '/ru/sinkfile_main-examples' 
+                  },
+                  { 
+                    text: 'Параметры', 
+                    link: '/ru/sinkfile_params-examples' 
+                  }
                 ] 
               },
               { 
                 text: 'HTTP приёмник', 
                 collapsed: true,
                 items: [
-                  { text: 'Основное', link: '/ru/sinkhttp_main-examples' },
-                  { text: 'Фабрики', link: '/ru/sinkhttp_factories-examples' },
-                  { text: 'Параметры', link: '/ru/sinkhttp_params-examples' }
+                  { 
+                    text: 'Основное', 
+                    link: '/ru/sinkhttp_main-examples' 
+                  },
+                  { 
+                    text: 'Фабрики', 
+                    link: '/ru/sinkhttp_factories-examples' 
+                  },
+                  { 
+                    text: 'Параметры', 
+                    link: '/ru/sinkhttp_params-examples' 
+                  }
                 ] 
               }
             ]
@@ -161,9 +199,22 @@ export default defineConfig({
       title: 'ULOG',
       themeConfig: {
         nav: [
-          { text: '首页', link: '/zh/' },
-          { text: 'API', link: '/zh/api' },
-          { text: '基准测试', link: '/zh/benchmarks' },
+          { 
+            text: '首页', 
+            link: '/zh/' 
+          },
+          { 
+            text: 'Go', 
+            link: '/zh/go' 
+          },
+          { 
+            text: '基准测试', 
+            link: '/zh/benchmarks' 
+          },
+          { 
+            text: 'API', 
+            link: '/zh/api' 
+          },
         ],
         sidebar: [
           {
@@ -172,26 +223,50 @@ export default defineConfig({
                 text: '核心', 
                 collapsed: true,
                 items: [
-                  { text: '主要', link: '/zh/core_main-examples' },
-                  { text: '选项', link: '/zh/core_options-examples' },
-                  { text: '格式', link: '/zh/core_reference-examples' }
+                  { 
+                    text: '主要', 
+                    link: '/zh/core_main-examples' 
+                  },
+                  { 
+                    text: '选项', 
+                    link: '/zh/core_options-examples' 
+                  },
+                  { 
+                    text: '格式', 
+                    link: '/zh/core_reference-examples' 
+                  }
                 ] 
               },
               { 
-                text: '文件接收器', 
+                text: '接收器 File', 
                 collapsed: true,
                 items: [
-                  { text: '主要', link: '/zh/sinkfile_main-examples' },
-                  { text: '参数', link: '/zh/sinkfile_params-examples' }
+                  { 
+                    text: '主要', 
+                    link: '/zh/sinkfile_main-examples' 
+                  },
+                  { 
+                    text: '参数', 
+                    link: '/zh/sinkfile_params-examples' 
+                  }
                 ] 
               },
               { 
-                text: 'HTTP 接收器', 
+                text: '接收器 Http', 
                 collapsed: true,
                 items: [
-                  { text: '主要', link: '/zh/sinkhttp_main-examples' },
-                  { text: '工厂', link: '/zh/sinkhttp_factories-examples' },
-                  { text: '参数', link: '/zh/sinkhttp_params-examples' }
+                  { 
+                    text: '主要', 
+                    link: '/zh/sinkhttp_main-examples' 
+                  },
+                  { 
+                    text: '工厂', 
+                    link: '/zh/sinkhttp_factories-examples' 
+                  },
+                  { 
+                    text: '参数', 
+                    link: '/zh/sinkhttp_params-examples' 
+                  }
                 ] 
               }
             ]
@@ -209,7 +284,10 @@ export default defineConfig({
       provider: 'local'
     },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/mikhaildadaev/ulog' }
+      { 
+        icon: 'github', 
+        link: 'https://github.com/mikhaildadaev/ulog' 
+      }
     ],
   }
 })

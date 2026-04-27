@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / HttpSink / Params
+# API / SinkHttp / Params
 
 ::: warning
 This page is under development

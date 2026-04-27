@@ -6,7 +6,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /go#get-started
+      link: /en/go#get-started
 features:
   - title: Logs
     details: Structured JSON and colored Text output. Automatic extraction from context. Built-in file rotation with atomic gzip compression.

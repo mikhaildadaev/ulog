@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / FileSink / Params
+# API / SinkFile / Params
 
 ::: warning
 This page is under development
