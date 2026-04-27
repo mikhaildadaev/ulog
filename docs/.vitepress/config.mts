@@ -15,58 +15,85 @@ export default defineConfig({
             link: '/' 
           },
           { 
-            text: 'API', 
-            link: '/api' 
+            text: 'Go', 
+            link: '/go' 
           },
           { 
             text: 'Benchmarks', 
             link: '/benchmarks' 
+          },
+          { 
+            text: 'API', 
+            link: '/core_main-examples' 
           },
         ],
         sidebar: [
           {
             items: [
               { 
-                text: 'Core', 
-                collapsed: true,
-                items: [
-                  { text: 'Main', link: '/core_main-examples' },
-                  { text: 'Options', link: '/core_options-examples' },
-                  { text: 'Reference', link: '/core_reference-examples' }
-                ] 
+                text: 'Go', 
+                link: '/go' 
               },
               { 
-                text: 'FileSink',
-                collapsed: true, 
-                items: [
-                  { 
-                    text: 'Main', 
-                    link: '/sinkfile_main-examples' 
-                  },
-                  { 
-                    text: 'Params', 
-                    link: '/sinkfile_params-examples' 
-                  }
-                ] 
+                text: 'Benchmarks', 
+                link: '/benchmarks' 
               },
               { 
-                text: 'HTTPSink', 
+                text: 'API', 
                 collapsed: true,
                 items: [
                   { 
-                    text: 'Main', 
-                    link: '/sinkhttp_main-examples' 
+                    text: 'Core', 
+                    collapsed: true,
+                    items: [
+                      { 
+                        text: 'Main', 
+                        link: '/core_main-examples' 
+                      },
+                      { 
+                        text: 'Options', 
+                        link: '/core_options-examples' 
+                      },
+                      { 
+                        text: 'Reference', 
+                        link: '/core_reference-examples' 
+                      }
+                    ] 
                   },
-                  { 
-                    text: 'Factories', 
-                    link: '/sinkhttp_factories-examples' 
+                  {
+                    text: 'FileSink',
+                    collapsed: true, 
+                    items: [
+                      { 
+                        text: 'Main', 
+                        link: '/sinkfile_main-examples' 
+                      },
+                      { 
+                        text: 'Params', 
+                        link: '/sinkfile_params-examples' 
+                      }
+                    ]
                   },
-                  { 
-                    text: 'Params', 
-                    link: '/sinkhttp_params-examples' 
+                  {
+                    text: 'HTTPSink', 
+                    collapsed: true,
+                    items: [
+                      { 
+                        text: 'Main', 
+                        link: '/sinkhttp_main-examples' 
+                      },
+                      { 
+                        text: 'Factories', 
+                        link: '/sinkhttp_factories-examples' 
+                      },
+                      { 
+                        text: 'Params', 
+                        link: '/sinkhttp_params-examples' 
+                      }
+                    ]
                   }
                 ] 
-              } 
+              }
             ]
           }
         ],

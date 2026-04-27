@@ -4,8 +4,10 @@ outline: deep
 
 # Benchmarks
 
-::: warning
-This page is under development
+::: tip Note
+The best way to compare logging libraries is to run benchmarks in **your own environment** with **your own workload**. Every project has unique requirements — latency, throughput, memory, integration complexity — and no single benchmark can capture them all.
+
+I recommend that you to test `ulog` alongside other libraries and choose the tool that best fits your needs.
 :::
 
 ## Core Write Performance
@@ -46,12 +48,19 @@ These benchmarks measure **pure formatting and context extraction overhead** by 
 
 Real-world benchmark writing structured JSON logs to a **real file** with **atomic rotation** enabled.
 
-| Thread     | Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|------------|-------|------------|--------------|---------------|--------|
-| **Multi**  | Async |       1.0M |        6,900 |          1962 |      6 |
-| **Multi**  |  Sync |     152.7K |        7,800 |          1801 |      5 |
-| **Single** | Async |     969.7K |        6,000 |          1962 |      6 |
-| **Single** |  Sync |     234.4K |        5,500 |          1798 |      5 |
+### Multi Thread
+
+| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|------------|--------------|---------------|--------|
+| Async |     999.9K |        6,900 |          1962 |      6 |
+|  Sync |     152.7K |        7,800 |          1801 |      5 |
+
+### Single Thread
+
+| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|------------|--------------|---------------|--------|
+| Async |     969.7K |        6,000 |          1962 |      6 |
+|  Sync |     234.4K |        5,500 |          1798 |      5 |
 
 > **Note:** Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks. `Single Sync` is the recommended production configuration.
 
@@ -61,23 +70,18 @@ Real-world benchmark writing structured JSON logs to a **real file** with **atom
 
 Benchmark measuring HTTP sink overhead using `httptest.Server` (no network latency).
 
-| Thread     | Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|------------|-------|------------|--------------|---------------|--------|
-| **Multi**  | Async |       1.0M |       27,000 |         8,400 |     82 |
-| **Multi**  |  Sync |      45.4K |       26,400 |         9,100 |     89 |
-| **Single** | Async |     555.2K |       42,100 |         9,100 |     82 |
-| **Single** |  Sync |      13.6K |       82,500 |         9,400 |     85 |
+### Multi Thread
+
+| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|------------|--------------|---------------|--------|
+| Async |     999.9K |       27,000 |         8,400 |     82 |
+|  Sync |      45.4K |       26,400 |         9,100 |     89 |
+
+### Single Thread
+
+| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|------------|--------------|---------------|--------|
+| Async |     555.2K |       42,100 |         9,100 |     82 |
+|  Sync |      13.6K |       82,500 |         9,400 |     85 |
 
 > **Note:** Real-world latency will be dominated by network I/O (typically 10-100x higher). These numbers reflect `ulog` internal overhead only.
-
----
-
-## Comparison: File Write with Rotation
-
-| Library              | Time (ns/op)  | Notes                     |
-|----------------------|---------------|---------------------------|
-| **ulog**             | **5,500**     | Built-in atomic rotation  |
-| Zap + lumberjack     | ~7,000-10,000 | External library required |
-| Zerolog + lumberjack | ~6,000-9,000  | External library required |
-
-> **ulog is faster because rotation is built into the core, eliminating data copying between libraries.**
