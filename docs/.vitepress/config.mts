@@ -126,7 +126,7 @@ export default defineConfig({
           },
           { 
             text: 'API', 
-            link: '/ru/api' 
+            link: '/ru/core_main-examples' 
           },
         ],
         sidebar: [
@@ -213,7 +213,7 @@ export default defineConfig({
           },
           { 
             text: 'API', 
-            link: '/zh/api' 
+            link: '/zh/core_main-examples' 
           },
         ],
         sidebar: [
