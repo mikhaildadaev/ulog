@@ -1,3 +1,5 @@
 <script>
-  window.location.replace('/ulog/en/')
+  if (typeof window !== 'undefined') {
+    window.location.replace('/ulog/en/')
+  }
 </script>
