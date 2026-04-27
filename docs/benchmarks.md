@@ -44,7 +44,7 @@ These benchmarks measure **pure formatting and context extraction overhead** by 
 
 ---
 
-## File Write with Rotation
+## File Write Performance
 
 Real-world benchmark writing structured JSON logs to a **real file** with **atomic rotation** enabled.
 
@@ -66,7 +66,7 @@ Real-world benchmark writing structured JSON logs to a **real file** with **atom
 
 ---
 
-## HTTP Write Overhead
+## HTTP Write Performance
 
 Benchmark measuring HTTP sink overhead using `httptest.Server` (no network latency).
 
