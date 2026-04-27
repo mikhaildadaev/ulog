@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# Core / Options
+# API / Core / Options
 
 ::: warning
 This page is under development
