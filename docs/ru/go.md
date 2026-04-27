@@ -11,19 +11,19 @@ go get github.com/mikhaildadaev/ulog
 
 ## Quick Navigation
 
-- [Benchmarks](/en/benchmarks) - Performance data for core, fileSink and httpSink operations.
+- [Benchmarks](/ru/benchmarks) - Performance data for core, fileSink and httpSink operations.
 - **API**
     - **Core**
-        - [Main](/en/core_main-examples) — Telemetry setup, configuration, and standard logger adapter.
-        - [Options](/en/core_options-examples) — All configuration options: Extractor, Format, Level, Mode, Theme.
-        - [Reference](/en/core_reference-examples) — All data types and 16 field constructors.
+        - [Main](/ru/core_main-examples) — Telemetry setup, configuration, and standard logger adapter.
+        - [Options](/ru/core_options-examples) — All configuration options: Extractor, Format, Level, Mode, Theme.
+        - [Reference](/ru/core_reference-examples) — All data types and 16 field constructors.
     - **SinkFile**
-        - [Main](/en/sinkfile_main-examples) — Atomic file rotation with gzip compression.
-        - [Params](/en/sinkfile_params-examples) — Configuration: MaxAge, MaxBackups, MaxSize.
+        - [Main](/ru/sinkfile_main-examples) — Atomic file rotation with gzip compression.
+        - [Params](/ru/sinkfile_params-examples) — Configuration: MaxAge, MaxBackups, MaxSize.
     - **SinkHttp**
-        - [Main](/en/sinkhttp_main-examples) — HTTP delivery.
-        - [Factories](/en/sinkhttp_factories-examples) — Ready-to-use integrations: Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
-        - [Params](/en/sinkhttp_params-examples) — Configuration: Batching, Circuit Breaker, Dedup, Retry, Sampling.
+        - [Main](/ru/sinkhttp_main-examples) — HTTP delivery.
+        - [Factories](/ru/sinkhttp_factories-examples) — Ready-to-use integrations: Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
+        - [Params](/ru/sinkhttp_params-examples) — Configuration: Batching, Circuit Breaker, Dedup, Retry, Sampling.
 
 ## Key Features
 
