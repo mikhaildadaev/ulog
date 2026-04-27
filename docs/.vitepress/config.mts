@@ -3,7 +3,7 @@ export default defineConfig({
   appearance: 'dark',
   base: '/ulog/',
   locales: {
-    root: {
+    en: {
       description: 'A high-performance, zero-dependency platform for logs, metrics and traces.',
       label: 'English',
       lang: 'en',
