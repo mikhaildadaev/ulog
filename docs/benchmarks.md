@@ -66,7 +66,7 @@ Real-world benchmark writing structured JSON logs to a **real file** with **atom
 
 ---
 
-## HTTP Write Performance
+## Http Write Performance
 
 Benchmark measuring HTTP sink overhead using `httptest.Server` (no network latency).
 
