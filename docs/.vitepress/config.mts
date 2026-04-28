@@ -2,6 +2,25 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   appearance: 'dark',
   base: '/ulog/',
+  head: [
+    [
+      'script',
+      {},
+      `(function() {
+        const lang = document.documentElement.lang
+        if (lang) {
+          localStorage.setItem('vitepress-lang', lang)
+        }
+        const observer = new MutationObserver(() => {
+          const newLang = document.documentElement.lang
+          if (newLang) {
+            localStorage.setItem('vitepress-lang', newLang)
+          }
+        })
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] })
+      })()`
+    ]
+  ],
   locales: {
     en: {
       description: 'A high-performance, zero-dependency platform for logs, metrics and traces.',
