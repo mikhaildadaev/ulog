@@ -75,8 +75,8 @@ export default defineConfig({
                         link: '/en/core_options-examples' 
                       },
                       { 
-                        text: 'Reference', 
-                        link: '/en/core_reference-examples' 
+                        text: 'Types', 
+                        link: '/en/core_types-examples' 
                       }
                     ] 
                   },
@@ -172,8 +172,8 @@ export default defineConfig({
                     link: '/ru/core_options-examples' 
                   },
                   { 
-                    text: 'Форматы', 
-                    link: '/ru/core_reference-examples' 
+                    text: 'Типы', 
+                    link: '/ru/core_types-examples' 
                   }
                 ] 
               },
@@ -268,7 +268,7 @@ export default defineConfig({
                   },
                   { 
                     text: '格式', 
-                    link: '/zh/core_reference-examples' 
+                    link: '/zh/core_types-examples' 
                   }
                 ] 
               },

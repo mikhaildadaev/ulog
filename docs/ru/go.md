@@ -15,7 +15,7 @@ go get github.com/mikhaildadaev/ulog
 
 ## Быстрая навигация
 
-- [Benchmarks](/ru/benchmarks) - Performance data for core, sinkFile and sinkHttp operations.
+- [Бенчмарки](/ru/benchmarks) - Performance data for core, sinkFile and sinkHttp operations.
 - **API**
     - **Core**
         - [Основное](/ru/core_main-examples) — Telemetry setup, configuration, and standard logger adapter.
