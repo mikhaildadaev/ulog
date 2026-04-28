@@ -29,7 +29,7 @@ go get github.com/mikhaildadaev/ulog
         - [Фабрики](/ru/sinkhttp_factories-examples) — Ready-to-use integrations: Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
         - [Параметры](/ru/sinkhttp_params-examples) — Configuration: Batching, Circuit Breaker, Dedup, Retry, Sampling.
 
-## Key Features
+## Ключевые функции
 
 - **Unified API** — One API for logs, metrics, and traces.
 - **Context Extraction** — Automatic `node_id`, `trace_id`, etc. from `context.Context`.

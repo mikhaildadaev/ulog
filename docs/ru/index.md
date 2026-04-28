@@ -1,17 +1,17 @@
 ---
 layout: home
 hero:
-  text: "High-performance, zero-dependency platform for logs, metrics and traces."
+  text: "Высокопроизводительная платформа без зависимостей для логов, метрик и трейсов."
   tagline: Observability 2.0
   actions:
     - theme: brand
       text: Get Started
       link: /ru/go#get-started
 features:
-  - title: Logs
-    details: Structured JSON and colored Text output. Automatic extraction from context. Built-in file rotation with atomic gzip compression.
-  - title: Metrics
-    details: Native Prometheus integration. Send metrics with one API call. Automatic label extraction from structured fields.
-  - title: Traces
-    details: Built-in Tempo integration with automatic field extraction. Full correlation with logs and metrics out of the box.
+  - title: Логи
+    details: Вывод структурированного JSON и цветного текста. Автоматическое извлечение из контекста. Встроенная ротация файлов с атомарным сжатием gzip.
+  - title: Метрики
+    details: Встроенная интеграция с Prometheus. Отправка метрик одним вызовом API. Автоматическое извлечение меток из структурированных полей.
+  - title: Трейсы
+    details: Встроенная интеграция Tempo с автоматическим извлечением полей. Полная корреляция с журналами и метриками из коробки.
 ---
