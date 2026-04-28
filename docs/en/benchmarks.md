@@ -14,7 +14,7 @@ I recommend that you test `ulog` alongside other libraries and choose the tool t
 
 These benchmarks measure the **cost of formatting and extracting context** by writing to `io.Discard`.
 
-### Multi Thread
+### Multithread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -27,7 +27,7 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 | Sync  | **InfoWithContext**  |       3.7M |        326.7 |          1794 |      5 |
 | Sync  | **WarnWithContext**  |       4.0M |        299.9 |          1794 |      5 |
 
-### Single Thread
+### Singlethread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -48,14 +48,14 @@ Uses `WithExtractor("node_id", "trace_id")` to automatically extract from the co
 
 Benchmark data writes structured JSON logs to a **real file** with **atomic rotation** enabled.
 
-### Multi Thread
+### Multithread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
 |  Sync | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
 
-### Single Thread
+### Singlethread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -72,14 +72,14 @@ Includes all additional features: JSON formatting, context extraction, file I/O,
 
 Benchmark data that measures the internal costs of the `ulog` HTTP receiver using `httptest.Server` without network latency.
 
-### Multi Thread
+### Multithread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
 |  Sync | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
 
-### Single Thread
+### Singlethread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
