@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / Экспортёр в сеть / Параметры
+# API / Запись по сети / Параметры
 
 ::: warning
 This page is under development

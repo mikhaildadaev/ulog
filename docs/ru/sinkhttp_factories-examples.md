@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / Экспортёр в сеть / Фабрики
+# API / Запись по сети / Фабрики
 
 ::: warning
 This page is under development

@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / Экспортёр в файл / Параметры
+# API / Запись в файл / Параметры
 
 ::: warning
 This page is under development

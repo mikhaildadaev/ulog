@@ -178,7 +178,7 @@ export default defineConfig({
                 ] 
               },
               { 
-                text: 'Экспортёр в файл', 
+                text: 'Запись в файл', 
                 collapsed: true,
                 items: [
                   { 
@@ -192,7 +192,7 @@ export default defineConfig({
                 ] 
               },
               { 
-                text: 'Экспортёр в сеть', 
+                text: 'Запись по сети', 
                 collapsed: true,
                 items: [
                   { 
