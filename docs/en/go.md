@@ -4,8 +4,12 @@ outline: deep
 
 # Go
 
+::: info Information
+The latest stable version of `ulog` is **v1.26.12**.
+:::
+
 ## Get Started
-```go
+```bash
 go get github.com/mikhaildadaev/ulog
 ```
 
@@ -15,8 +19,8 @@ go get github.com/mikhaildadaev/ulog
 - **API**
     - **Core**
         - [Main](/en/core_main-examples) — Telemetry setup, configuration, and standard logger adapter.
+        - [Formats](/en/core_formats-examples) — All data types and 16 field constructors.
         - [Options](/en/core_options-examples) — All configuration options: Extractor, Format, Level, Mode, Theme.
-        - [Reference](/en/core_reference-examples) — All data types and 16 field constructors.
     - **SinkFile**
         - [Main](/en/sinkfile_main-examples) — Atomic file rotation with gzip compression.
         - [Params](/en/sinkfile_params-examples) — Configuration: MaxAge, MaxBackups, MaxSize.

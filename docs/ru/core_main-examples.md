@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / Core / Main
+# API / Ядро / Основное
 
 ::: warning
 This page is under development

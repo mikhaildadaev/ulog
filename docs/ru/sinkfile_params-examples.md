@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / SinkFile / Params
+# API / SinkFile / Параметры
 
 ::: warning
 This page is under development
