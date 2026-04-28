@@ -33,8 +33,6 @@ telemetry.Error(ulog.DataLog,
 telemetry.Sync()
 ```
 
-## 帕拉姆斯
-
 | 姓名                                                                                           | 资料描述                                                                                | 违约情况      |
 |-----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|--------------|
 | [`WithHttpBatch(size, flushInterval)`](/en/sinkhttp_params-examples#batch)                    | Batch messages: send up to `size` messages or every `flushInterval`                    | `100, 5s`    |

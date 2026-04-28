@@ -35,8 +35,6 @@ telemetry.Error(ulog.DataLog,
 telemetry.Sync()
 ```
 
-## Params
-
 | Name                                                                    | Description                             | Default | 
 |-------------------------------------------------------------------------|-----------------------------------------|---------|
 | [`WithFileMaxAge(number)`](/en/sinkfile_params-examples#maxage)         | Maximum days to keep old log files      |      30 |
