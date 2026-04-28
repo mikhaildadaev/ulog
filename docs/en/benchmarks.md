@@ -86,4 +86,4 @@ Benchmark data that measures the internal costs of the `ulog` HTTP receiver usin
 
 ::: tip Note
 In a real environment, the delay is mainly determined by network I/O (usually 10-100 times higher). These numbers only reflect the internal costs of `ulog`.
-:::.
+:::
