@@ -4,7 +4,7 @@ outline: deep
 
 # 基准
 
-::: tip Note
+::: info 资料
 比较日志记录库的最佳方法是在**您自己的环境**与**您自己的工作负载**中运行基准测试。 每个项目都有独特的需求--延迟、吞吐量、内存、集成复杂性--没有一个基准可以全部捕获它们。
 
 我建议您与其他库一起测试`ulog'，并选择最适合您需求的工具。
@@ -40,7 +40,7 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 | Sync  | **InfoWithContext**  |       1.5M |        810.0 |          1794 |      5 |
 | Sync  | **WarnWithContext**  |       1.5M |        790.5 |          1794 |      5 |
 
-::: tip Note
+::: tip 注
 使用 `WithExtractor("node_id", "trace_id")` 自动从上下文中提取。 所有测试都写入 `io.Discard`。 以英特尔酷睿i9-9880h(2.30GHz)。
 :::
 
@@ -62,7 +62,7 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 | Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
 |  Sync | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
 
-::: tip Note
+::: tip 注
 `Single Sync` 是推荐的工作配置。 使用的基准测试包括所有附加功能：JSON格式，上下文提取，文件I/O和非阻塞旋转验证。
 :::
 
@@ -84,6 +84,6 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 | Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
 |  Sync | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
 
-::: tip Note
+::: tip 注
 在真实环境中，延迟主要由网络I/O决定（通常高出10-100倍）。 这些数字只反映了`ulog`的内部成本。
 :::
