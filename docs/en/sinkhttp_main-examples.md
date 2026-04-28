@@ -8,10 +8,10 @@ outline: deep
 This page is under development
 :::
 
-## NewHttpSink
+## NewSinkHttp
 Creates an HTTP sink for sending logs to a remote endpoint with **Batching**, **Circuit Breaker**, **Deduplication**, **Retry**, and **Sampling** built in
 ```go
-httpSink := ulog.NewHttpSink("http://localhost:8080/logs",
+sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpBatch(100, 5*time.Second),
     ulog.WithHttpCircuitBreaker(10, 10*time.Second),
     ulog.WithHttpDedupWindow(5*time.Second),
@@ -20,10 +20,10 @@ httpSink := ulog.NewHttpSink("http://localhost:8080/logs",
     ulog.WithHttpSampleRate(100),
     ulog.WithHttpTimeout(30*time.Second),
 )
-defer httpSink.Close()
+defer sinkHttp.Close()
 telemetry := ulog.NewTelemetry(
     ulog.WithFormat(ulog.FormatJson),
-    ulog.WithMode(ulog.ModeAsync, httpSink, 10000),
+    ulog.WithMode(ulog.ModeAsync, sinkHttp, 10000),
 )
 defer telemetry.Close()
 telemetry.Error(ulog.DataLog,
