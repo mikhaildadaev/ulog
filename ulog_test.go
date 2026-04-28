@@ -681,18 +681,18 @@ func Test_SinkFactory_Discord(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer server.Close()
-	sinkHttp := NewDiscordSink(server.URL, "ULog Bot", "")
+	sinkDiscord := NewSinkDiscord(server.URL, "ULog Bot", "")
 	fields := []Field{
 		String("message", "test message"),
 	}
-	_, err := sinkHttp.WriteWithAttributes(
+	_, err := sinkDiscord.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkHttp.Sync()
+	sinkDiscord.Sync()
 }
 func Test_SinkFactory_Kafka(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -739,7 +739,7 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkHttp := NewKafkaSink(server.URL, "test-topic")
+	sinkKafka := NewSinkKafka(server.URL, "test-topic")
 	fields := []Field{
 		String("message", "test kafka message"),
 		String("service", "test-service"),
@@ -748,14 +748,14 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 		Int("count", 42),
 		Duration("duration", 5*time.Second),
 	}
-	_, err := sinkHttp.WriteWithAttributes(
+	_, err := sinkKafka.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkHttp.Sync()
+	sinkKafka.Sync()
 }
 func Test_SinkFactory_Loki(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -804,7 +804,7 @@ func Test_SinkFactory_Loki(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer server.Close()
-	sinkHttp := NewLokiSink(server.URL, map[string]string{
+	sinkLoki := NewSinkLoki(server.URL, map[string]string{
 		"app": "test-app",
 		"env": "test",
 	})
@@ -813,14 +813,14 @@ func Test_SinkFactory_Loki(t *testing.T) {
 		String("user_id", "12345"),
 		String("trace_id", "abc-123"),
 	}
-	_, err := sinkHttp.WriteWithAttributes(
+	_, err := sinkLoki.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkHttp.Sync()
+	sinkLoki.Sync()
 }
 func Test_SinkFactory_Prometheus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -840,20 +840,20 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkHttp := NewPrometheusSink(server.URL)
+	sinkPrometheus := NewSinkPrometheus(server.URL)
 	fields := []Field{
 		String("name", "http_requests_total"),
 		String("method", "GET"),
 		Float64("value", 42.0),
 	}
-	_, err := sinkHttp.WriteWithAttributes(
+	_, err := sinkPrometheus.WriteWithAttributes(
 		writeAttributes{typeData: DataMetric},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkHttp.Sync()
+	sinkPrometheus.Sync()
 }
 func Test_SinkFactory_Slack(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -873,18 +873,18 @@ func Test_SinkFactory_Slack(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkHttp := NewSlackSink(server.URL, "ULog", ":robot:", "", "#alerts")
+	sinkSlack := NewSinkSlack(server.URL, "ULog", ":robot:", "", "#alerts")
 	fields := []Field{
 		String("message", "test message"),
 	}
-	_, err := sinkHttp.WriteWithAttributes(
+	_, err := sinkSlack.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkHttp.Sync()
+	sinkSlack.Sync()
 }
 func Test_SinkFactory_Telegram(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -910,19 +910,19 @@ func Test_SinkFactory_Telegram(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkHttp := NewTelegramSink("test-bot-token", "test-chat-123")
-	sinkHttp.endPoint = server.URL
+	sinkTelegram := NewSinkTelegram("test-bot-token", "test-chat-123")
+	sinkTelegram.endPoint = server.URL
 	fields := []Field{
 		String("message", "test message"),
 	}
-	_, err := sinkHttp.WriteWithAttributes(
+	_, err := sinkTelegram.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkHttp.Sync()
+	sinkTelegram.Sync()
 }
 func Test_SinkFactory_Tempo(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -943,15 +943,15 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkHttp := NewTempoSink(server.URL)
+	sinkTempo := NewSinkTempo(server.URL)
 	fields := []Field{
 		String("trace_id", "abc"),
 		String("span_id", "def"),
 		String("name", "test"),
 		Int64("duration", 100),
 	}
-	sinkHttp.WriteWithAttributes(writeAttributes{typeData: DataTrace}, fields)
-	sinkHttp.Sync()
+	sinkTempo.WriteWithAttributes(writeAttributes{typeData: DataTrace}, fields)
+	sinkTempo.Sync()
 }
 func Test_SinkFactory_Wechat(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -974,18 +974,18 @@ func Test_SinkFactory_Wechat(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkHttp := NewWechatSink(server.URL)
+	sinkWechat := NewSinkWechat(server.URL)
 	fields := []Field{
 		String("message", "test message"),
 	}
-	_, err := sinkHttp.WriteWithAttributes(
+	_, err := sinkWechat.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkHttp.Sync()
+	sinkWechat.Sync()
 }
 func Test_SinkFile(t *testing.T) {
 	tmpDir := t.TempDir()
