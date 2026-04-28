@@ -32,7 +32,7 @@ go get github.com/mikhaildadaev/ulog
 ## Key Features
 
 - **Unified API** — One API for logs, metrics, and traces.
-- **Context Extraction** — Automatic `node_id`, `trace_id`, etc. from `context.Context`.
+- **Context Extraction** — Automatic extract `node_id`, `trace_id`, etc. from `context.Context`.
 - **16 Field Types** — `Bool`, `Bools`, `Duration`, `Durations`, `Error`, `Errors`, `Float64`, `Floats64`, `Int`, `Ints`, `Int64`, `Ints64`, `String`, `Strings`, `Time`, `Times`.
 - **SinkFile** — Non-blocking atomic rotation with gzip.
 - **SinkHttp** — Batching, Circuit Breaker, Deduplication, Retry, Sampling.

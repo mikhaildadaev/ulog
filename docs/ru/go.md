@@ -15,25 +15,25 @@ go get github.com/mikhaildadaev/ulog
 
 ## Быстрая навигация
 
-- [Бенчмарки](/ru/benchmarks) - Performance data for core, sinkFile and sinkHttp operations.
+- [Бенчмарки](/ru/benchmarks) - Данные о производительности ядра, записи в файл и записи по сети.
 - **API**
-    - **Core**
-        - [Основное](/ru/core_main-examples) — Telemetry setup, configuration, and standard logger adapter.
-        - [Опции](/ru/core_options-examples) — All configuration options: Extractor, Format, Level, Mode, Theme.
-        - [Типы](/en/core_types-examples) — All data types and 16 field constructors.
-    - **SinkFile**
-        - [Основное](/ru/sinkfile_main-examples) — Atomic file rotation with gzip compression.
-        - [Параметры](/ru/sinkfile_params-examples) — Configuration: MaxAge, MaxBackups, MaxSize.
-    - **SinkHttp**
-        - [Основное](/ru/sinkhttp_main-examples) — HTTP delivery.
-        - [Фабрики](/ru/sinkhttp_factories-examples) — Ready-to-use integrations: Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
-        - [Параметры](/ru/sinkhttp_params-examples) — Configuration: Batching, Circuit Breaker, Dedup, Retry, Sampling.
+    - **Ядро**
+        - [Основное](/ru/core_main-examples) — Настройка телеметрии, конфигурирование и стандартный адаптер регистратора.
+        - [Опции](/ru/core_options-examples) — Все параметры конфигурации: Экстрактор, Форматы, Уровни, Режимы, Темы
+        - [Типы](/en/core_types-examples) — Все типы данных и 16 конструкторов полей.
+    - **Запись в файл**
+        - [Основное](/ru/sinkfile_main-examples) — Атомарная ротация файлов со сжатием в gzip.
+        - [Параметры](/ru/sinkfile_params-examples) — ...
+    - **Запись по сети**
+        - [Основное](/ru/sinkhttp_main-examples) — ...
+        - [Фабрики](/ru/sinkhttp_factories-examples) — Готовые к использованию интеграции: Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
+        - [Параметры](/ru/sinkhttp_params-examples) — Конфигурация: Пакетной обработки, Автоматического выключателя, Дедупликации, Повторной отправке, Выборки.
 
 ## Ключевые функции
 
-- **Unified API** — One API for logs, metrics, and traces.
-- **Context Extraction** — Automatic `node_id`, `trace_id`, etc. from `context.Context`.
-- **16 Field Types** — `Bool`, `Bools`, `Duration`, `Durations`, `Error`, `Errors`, `Float64`, `Floats64`, `Int`, `Ints`, `Int64`, `Ints64`, `String`, `Strings`, `Time`, `Times`.
-- **SinkFile** — Non-blocking atomic rotation with gzip.
-- **SinkHttp** — Batching, Circuit Breaker, Deduplication, Retry, Sampling.
-- **8 Integrations** — Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
+- **Унифицированный API** — Единый API для логов, метрик и трассировок.
+- **Извлечение контекста** — Автоматическое извлечение `node_id`, `trace_id` и т.д. из `context.Context`.
+- **16 типов полей** — `Bool`, `Bools`, `Duration`, `Durations`, `Error`, `Errors`, `Float64`, `Floats64`, `Int`, `Ints`, `Int64`, `Ints64`, `String`, `Strings`, `Time`, `Times`.
+- **Запись в файл** — Неблокируемое атомарное преобразование с помощью gzip.
+- **Запись по сети** — Пакетная обработка, автоматический выключатель, дедупликация, повторная попытка, выборка.
+- **8 интеграций** — Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
