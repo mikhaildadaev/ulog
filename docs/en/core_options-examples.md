@@ -4,8 +4,8 @@ outline: deep
 
 # API / Core / Options
 
-::: warning
-This page is under development
+::: info
+This page covers all configuration options: `Extractor`, `Format`, `Level`, `Mode`, `Theme`. Each option is shown with a working code example and expected output.
 :::
 
 ## WithExtractor/SetExtractor

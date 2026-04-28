@@ -4,8 +4,8 @@ outline: deep
 
 # API / Core / Types
 
-::: warning
-This page is under development
+::: info
+This page documents all data types `DataLog`, `DataMetric`, `DataTrace` and all 16 field types. Each field is shown with a working code example and expected JSON output.
 :::
 
 ## Data

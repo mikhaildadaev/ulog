@@ -4,8 +4,8 @@ outline: deep
 
 # API / Ядро / Опции
 
-::: warning
-This page is under development
+::: info
+На этой странице описаны все опции конфигурации: `Extractor`, `Format`, `Level`, `Mode`, `Theme`. Каждая опция показана с рабочим примером кода и ожидаемым выводом.
 :::
 
 ## WithExtractor/SetExtractor

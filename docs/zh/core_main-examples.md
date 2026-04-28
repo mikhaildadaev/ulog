@@ -4,8 +4,8 @@ outline: deep
 
 # API / 核心 / 主要
 
-::: warning
-This page is under development
+::: info
+API 的核心是 `ulog` 的基础。 在这里，您将学习如何创建遥测实例、配置所有参数以及了解每个数据类型和字段构造函数。
 :::
 
 ## NewTelemetry

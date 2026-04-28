@@ -4,8 +4,8 @@ outline: deep
 
 # API / Ядро / Типы
 
-::: warning
-This page is under development
+::: info
+На этой странице описаны все типы данных `DataLog`, `DataMetric`, `DataTrace` и все 16 типов полей. Каждое поле показано с рабочим примером кода и ожидаемым выводом в JSON.
 :::
 
 ## Data
