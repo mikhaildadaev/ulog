@@ -4,26 +4,26 @@ outline: deep
 
 # Go
 
-## Get Started
+## 开始吧
 ```bash
 go get github.com/mikhaildadaev/ulog
 ```
 
-## Quick Navigation
+## 快速导航
 
 - [Benchmarks](/en/benchmarks) - Performance data for core, fileSink and httpSink operations.
 - **API**
-    - **Core**
-        - [Main](/en/core_main-examples) — Telemetry setup, configuration, and standard logger adapter.
+    - **核心**
+        - [主要](/en/core_main-examples) — Telemetry setup, configuration, and standard logger adapter.
         - [Options](/en/core_options-examples) — All configuration options: Extractor, Format, Level, Mode, Theme.
         - [Types](/en/core_types-examples) — All data types and 16 field constructors.
     - **SinkFile**
-        - [Main](/en/sinkfile_main-examples) — Atomic file rotation with gzip compression.
-        - [Params](/en/sinkfile_params-examples) — Configuration: MaxAge, MaxBackups, MaxSize.
+        - [主要](/en/sinkfile_main-examples) — Atomic file rotation with gzip compression.
+        - [帕拉姆斯](/en/sinkfile_params-examples) — Configuration: MaxAge, MaxBackups, MaxSize.
     - **SinkHttp**
-        - [Main](/en/sinkhttp_main-examples) — HTTP delivery.
+        - [主要](/en/sinkhttp_main-examples) — HTTP delivery.
         - [Factories](/en/sinkhttp_factories-examples) — Ready-to-use integrations: Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
-        - [Params](/en/sinkhttp_params-examples) — Configuration: Batching, Circuit Breaker, Dedup, Retry, Sampling.
+        - [帕拉姆斯](/en/sinkhttp_params-examples) — Configuration: Batching, Circuit Breaker, Dedup, Retry, Sampling.
 
 ## Key Features
 

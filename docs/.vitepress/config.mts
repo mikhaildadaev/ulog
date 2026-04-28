@@ -281,7 +281,7 @@ export default defineConfig({
                     link: '/zh/sinkfile_main-examples' 
                   },
                   { 
-                    text: '参数', 
+                    text: '帕拉姆斯', 
                     link: '/zh/sinkfile_params-examples' 
                   }
                 ] 
@@ -299,7 +299,7 @@ export default defineConfig({
                     link: '/zh/sinkhttp_factories-examples' 
                   },
                   { 
-                    text: '参数', 
+                    text: '帕拉姆斯', 
                     link: '/zh/sinkhttp_params-examples' 
                   }
                 ] 

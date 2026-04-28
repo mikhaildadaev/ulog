@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / SinkHttp / Main
+# API / 通过网络录制 / 主要
 
 ::: warning
 This page is under development
@@ -33,7 +33,7 @@ telemetry.Error(ulog.DataLog,
 telemetry.Sync()
 ```
 
-## Params
+## 帕拉姆斯
 
 | Name                                                                                       | Description                                                                            | Default      |
 |--------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|--------------|
