@@ -219,7 +219,7 @@ export default defineConfig({
       }
     },
     zh: {
-      description: '高性能、零依赖的日志、指标和追踪平台。',
+      description: '一个高性能、零依赖性的日志、度量和跟踪平台。',
       label: '简体中文',
       lang: 'zh',
       link: '/zh/',
