@@ -12,11 +12,11 @@ outline: deep
 
 ## 核心表现
 
-These benchmarks measure the **cost of formatting and extracting context** by writing to `io.Discard`.
+这些基准通过写入 `io.Discard`.
 
 ### 多线程
 
-| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+| 模式  | 水平                  | 运作        | 时间 (ns/op)  | 记忆 (B/op)   | 分配    |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **DebugWithContext** |       5.8M |        180.7 |           536 |      3 |
 | Async | **ErrorWithContext** |       2.0M |        578.3 |          1922 |      6 |
@@ -29,7 +29,7 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 
 ### 单读,单读
 
-| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+| 模式  | 水平                  | 运作        | 时间  (ns/op) | 记忆 (B/op)   | 分配    |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **DebugWithContext** |       2.1M |        567.1 |           536 |      3 |
 | Async | **ErrorWithContext** |       1.0M |         1045 |          1922 |      6 |
@@ -50,14 +50,14 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 
 ### 多线程
 
-| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+| 模式  | 水平                  | 运作        | 时间 (ns/op) | 记忆 (B/op)    | 分配    |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
 |  Sync | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
 
 ### 单读,单读
 
-| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+| 模式  | 水平                  | 运作        | 时间 (ns/op) | 记忆 (B/op)    | 分配    |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
 |  Sync | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
@@ -72,14 +72,14 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 
 ### 多线程
 
-| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+| 模式  | 水平                  | 运作        | 时间 (ns/op) | 记忆 (B/op)    | 分配    |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
 |  Sync | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
 
 ### 单读,单读
 
-| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+| 模式  | 水平                  | 运作        | 时间 (ns/op) | 记忆 (B/op)    | 分配    |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
 |  Sync | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
