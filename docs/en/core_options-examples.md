@@ -8,14 +8,14 @@ outline: deep
 This page is under development
 :::
 
-## Extractor
+## WithExtractor/SetExtractor
 Automatic context extraction. Fields from `context.Context` are added to every log, metric, and trace automatically
 ```go
 ctx := context.Background()
 ctx = context.WithValue(ctx, "node_id", "123-abc")
 ctx = context.WithValue(ctx, "trace_id", "abc-123")
 telemetry := ulog.NewTelemetry(
-    ulog.WithExtractor("node_id", "trace_id")
+    ulog.WithExtractor("node_id")
 )
 defer telemetry.Close()
 telemetry.InfoWithContext(ctx, ulog.DataLog, 
@@ -31,6 +31,19 @@ telemetry.InfoWithContext(ctx, ulog.DataTrace,
     ulog.Int64("duration", 150),
 )
 telemetry.Sync()
+telemetry.SetExtractor("trace_id")
+telemetry.InfoWithContext(ctx, ulog.DataLog, 
+    ulog.String("message", "user login"),
+)
+telemetry.InfoWithContext(ctx, ulog.DataMetric,
+    ulog.String("name", "logins"),
+    ulog.Float64("value", 1.0),
+)
+telemetry.InfoWithContext(ctx, ulog.DataTrace,
+    ulog.String("span_id", "def"),
+    ulog.String("name", "login"),
+    ulog.Int64("duration", 150),
+)
 ```
 Output:
 ```json
@@ -38,7 +51,27 @@ Output:
     "level":"info",
     "type":"log",
     "message":"user login",
-    "node_id":"123-abc",
+    "node_id":"123-abc"
+}
+{
+    "level":"info",
+    "type":"metric",
+    "name":"logins",
+    "value":1,
+    "node_id":"123-abc"
+}
+{
+    "level":"info",
+    "type":"trace",
+    "span_id":"def",
+    "name":"login",
+    "duration":150,
+    "node_id":"123-abc"
+}
+{
+    "level":"info",
+    "type":"log",
+    "message":"user login",
     "trace_id":"abc-123"
 }
 {
@@ -46,7 +79,6 @@ Output:
     "type":"metric",
     "name":"logins",
     "value":1,
-    "node_id":"123-abc",
     "trace_id":"abc-123"
 }
 {
@@ -55,12 +87,11 @@ Output:
     "span_id":"def",
     "name":"login",
     "duration":150,
-    "node_id":"123-abc",
     "trace_id":"abc-123"
 }
 ```
 
-## Format
+## WithFormat/SetFormat
 Switch between Text and JSON output on the fly
 ```go
 telemetry := ulog.NewTelemetry(
@@ -85,7 +116,7 @@ Output:
 [INFO] type="log" message="text message"
 ```
 
-## Level
+## WithLevel/SetLevel
 Filter logs by severity. Only messages at or above the configured level are written
 ```go
 telemetry := ulog.NewTelemetry(
@@ -98,6 +129,8 @@ telemetry.Debug(ulog.DataLog,
 telemetry.Error(ulog.DataLog,
     ulog.String("message", "error message"),
 )
+telemetry.Sync()
+telemetry.SetLevel(ulog.LevelInfo)
 telemetry.Info(ulog.DataLog,
     ulog.String("message", "info message"),
 )
@@ -114,7 +147,7 @@ Output:
 {"level":"warn","type":"log","message":"warn message"}
 ```
 
-## Mode
+## WithMode/SetMode
 Switch between synchronous and asynchronous writing on the fly
 ```go
 telemetry := ulog.NewTelemetry(
@@ -137,7 +170,7 @@ Output:
 {"level":"info","type":"log","message":"sync message"}
 ```
 
-## Theme
+## WithTheme/SetTheme
 Switch between Dark and Light color themes for Text output. Themes only affect Text format, not JSON
 ```go
 telemetry := ulog.NewTelemetry(
