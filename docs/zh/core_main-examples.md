@@ -95,9 +95,9 @@ Output:
 | [`WithMode()`](/en/core_options-examples#mode)          | Write mode: non-blocking `ModeAsync` with buffer or blocking `ModeSync`         | `ModeAsync`, `ModeSync`                                            | `ModeSync`   |
 | [`WithTheme()`](/en/core_options-examples#theme)        | ANSI color theme for TEXT output: optimized for dark or light terminals         | `ThemeDark`, `ThemeLight`                                          | `ThemeDark`  |
 
-## Reference
+## Types
 
 | Name                                          | Description                                    | Values                                                                                                                                                     |
 |-----------------------------------------------|------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`TypeData`](/en/core_reference-examples#data)   | Log messages, Prometheus metrics, Tempo traces | `DataLog`, `DataMetric`, `DataTrace`                                                                                                                       |
-| [`TypeField`](/en/core_reference-examples#field) | 16 type-safe field constructors                | `Bool`, `Bools`, `Duration`, `Durations`, `Error`, `Errors`, `Float64`, `Floats64`, `Int`, `Ints`, `Int64`, `Ints64`, `String`, `Strings`, `Time`, `Times` |
+| [`TypeData`](/en/core_types-examples#data)   | Log messages, Prometheus metrics, Tempo traces | `DataLog`, `DataMetric`, `DataTrace`                                                                                                                       |
+| [`TypeField`](/en/core_types-examples#field) | 16 type-safe field constructors                | `Bool`, `Bools`, `Duration`, `Durations`, `Error`, `Errors`, `Float64`, `Floats64`, `Int`, `Ints`, `Int64`, `Ints64`, `String`, `Strings`, `Time`, `Times` |

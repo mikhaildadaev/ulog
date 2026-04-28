@@ -35,7 +35,7 @@ telemetry.Sync()
 
 ## Params
 
-| Name                                                                                       | Description                                                                            | Default      |
+| Наименование                                                                                       | Описание                                                                            | По умолчанию      |
 |--------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|--------------|
 | [`WithHttpBatch(size, flushInterval)`](/ru/sinkhttp_params-examples#batch)                    | Batch messages: send up to `size` messages or every `flushInterval`                    | `100, 5s`    |
 | [`WithHttpCircuitBreaker(maxFailures, timeout)`](/ru/sinkhttp_params-examples#circuitbreaker) | Open circuit after `maxFailures` errors, wait `timeout` before recovery                | `10, 10s`    |
