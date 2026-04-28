@@ -321,7 +321,7 @@ func Benchmark_SinkFile_Multi(b *testing.B) {
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
 			logFile := filepath.Join(tmpDir, "ulog_file.log")
-			sinkFile, err := NewFileSink(logFile,
+			sinkFile, err := NewSinkFile(logFile,
 				WithFileMaxSize(15),
 			)
 			if err != nil {
@@ -369,7 +369,7 @@ func Benchmark_SinkFile_Single(b *testing.B) {
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
 			logFile := filepath.Join(tmpDir, "ulog_file.log")
-			sinkFile, err := NewFileSink(logFile,
+			sinkFile, err := NewSinkFile(logFile,
 				WithFileMaxSize(15),
 			)
 			if err != nil {
@@ -409,12 +409,12 @@ func Benchmark_SinkHttp_Multi(b *testing.B) {
 				w.WriteHeader(http.StatusOK)
 			}))
 			defer server.Close()
-			sink := NewHttpSink(server.URL,
+			sinkHttp := NewSinkHttp(server.URL,
 				WithHttpDisabledBatch(),
 				WithHttpDisabledCircuit(),
 				WithHttpFilterLevel(LevelDebug),
 			)
-			tee := NewTeeSink(sink)
+			tee := NewTeeSink(sinkHttp)
 			telemetry := NewTelemetry(
 				WithExtractor("node_id", "trace_id"),
 				WithFormat(FormatJson),
@@ -451,12 +451,12 @@ func Benchmark_SinkHttp_Single(b *testing.B) {
 				w.WriteHeader(http.StatusOK)
 			}))
 			defer server.Close()
-			sink := NewHttpSink(server.URL,
+			sinkHttp := NewSinkHttp(server.URL,
 				WithHttpDisabledBatch(),
 				WithHttpDisabledCircuit(),
 				WithHttpFilterLevel(LevelDebug),
 			)
-			tee := NewTeeSink(sink)
+			tee := NewTeeSink(sinkHttp)
 			telemetry := NewTelemetry(
 				WithExtractor("node_id", "trace_id"),
 				WithFormat(FormatJson),

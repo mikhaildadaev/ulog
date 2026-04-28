@@ -15,7 +15,7 @@ type DiscordData struct {
 	TTS       bool   `json:"tts,omitempty"`
 	UserName  string `json:"username,omitempty"`
 }
-type DiscordSink = HttpSink
+type DiscordSink = SinkHttp
 type KafkaData struct {
 	Headers   map[string]string `json:"headers,omitempty"`
 	Key       string            `json:"key,omitempty"`
@@ -24,20 +24,20 @@ type KafkaData struct {
 	Topic     string            `json:"topic,omitempty"`
 	Value     json.RawMessage   `json:"value"`
 }
-type KafkaSink = HttpSink
+type KafkaSink = SinkHttp
 type LokiData struct {
 	Streams []struct {
 		Stream map[string]string `json:"stream"`
 		Values [][]string        `json:"values"`
 	} `json:"streams"`
 }
-type LokiSink = HttpSink
+type LokiSink = SinkHttp
 type PrometheusData struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	Name   string            `json:"name"`
 	Value  float64           `json:"value"`
 }
-type PrometheusSink = HttpSink
+type PrometheusSink = SinkHttp
 type SlackData struct {
 	Channel   string `json:"channel,omitempty"`
 	IconEmoji string `json:"icon_emoji,omitempty"`
@@ -45,14 +45,14 @@ type SlackData struct {
 	Text      string `json:"text"`
 	UserName  string `json:"username,omitempty"`
 }
-type SlackSink = HttpSink
+type SlackSink = SinkHttp
 type TelegramData struct {
 	ChatID              string `json:"chat_id"`
 	DisableNotification bool   `json:"disable_notification,omitempty"`
 	Text                string `json:"text"`
 	ParseMode           string `json:"parse_mode,omitempty"`
 }
-type TelegramSink = HttpSink
+type TelegramSink = SinkHttp
 type TempoData struct {
 	Attributes map[string]any `json:"attributes,omitempty"`
 	Duration   int64          `json:"duration_ms"`
@@ -61,18 +61,18 @@ type TempoData struct {
 	Timestamp  time.Time      `json:"timestamp"`
 	TraceID    string         `json:"trace_id"`
 }
-type TempoSink = HttpSink
+type TempoSink = SinkHttp
 type WechatData struct {
 	Content             string   `json:"content"`
 	MsgType             string   `json:"msgtype"`
 	MentionedList       []string `json:"mentioned_list,omitempty"`
 	MentionedMobileList []string `json:"mentioned_mobile_list,omitempty"`
 }
-type WechatSink = HttpSink
+type WechatSink = SinkHttp
 
 // Публичные конструкторы
-func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) *HttpSink {
-	return NewHttpSink(endPoint, append([]httpParams{
+func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) *SinkHttp {
+	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
@@ -88,9 +88,9 @@ func NewDiscordSink(endPoint, userName, avatarURL string, params ...httpParams) 
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
-func NewKafkaSink(restProxyURL, topic string, params ...httpParams) *HttpSink {
+func NewKafkaSink(restProxyURL, topic string, params ...httpParams) *SinkHttp {
 	endPoint := strings.TrimRight(restProxyURL, "/") + "/topics/" + topic
-	return NewHttpSink(endPoint, append([]httpParams{
+	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpBatch(100, 5*time.Second),
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelInfo),
@@ -137,7 +137,7 @@ func NewKafkaSink(restProxyURL, topic string, params ...httpParams) *HttpSink {
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
-func NewLokiSink(endPoint string, labels map[string]string, params ...httpParams) *HttpSink {
+func NewLokiSink(endPoint string, labels map[string]string, params ...httpParams) *SinkHttp {
 	lokiFormatter := func(attributes writeAttributes, fields []Field) ([]byte, error) {
 		message := getLogMessage(fields)
 		level := getLevel(attributes.typeLevel)
@@ -178,15 +178,15 @@ func NewLokiSink(endPoint string, labels map[string]string, params ...httpParams
 		return json.Marshal(lokiData)
 	}
 	fullURL := strings.TrimSuffix(endPoint, "/") + "/loki/api/v1/push"
-	return NewHttpSink(fullURL, append([]httpParams{
+	return NewSinkHttp(fullURL, append([]httpParams{
 		WithHttpFilterData(DataLog),
 		WithHttpFormatter(lokiFormatter),
 		WithHttpHeader("Content-Type", "application/json"),
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
-func NewPrometheusSink(endPoint string, params ...httpParams) *HttpSink {
-	return NewHttpSink(endPoint, append([]httpParams{
+func NewPrometheusSink(endPoint string, params ...httpParams) *SinkHttp {
+	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataMetric),
 		WithHttpFormatter(func(attrs writeAttributes, fields []Field) ([]byte, error) {
 			var builder strings.Builder
@@ -207,8 +207,8 @@ func NewPrometheusSink(endPoint string, params ...httpParams) *HttpSink {
 		WithHttpHeader("Content-Type", "text/plain"),
 	}, params...)...)
 }
-func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params ...httpParams) *HttpSink {
-	return NewHttpSink(endPoint, append([]httpParams{
+func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params ...httpParams) *SinkHttp {
+	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
@@ -225,9 +225,9 @@ func NewSlackSink(endPoint, userName, iconEmoji, iconURL, channel string, params
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
-func NewTelegramSink(botToken, chatID string, params ...httpParams) *HttpSink {
+func NewTelegramSink(botToken, chatID string, params ...httpParams) *SinkHttp {
 	endPoint := "https://api.telegram.org/bot" + botToken + "/sendMessage"
-	return NewHttpSink(endPoint, append([]httpParams{
+	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
@@ -242,8 +242,8 @@ func NewTelegramSink(botToken, chatID string, params ...httpParams) *HttpSink {
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
-func NewTempoSink(endPoint string, params ...httpParams) *HttpSink {
-	return NewHttpSink(endPoint, append([]httpParams{
+func NewTempoSink(endPoint string, params ...httpParams) *SinkHttp {
+	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataTrace),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			tempoData := TempoData{
@@ -258,8 +258,8 @@ func NewTempoSink(endPoint string, params ...httpParams) *HttpSink {
 		WithHttpHeader("Content-Type", "application/json"),
 	}, params...)...)
 }
-func NewWechatSink(endPoint string, params ...httpParams) *HttpSink {
-	return NewHttpSink(endPoint, append([]httpParams{
+func NewWechatSink(endPoint string, params ...httpParams) *SinkHttp {
+	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {

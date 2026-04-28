@@ -681,18 +681,18 @@ func Test_SinkFactory_Discord(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer server.Close()
-	sink := NewDiscordSink(server.URL, "ULog Bot", "")
+	sinkHttp := NewDiscordSink(server.URL, "ULog Bot", "")
 	fields := []Field{
 		String("message", "test message"),
 	}
-	_, err := sink.WriteWithAttributes(
+	_, err := sinkHttp.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sink.Sync()
+	sinkHttp.Sync()
 }
 func Test_SinkFactory_Kafka(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -739,7 +739,7 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewKafkaSink(server.URL, "test-topic")
+	sinkHttp := NewKafkaSink(server.URL, "test-topic")
 	fields := []Field{
 		String("message", "test kafka message"),
 		String("service", "test-service"),
@@ -748,14 +748,14 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 		Int("count", 42),
 		Duration("duration", 5*time.Second),
 	}
-	_, err := sink.WriteWithAttributes(
+	_, err := sinkHttp.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sink.Sync()
+	sinkHttp.Sync()
 }
 func Test_SinkFactory_Loki(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -804,7 +804,7 @@ func Test_SinkFactory_Loki(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer server.Close()
-	sink := NewLokiSink(server.URL, map[string]string{
+	sinkHttp := NewLokiSink(server.URL, map[string]string{
 		"app": "test-app",
 		"env": "test",
 	})
@@ -813,14 +813,14 @@ func Test_SinkFactory_Loki(t *testing.T) {
 		String("user_id", "12345"),
 		String("trace_id", "abc-123"),
 	}
-	_, err := sink.WriteWithAttributes(
+	_, err := sinkHttp.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sink.Sync()
+	sinkHttp.Sync()
 }
 func Test_SinkFactory_Prometheus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -840,20 +840,20 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewPrometheusSink(server.URL)
+	sinkHttp := NewPrometheusSink(server.URL)
 	fields := []Field{
 		String("name", "http_requests_total"),
 		String("method", "GET"),
 		Float64("value", 42.0),
 	}
-	_, err := sink.WriteWithAttributes(
+	_, err := sinkHttp.WriteWithAttributes(
 		writeAttributes{typeData: DataMetric},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sink.Sync()
+	sinkHttp.Sync()
 }
 func Test_SinkFactory_Slack(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -873,18 +873,18 @@ func Test_SinkFactory_Slack(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewSlackSink(server.URL, "ULog", ":robot:", "", "#alerts")
+	sinkHttp := NewSlackSink(server.URL, "ULog", ":robot:", "", "#alerts")
 	fields := []Field{
 		String("message", "test message"),
 	}
-	_, err := sink.WriteWithAttributes(
+	_, err := sinkHttp.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sink.Sync()
+	sinkHttp.Sync()
 }
 func Test_SinkFactory_Telegram(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -910,19 +910,19 @@ func Test_SinkFactory_Telegram(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewTelegramSink("test-bot-token", "test-chat-123")
-	sink.endPoint = server.URL
+	sinkHttp := NewTelegramSink("test-bot-token", "test-chat-123")
+	sinkHttp.endPoint = server.URL
 	fields := []Field{
 		String("message", "test message"),
 	}
-	_, err := sink.WriteWithAttributes(
+	_, err := sinkHttp.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sink.Sync()
+	sinkHttp.Sync()
 }
 func Test_SinkFactory_Tempo(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -943,15 +943,15 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewTempoSink(server.URL)
+	sinkHttp := NewTempoSink(server.URL)
 	fields := []Field{
 		String("trace_id", "abc"),
 		String("span_id", "def"),
 		String("name", "test"),
 		Int64("duration", 100),
 	}
-	sink.WriteWithAttributes(writeAttributes{typeData: DataTrace}, fields)
-	sink.Sync()
+	sinkHttp.WriteWithAttributes(writeAttributes{typeData: DataTrace}, fields)
+	sinkHttp.Sync()
 }
 func Test_SinkFactory_Wechat(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -974,29 +974,29 @@ func Test_SinkFactory_Wechat(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewWechatSink(server.URL)
+	sinkHttp := NewWechatSink(server.URL)
 	fields := []Field{
 		String("message", "test message"),
 	}
-	_, err := sink.WriteWithAttributes(
+	_, err := sinkHttp.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
 		fields,
 	)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sink.Sync()
+	sinkHttp.Sync()
 }
 func Test_SinkFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
-	sink, err := NewFileSink(logFile)
+	sinkFile, err := NewSinkFile(logFile)
 	if err != nil {
 		t.Fatalf("NewFileSink failed: %v", err)
 	}
-	defer sink.Close()
+	defer sinkFile.Close()
 	data := []byte("test message\n")
-	n, err := sink.Write(data)
+	n, err := sinkFile.Write(data)
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}
@@ -1014,17 +1014,17 @@ func Test_SinkFile(t *testing.T) {
 func Test_SinkFile_CleanupByAge(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
-	sink, err := NewFileSink(logFile,
+	sinkFile, err := NewSinkFile(logFile,
 		WithFileMaxAge(1),
 		WithFileMaxSize(1),
 	)
 	if err != nil {
 		t.Fatalf("NewFileSink failed: %v", err)
 	}
-	defer sink.Close()
+	defer sinkFile.Close()
 	data := make([]byte, 1024)
 	for i := 0; i < 3; i++ {
-		_, err := sink.Write(data)
+		_, err := sinkFile.Write(data)
 		if err != nil {
 			t.Fatalf("Write failed: %v", err)
 		}
@@ -1042,17 +1042,17 @@ func Test_SinkFile_CleanupByAge(t *testing.T) {
 func Test_SinkFile_CleanupByCount(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
-	sink, err := NewFileSink(logFile,
+	sinkFile, err := NewSinkFile(logFile,
 		WithFileMaxSize(1),
 		WithFileMaxBackups(2),
 	)
 	if err != nil {
 		t.Fatalf("NewFileSink failed: %v", err)
 	}
-	defer sink.Close()
+	defer sinkFile.Close()
 	data := make([]byte, 1024)
 	for i := 0; i < 5; i++ {
-		_, err := sink.Write(data)
+		_, err := sinkFile.Write(data)
 		if err != nil {
 			t.Fatalf("Write failed: %v", err)
 		}
@@ -1070,26 +1070,26 @@ func Test_SinkFile_CleanupByCount(t *testing.T) {
 func Test_SinkFile_Rotate(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
-	sink, err := NewFileSink(logFile,
+	sinkFile, err := NewSinkFile(logFile,
 		WithFileMaxBackups(3),
 		WithFileMaxSize(1),
 	)
 	if err != nil {
 		t.Fatalf("NewFileSink failed: %v", err)
 	}
-	defer sink.Close()
+	defer sinkFile.Close()
 	data := make([]byte, 1024*1024)
 	for i := range data {
 		data[i] = 'A'
 	}
 	for i := 0; i < 2; i++ {
-		_, err := sink.Write(data)
+		_, err := sinkFile.Write(data)
 		if err != nil {
 			t.Fatalf("Write failed at iteration %d: %v", i, err)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if err := sink.Sync(); err != nil {
+	if err := sinkFile.Sync(); err != nil {
 		t.Errorf("Sync error: %v", err)
 	}
 	time.Sleep(500 * time.Millisecond)
@@ -1117,7 +1117,7 @@ func Test_SinkHttp(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewHttpSink(server.URL,
+	sinkHttp := NewSinkHttp(server.URL,
 		WithHttpDisabledBatch(),
 		WithHttpFilterLevel(LevelDebug),
 		WithHttpHeader("Content-Type", "application/json"),
@@ -1128,7 +1128,7 @@ func Test_SinkHttp(t *testing.T) {
 		typeLevel: LevelInfo,
 	}
 	fields := []Field{String("message", "test")}
-	_, err := sink.WriteWithAttributes(attributes, fields)
+	_, err := sinkHttp.WriteWithAttributes(attributes, fields)
 	if err != nil {
 		t.Fatalf("WriteWithAttributes failed: %v", err)
 	}
@@ -1164,7 +1164,7 @@ func Test_SinkHttp_Batch(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewHttpSink(server.URL,
+	sinkHttp := NewSinkHttp(server.URL,
 		WithHttpBatch(batchSize, batchInterval),
 		WithHttpFilterLevel(LevelDebug),
 	)
@@ -1177,7 +1177,7 @@ func Test_SinkHttp_Batch(t *testing.T) {
 			String("message", "test"),
 			Int("count", i),
 		}
-		sink.WriteWithAttributes(attributes, fields)
+		sinkHttp.WriteWithAttributes(attributes, fields)
 	}
 	time.Sleep(delay)
 	mutex.Lock()
@@ -1208,11 +1208,11 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 	t.Run("Disabled", func(t *testing.T) {
 		srv, cnt := newServer(func(int) int { return 500 })
 		defer srv.Close()
-		sink := NewHttpSink(srv.URL, WithHttpDisabledBatch(), WithHttpDisabledCircuit())
+		sinkHttp := NewSinkHttp(srv.URL, WithHttpDisabledBatch(), WithHttpDisabledCircuit())
 		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
 		fields := []Field{String("msg", "test")}
 		for i := 0; i < 10; i++ {
-			sink.WriteWithAttributes(attrs, fields)
+			sinkHttp.WriteWithAttributes(attrs, fields)
 		}
 		if atomic.LoadInt32(cnt) != 10 {
 			t.Errorf("requests = %d, want 10", *cnt)
@@ -1226,14 +1226,14 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 			return 200
 		})
 		defer srv.Close()
-		sink := NewHttpSink(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(2, 50*time.Millisecond))
+		sinkHttp := NewSinkHttp(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(2, 50*time.Millisecond))
 		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
 		fields := []Field{String("msg", "test")}
-		sink.WriteWithAttributes(attrs, fields)
-		sink.WriteWithAttributes(attrs, fields)
+		sinkHttp.WriteWithAttributes(attrs, fields)
+		sinkHttp.WriteWithAttributes(attrs, fields)
 		time.Sleep(60 * time.Millisecond)
-		sink.WriteWithAttributes(attrs, fields)
-		if atomic.LoadInt32(&sink.circuitState) != circuitStateClosed {
+		sinkHttp.WriteWithAttributes(attrs, fields)
+		if atomic.LoadInt32(&sinkHttp.circuitState) != circuitStateClosed {
 			t.Error("should be Closed")
 		}
 	})
@@ -1242,29 +1242,29 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 			return 500
 		})
 		defer srv.Close()
-		sink := NewHttpSink(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(2, 50*time.Millisecond))
+		sinkHttp := NewSinkHttp(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(2, 50*time.Millisecond))
 		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
 		fields := []Field{String("msg", "test")}
-		sink.WriteWithAttributes(attrs, fields)
-		sink.WriteWithAttributes(attrs, fields)
+		sinkHttp.WriteWithAttributes(attrs, fields)
+		sinkHttp.WriteWithAttributes(attrs, fields)
 		time.Sleep(60 * time.Millisecond)
-		sink.WriteWithAttributes(attrs, fields)
-		if atomic.LoadInt32(&sink.circuitState) != circuitStateOpen {
+		sinkHttp.WriteWithAttributes(attrs, fields)
+		if atomic.LoadInt32(&sinkHttp.circuitState) != circuitStateOpen {
 			t.Error("should stay Open after HalfOpen failure")
 		}
 	})
 	t.Run("Open", func(t *testing.T) {
 		srv, cnt := newServer(func(int) int { return 500 })
 		defer srv.Close()
-		sink := NewHttpSink(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(2, time.Hour))
+		sinkHttp := NewSinkHttp(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(2, time.Hour))
 		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
 		fields := []Field{String("msg", "test")}
-		sink.WriteWithAttributes(attrs, fields)
-		sink.WriteWithAttributes(attrs, fields)
-		if atomic.LoadInt32(&sink.circuitState) != circuitStateOpen {
+		sinkHttp.WriteWithAttributes(attrs, fields)
+		sinkHttp.WriteWithAttributes(attrs, fields)
+		if atomic.LoadInt32(&sinkHttp.circuitState) != circuitStateOpen {
 			t.Error("should be Open")
 		}
-		_, err := sink.WriteWithAttributes(attrs, fields)
+		_, err := sinkHttp.WriteWithAttributes(attrs, fields)
 		if err == nil || err.Error() != "circuit breaker is open" {
 			t.Error("should be blocked")
 		}
@@ -1280,15 +1280,15 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 			return 200
 		})
 		defer srv.Close()
-		sink := NewHttpSink(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(5, time.Hour))
+		sinkHttp := NewSinkHttp(srv.URL, WithHttpDisabledBatch(), WithHttpCircuitBreaker(5, time.Hour))
 		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
 		fields := []Field{String("msg", "test")}
-		sink.WriteWithAttributes(attrs, fields)
-		if atomic.LoadInt32(&sink.circuitFailures) != 1 {
+		sinkHttp.WriteWithAttributes(attrs, fields)
+		if atomic.LoadInt32(&sinkHttp.circuitFailures) != 1 {
 			t.Error("failures should be 1")
 		}
-		sink.WriteWithAttributes(attrs, fields)
-		if atomic.LoadInt32(&sink.circuitFailures) != 0 {
+		sinkHttp.WriteWithAttributes(attrs, fields)
+		if atomic.LoadInt32(&sinkHttp.circuitFailures) != 0 {
 			t.Error("failures should be 0")
 		}
 	})
@@ -1306,7 +1306,7 @@ func Test_SinkHttp_Deduplication(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewHttpSink(server.URL,
+	sinkHttp := NewSinkHttp(server.URL,
 		WithHttpDedupWindow(deduplication),
 		WithHttpDisabledBatch(),
 		WithHttpFilterLevel(LevelDebug),
@@ -1316,9 +1316,9 @@ func Test_SinkHttp_Deduplication(t *testing.T) {
 		typeLevel: LevelInfo,
 	}
 	fields := []Field{String("message", "test")}
-	sink.WriteWithAttributes(attributes, fields)
+	sinkHttp.WriteWithAttributes(attributes, fields)
 	time.Sleep(shortDelay)
-	sink.WriteWithAttributes(attributes, fields)
+	sinkHttp.WriteWithAttributes(attributes, fields)
 	time.Sleep(mediumDelay)
 	mutex.Lock()
 	count := requestCount
@@ -1346,7 +1346,7 @@ func Test_SinkHttp_RateLimit(t *testing.T) {
 	}))
 	defer server.Close()
 	start := time.Now()
-	sink := NewHttpSink(server.URL,
+	sinkHttp := NewSinkHttp(server.URL,
 		WithHttpDisabledBatch(),
 		WithHttpFilterLevel(LevelDebug),
 		WithHttpRetry(retry, backoff),
@@ -1356,7 +1356,7 @@ func Test_SinkHttp_RateLimit(t *testing.T) {
 		typeLevel: LevelInfo,
 	}
 	fields := []Field{String("message", "test")}
-	_, err := sink.WriteWithAttributes(attributes, fields)
+	_, err := sinkHttp.WriteWithAttributes(attributes, fields)
 	if err != nil {
 		t.Fatalf("WriteWithAttributes failed: %v", err)
 	}
@@ -1386,7 +1386,7 @@ func Test_SinkHttp_Retry(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewHttpSink(server.URL,
+	sinkHttp := NewSinkHttp(server.URL,
 		WithHttpDisabledBatch(),
 		WithHttpFilterLevel(LevelDebug),
 		WithHttpRetry(retry, backoff),
@@ -1396,7 +1396,7 @@ func Test_SinkHttp_Retry(t *testing.T) {
 		typeLevel: LevelInfo,
 	}
 	fields := []Field{String("message", "test")}
-	sink.WriteWithAttributes(attributes, fields)
+	sinkHttp.WriteWithAttributes(attributes, fields)
 	if attempt != retry {
 		t.Errorf("Expected 3 attempts, got %d", attempt)
 	}
@@ -1415,7 +1415,7 @@ func Test_SinkHttp_Sampling(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sink := NewHttpSink(server.URL,
+	sinkHttp := NewSinkHttp(server.URL,
 		WithHttpDisabledBatch(),
 		WithHttpFilterLevel(LevelDebug),
 		WithHttpSampleRate(rate),
@@ -1426,7 +1426,7 @@ func Test_SinkHttp_Sampling(t *testing.T) {
 	}
 	fields := []Field{String("message", "test")}
 	for i := 0; i < counts; i++ {
-		sink.WriteWithAttributes(attributes, fields)
+		sinkHttp.WriteWithAttributes(attributes, fields)
 	}
 	time.Sleep(100 * time.Millisecond)
 	mutex.Lock()

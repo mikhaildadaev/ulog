@@ -12,7 +12,7 @@ import (
 )
 
 // Публичные структуры
-type HttpSink struct {
+type SinkHttp struct {
 	batchBuffer        [][]byte
 	batchChan          chan struct{}
 	batchMutex         sync.Mutex
@@ -48,8 +48,8 @@ type HttpSink struct {
 }
 
 // Публичные конструкторы
-func NewHttpSink(endPoint string, params ...httpParams) *HttpSink {
-	httpSink := &HttpSink{
+func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
+	sinkHttp := &SinkHttp{
 		batchChan:          make(chan struct{}),
 		batchSize:          100,
 		batchTicker:        time.NewTicker(5 * time.Second),
@@ -77,179 +77,179 @@ func NewHttpSink(endPoint string, params ...httpParams) *HttpSink {
 		retryMax:      0,
 	}
 	for _, param := range params {
-		param(httpSink)
+		param(sinkHttp)
 	}
-	if httpSink.dedupWindow > 0 {
-		go httpSink.cleanupDedupCache()
+	if sinkHttp.dedupWindow > 0 {
+		go sinkHttp.cleanupDedupCache()
 	}
-	return httpSink
+	return sinkHttp
 }
 
 // Публичные функции
 func WithHttpBatch(size int, flushInterval time.Duration) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.batchSize = size
-		httpSink.batchTicker = time.NewTicker(flushInterval)
-		go httpSink.batchLoop()
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.batchSize = size
+		sinkHttp.batchTicker = time.NewTicker(flushInterval)
+		go sinkHttp.batchLoop()
 	}
 }
 func WithHttpCircuitBreaker(maxFailures int, timeout time.Duration) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.circuitEnabled = true
-		httpSink.circuitMaxFailures = maxFailures
-		httpSink.circuitState = circuitStateClosed
-		httpSink.circuitTimeout = timeout
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.circuitEnabled = true
+		sinkHttp.circuitMaxFailures = maxFailures
+		sinkHttp.circuitState = circuitStateClosed
+		sinkHttp.circuitTimeout = timeout
 	}
 }
 func WithHttpDedupWindow(window time.Duration) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.dedupWindow = window
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.dedupWindow = window
 	}
 }
 func WithHttpDisabledBatch() httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.batchSize = 0
-		httpSink.batchTicker = nil
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.batchSize = 0
+		sinkHttp.batchTicker = nil
 	}
 }
 func WithHttpDisabledCircuit() httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.circuitEnabled = false
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.circuitEnabled = false
 	}
 }
 func WithHttpDisableKeepAlive() httpParams {
-	return func(httpSink *HttpSink) {
-		if transport, ok := httpSink.client.Transport.(*http.Transport); ok {
+	return func(sinkHttp *SinkHttp) {
+		if transport, ok := sinkHttp.client.Transport.(*http.Transport); ok {
 			transport.DisableKeepAlives = true
 		}
 	}
 }
 func WithHttpFilterData(typeData TypeData) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.filterData = typeData
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.filterData = typeData
 	}
 }
 func WithHttpFilterLevel(level TypeLevel) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.filterLevel = level
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.filterLevel = level
 	}
 }
 func WithHttpFormatter(formatter func(attributes writeAttributes, fields []Field) ([]byte, error)) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.formatter = formatter
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.formatter = formatter
 	}
 }
 func WithHttpHeader(key, value string) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.headers[key] = value
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.headers[key] = value
 	}
 }
 func WithHttpMethod(method string) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.method = method
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.method = method
 	}
 }
 func WithHttpRetry(maxRetries int, backoff time.Duration) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.retryMax = maxRetries
-		httpSink.retryBackoff = backoff
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.retryMax = maxRetries
+		sinkHttp.retryBackoff = backoff
 	}
 }
 func WithHttpSampleRate(rate int32) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.sampleRate = rate
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.sampleRate = rate
 	}
 }
 func WithHttpSampleWindow(window time.Duration) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.sampleWindow = window
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.sampleWindow = window
 	}
 }
 func WithHttpTimeout(timeout time.Duration) httpParams {
-	return func(httpSink *HttpSink) {
-		httpSink.client.Timeout = timeout
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.client.Timeout = timeout
 	}
 }
 
 // Публичные методы
-func (httpSink *HttpSink) Close() error {
-	httpSink.mutex.Lock()
-	if httpSink.closed {
-		httpSink.mutex.Unlock()
+func (sinkHttp *SinkHttp) Close() error {
+	sinkHttp.mutex.Lock()
+	if sinkHttp.closed {
+		sinkHttp.mutex.Unlock()
 		return nil
 	}
-	httpSink.closed = true
-	httpSink.mutex.Unlock()
-	if httpSink.batchSize > 0 {
-		httpSink.wg.Add(1)
+	sinkHttp.closed = true
+	sinkHttp.mutex.Unlock()
+	if sinkHttp.batchSize > 0 {
+		sinkHttp.wg.Add(1)
 		go func() {
-			defer httpSink.wg.Done()
-			httpSink.flush()
+			defer sinkHttp.wg.Done()
+			sinkHttp.flush()
 		}()
 	}
-	if httpSink.dedupStopChan != nil {
-		close(httpSink.dedupStopChan)
+	if sinkHttp.dedupStopChan != nil {
+		close(sinkHttp.dedupStopChan)
 	}
-	httpSink.batchMutex.Lock()
-	ticker := httpSink.batchTicker
-	httpSink.batchMutex.Unlock()
-	if httpSink.batchSize > 0 {
-		close(httpSink.batchChan)
+	sinkHttp.batchMutex.Lock()
+	ticker := sinkHttp.batchTicker
+	sinkHttp.batchMutex.Unlock()
+	if sinkHttp.batchSize > 0 {
+		close(sinkHttp.batchChan)
 		if ticker != nil {
 			ticker.Stop()
 		}
 	}
 	done := make(chan struct{})
 	go func() {
-		httpSink.wg.Wait()
+		sinkHttp.wg.Wait()
 		close(done)
 	}()
 	select {
 	case <-done:
 	case <-time.After(3 * time.Second):
 	}
-	httpSink.client.CloseIdleConnections()
+	sinkHttp.client.CloseIdleConnections()
 	return nil
 }
-func (httpSink *HttpSink) Sync() error {
-	if httpSink.batchSize > 0 {
-		return httpSink.flush()
+func (sinkHttp *SinkHttp) Sync() error {
+	if sinkHttp.batchSize > 0 {
+		return sinkHttp.flush()
 	}
 	return nil
 }
-func (httpSink *HttpSink) Write(p []byte) (n int, err error) {
-	return httpSink.sendWithRetry(p)
+func (sinkHttp *SinkHttp) Write(p []byte) (n int, err error) {
+	return sinkHttp.sendWithRetry(p)
 }
-func (httpSink *HttpSink) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
-	if attributes.typeLevel < httpSink.filterLevel {
+func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
+	if attributes.typeLevel < sinkHttp.filterLevel {
 		return 0, nil
 	}
-	if attributes.typeData != httpSink.filterData && httpSink.filterData > TypeData(defaultType) {
+	if attributes.typeData != sinkHttp.filterData && sinkHttp.filterData > TypeData(defaultType) {
 		return 0, nil
 	}
 	if attributes.typeLevel != LevelError && attributes.typeLevel != LevelFatal {
-		if !httpSink.shouldSample() {
+		if !sinkHttp.shouldSample() {
 			return 0, nil
 		}
-		if httpSink.isDuplicate(fields) {
+		if sinkHttp.isDuplicate(fields) {
 			return 0, nil
 		}
 	}
-	body, err := httpSink.formatter(attributes, fields)
+	body, err := sinkHttp.formatter(attributes, fields)
 	if err != nil {
 		return 0, fmt.Errorf("formatter error: %w", err)
 	}
-	if httpSink.batchSize > 0 {
-		httpSink.batchMutex.Lock()
-		httpSink.batchBuffer = append(httpSink.batchBuffer, body)
-		needFlush := len(httpSink.batchBuffer) >= httpSink.batchSize
-		httpSink.batchMutex.Unlock()
+	if sinkHttp.batchSize > 0 {
+		sinkHttp.batchMutex.Lock()
+		sinkHttp.batchBuffer = append(sinkHttp.batchBuffer, body)
+		needFlush := len(sinkHttp.batchBuffer) >= sinkHttp.batchSize
+		sinkHttp.batchMutex.Unlock()
 		if needFlush {
-			go httpSink.flush()
+			go sinkHttp.flush()
 		}
 		return len(body), nil
 	}
-	return httpSink.sendWithRetry(body)
+	return sinkHttp.sendWithRetry(body)
 }
 
 // Приватные константы
@@ -293,7 +293,7 @@ var fieldExtractor = map[TypeField]func(Field) any{
 type rateLimitError struct {
 	retryAfter time.Duration
 }
-type httpParams func(*HttpSink)
+type httpParams func(*SinkHttp)
 
 // Приватные функции
 func defaultformatter(attributes writeAttributes, fields []Field) ([]byte, error) {
@@ -365,33 +365,33 @@ func getTraceSpanID(fields []Field) string {
 }
 
 // Приватные методы
-func (httpSink *HttpSink) batchLoop() {
+func (sinkHttp *SinkHttp) batchLoop() {
 	for {
 		select {
-		case <-httpSink.batchTicker.C:
-			httpSink.flush()
-		case <-httpSink.batchChan:
-			httpSink.flush()
+		case <-sinkHttp.batchTicker.C:
+			sinkHttp.flush()
+		case <-sinkHttp.batchChan:
+			sinkHttp.flush()
 			return
 		}
 	}
 }
-func (httpSink *HttpSink) circuitAllow() bool {
-	if !httpSink.circuitEnabled {
+func (sinkHttp *SinkHttp) circuitAllow() bool {
+	if !sinkHttp.circuitEnabled {
 		return true
 	}
-	state := atomic.LoadInt32(&httpSink.circuitState)
+	state := atomic.LoadInt32(&sinkHttp.circuitState)
 	switch state {
 	case circuitStateClosed:
 		return true
 	case circuitStateOpen:
-		lastFailure := httpSink.circuitLastFailure.Load()
-		if time.Now().UnixNano()-lastFailure > httpSink.circuitTimeout.Nanoseconds() {
-			httpSink.circuitMutex.Lock()
-			if atomic.LoadInt32(&httpSink.circuitState) == circuitStateOpen {
-				atomic.StoreInt32(&httpSink.circuitState, circuitStateHalfOpen)
+		lastFailure := sinkHttp.circuitLastFailure.Load()
+		if time.Now().UnixNano()-lastFailure > sinkHttp.circuitTimeout.Nanoseconds() {
+			sinkHttp.circuitMutex.Lock()
+			if atomic.LoadInt32(&sinkHttp.circuitState) == circuitStateOpen {
+				atomic.StoreInt32(&sinkHttp.circuitState, circuitStateHalfOpen)
 			}
-			httpSink.circuitMutex.Unlock()
+			sinkHttp.circuitMutex.Unlock()
 			return true
 		}
 		return false
@@ -401,72 +401,72 @@ func (httpSink *HttpSink) circuitAllow() bool {
 		return true
 	}
 }
-func (httpSink *HttpSink) circuitRecord(success bool) {
-	if !httpSink.circuitEnabled {
+func (sinkHttp *SinkHttp) circuitRecord(success bool) {
+	if !sinkHttp.circuitEnabled {
 		return
 	}
-	state := atomic.LoadInt32(&httpSink.circuitState)
+	state := atomic.LoadInt32(&sinkHttp.circuitState)
 	switch state {
 	case circuitStateClosed:
 		if !success {
-			failures := atomic.AddInt32(&httpSink.circuitFailures, 1)
-			httpSink.circuitLastFailure.Store(time.Now().UnixNano())
-			if int(failures) >= httpSink.circuitMaxFailures {
-				httpSink.circuitMutex.Lock()
-				if atomic.LoadInt32(&httpSink.circuitState) == circuitStateClosed {
-					atomic.StoreInt32(&httpSink.circuitState, circuitStateOpen)
-					atomic.StoreInt32(&httpSink.circuitFailures, 0)
+			failures := atomic.AddInt32(&sinkHttp.circuitFailures, 1)
+			sinkHttp.circuitLastFailure.Store(time.Now().UnixNano())
+			if int(failures) >= sinkHttp.circuitMaxFailures {
+				sinkHttp.circuitMutex.Lock()
+				if atomic.LoadInt32(&sinkHttp.circuitState) == circuitStateClosed {
+					atomic.StoreInt32(&sinkHttp.circuitState, circuitStateOpen)
+					atomic.StoreInt32(&sinkHttp.circuitFailures, 0)
 				}
-				httpSink.circuitMutex.Unlock()
+				sinkHttp.circuitMutex.Unlock()
 			}
 		} else {
-			httpSink.circuitMutex.Lock()
-			if atomic.LoadInt32(&httpSink.circuitState) == circuitStateClosed {
-				atomic.StoreInt32(&httpSink.circuitFailures, 0)
+			sinkHttp.circuitMutex.Lock()
+			if atomic.LoadInt32(&sinkHttp.circuitState) == circuitStateClosed {
+				atomic.StoreInt32(&sinkHttp.circuitFailures, 0)
 			}
-			httpSink.circuitMutex.Unlock()
+			sinkHttp.circuitMutex.Unlock()
 		}
 	case circuitStateHalfOpen:
-		httpSink.circuitMutex.Lock()
-		defer httpSink.circuitMutex.Unlock()
+		sinkHttp.circuitMutex.Lock()
+		defer sinkHttp.circuitMutex.Unlock()
 		if success {
-			atomic.StoreInt32(&httpSink.circuitState, circuitStateClosed)
-			atomic.StoreInt32(&httpSink.circuitFailures, 0)
+			atomic.StoreInt32(&sinkHttp.circuitState, circuitStateClosed)
+			atomic.StoreInt32(&sinkHttp.circuitFailures, 0)
 		} else {
-			atomic.StoreInt32(&httpSink.circuitState, circuitStateOpen)
-			httpSink.circuitLastFailure.Store(time.Now().UnixNano())
+			atomic.StoreInt32(&sinkHttp.circuitState, circuitStateOpen)
+			sinkHttp.circuitLastFailure.Store(time.Now().UnixNano())
 		}
 	case circuitStateOpen:
 	}
 }
-func (httpSink *HttpSink) cleanupDedupCache() {
-	ticker := time.NewTicker(httpSink.dedupWindow)
+func (sinkHttp *SinkHttp) cleanupDedupCache() {
+	ticker := time.NewTicker(sinkHttp.dedupWindow)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			now := time.Now()
-			httpSink.dedupCache.Range(func(key, value any) bool {
-				if now.Sub(value.(time.Time)) > httpSink.dedupWindow {
-					httpSink.dedupCache.Delete(key)
+			sinkHttp.dedupCache.Range(func(key, value any) bool {
+				if now.Sub(value.(time.Time)) > sinkHttp.dedupWindow {
+					sinkHttp.dedupCache.Delete(key)
 				}
 				return true
 			})
-		case <-httpSink.dedupStopChan:
+		case <-sinkHttp.dedupStopChan:
 			return
 		}
 	}
 }
-func (httpSink *HttpSink) flush() error {
-	httpSink.batchMutex.Lock()
-	if len(httpSink.batchBuffer) == 0 {
-		httpSink.batchMutex.Unlock()
+func (sinkHttp *SinkHttp) flush() error {
+	sinkHttp.batchMutex.Lock()
+	if len(sinkHttp.batchBuffer) == 0 {
+		sinkHttp.batchMutex.Unlock()
 		return nil
 	}
-	batch := make([][]byte, len(httpSink.batchBuffer))
-	copy(batch, httpSink.batchBuffer)
-	httpSink.batchBuffer = httpSink.batchBuffer[:0]
-	httpSink.batchMutex.Unlock()
+	batch := make([][]byte, len(sinkHttp.batchBuffer))
+	copy(batch, sinkHttp.batchBuffer)
+	sinkHttp.batchBuffer = sinkHttp.batchBuffer[:0]
+	sinkHttp.batchMutex.Unlock()
 	var body []byte
 	if len(batch) == 1 {
 		body = batch[0]
@@ -477,23 +477,23 @@ func (httpSink *HttpSink) flush() error {
 		}
 		body = bytes.Join(parts, []byte{'\n'})
 	}
-	_, err := httpSink.sendWithRetry(body)
+	_, err := sinkHttp.sendWithRetry(body)
 	return err
 }
-func (httpSink *HttpSink) isDuplicate(fields []Field) bool {
-	if httpSink.dedupWindow <= 0 {
+func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
+	if sinkHttp.dedupWindow <= 0 {
 		return false
 	}
-	hash := httpSink.hashFields(fields)
-	if lastSeen, ok := httpSink.dedupCache.Load(hash); ok {
-		if time.Since(lastSeen.(time.Time)) < httpSink.dedupWindow {
+	hash := sinkHttp.hashFields(fields)
+	if lastSeen, ok := sinkHttp.dedupCache.Load(hash); ok {
+		if time.Since(lastSeen.(time.Time)) < sinkHttp.dedupWindow {
 			return true
 		}
 	}
-	httpSink.dedupCache.Store(hash, time.Now())
+	sinkHttp.dedupCache.Store(hash, time.Now())
 	return false
 }
-func (httpSink *HttpSink) hashFields(fields []Field) uint64 {
+func (sinkHttp *SinkHttp) hashFields(fields []Field) uint64 {
 	hash := fnv.New64a()
 	for _, f := range fields {
 		hash.Write([]byte(f.nameKey))
@@ -503,15 +503,15 @@ func (httpSink *HttpSink) hashFields(fields []Field) uint64 {
 	}
 	return hash.Sum64()
 }
-func (httpSink *HttpSink) send(body []byte) error {
-	req, err := http.NewRequest(httpSink.method, httpSink.endPoint, bytes.NewReader(body))
+func (sinkHttp *SinkHttp) send(body []byte) error {
+	req, err := http.NewRequest(sinkHttp.method, sinkHttp.endPoint, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
-	for k, v := range httpSink.headers {
+	for k, v := range sinkHttp.headers {
 		req.Header.Set(k, v)
 	}
-	resp, err := httpSink.client.Do(req)
+	resp, err := sinkHttp.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -535,43 +535,43 @@ func (httpSink *HttpSink) send(body []byte) error {
 	}
 	return nil
 }
-func (httpSink *HttpSink) sendWithRetry(body []byte) (int, error) {
+func (sinkHttp *SinkHttp) sendWithRetry(body []byte) (int, error) {
 	var lastErr error
-	for i := 0; i <= httpSink.retryMax; i++ {
-		if !httpSink.circuitAllow() {
+	for i := 0; i <= sinkHttp.retryMax; i++ {
+		if !sinkHttp.circuitAllow() {
 			return 0, fmt.Errorf("circuit breaker is open")
 		}
-		err := httpSink.send(body)
-		httpSink.circuitRecord(err == nil)
+		err := sinkHttp.send(body)
+		sinkHttp.circuitRecord(err == nil)
 		if err == nil {
 			return len(body), nil
 		}
 		lastErr = err
-		if i == httpSink.retryMax {
+		if i == sinkHttp.retryMax {
 			break
 		}
 		var sleepDuration time.Duration
 		if rateErr, ok := err.(*rateLimitError); ok {
 			sleepDuration = rateErr.retryAfter
 		} else {
-			sleepDuration = httpSink.retryBackoff * time.Duration(1<<i)
+			sleepDuration = sinkHttp.retryBackoff * time.Duration(1<<i)
 		}
 		time.Sleep(sleepDuration)
 	}
-	return 0, fmt.Errorf("failed after %d retries: %w", httpSink.retryMax, lastErr)
+	return 0, fmt.Errorf("failed after %d retries: %w", sinkHttp.retryMax, lastErr)
 }
-func (httpSink *HttpSink) shouldSample() bool {
-	if httpSink.sampleRate <= 1 {
+func (sinkHttp *SinkHttp) shouldSample() bool {
+	if sinkHttp.sampleRate <= 1 {
 		return true
 	}
-	httpSink.sampleMutex.Lock()
-	defer httpSink.sampleMutex.Unlock()
-	if httpSink.sampleWindow > 0 && time.Since(httpSink.sampleLastReset) > httpSink.sampleWindow {
-		httpSink.sampleCounter = 0
-		httpSink.sampleLastReset = time.Now()
+	sinkHttp.sampleMutex.Lock()
+	defer sinkHttp.sampleMutex.Unlock()
+	if sinkHttp.sampleWindow > 0 && time.Since(sinkHttp.sampleLastReset) > sinkHttp.sampleWindow {
+		sinkHttp.sampleCounter = 0
+		sinkHttp.sampleLastReset = time.Now()
 	}
-	httpSink.sampleCounter++
-	return httpSink.sampleCounter%httpSink.sampleRate == 0
+	sinkHttp.sampleCounter++
+	return sinkHttp.sampleCounter%sinkHttp.sampleRate == 0
 }
 func (rateLimitError *rateLimitError) Error() string {
 	return fmt.Sprintf("rate limited, retry after %v", rateLimitError.retryAfter)

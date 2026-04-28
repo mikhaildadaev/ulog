@@ -14,7 +14,7 @@ import (
 )
 
 // Публичные структуры
-type FileSink struct {
+type SinkFile struct {
 	currentSize int64
 	file        *os.File
 	filename    string
@@ -27,7 +27,7 @@ type FileSink struct {
 }
 
 // Публичные конструкторы
-func NewFileSink(filename string, params ...fileParams) (*FileSink, error) {
+func NewSinkFile(filename string, params ...fileParams) (*SinkFile, error) {
 	dir := filepath.Dir(filename)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create log directory: %w", err)
@@ -40,7 +40,7 @@ func NewFileSink(filename string, params ...fileParams) (*FileSink, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file info: %w", err)
 	}
-	fileSink := &FileSink{
+	sinkFile := &SinkFile{
 		currentSize: info.Size(),
 		file:        file,
 		filename:    filename,
@@ -49,71 +49,71 @@ func NewFileSink(filename string, params ...fileParams) (*FileSink, error) {
 		maxSize:     100 * 1024 * 1024,
 	}
 	for _, param := range params {
-		param(fileSink)
+		param(sinkFile)
 	}
-	return fileSink, nil
+	return sinkFile, nil
 }
 
 // Публичные функции
 func WithFileMaxAge(days int) fileParams {
-	return func(fileSink *FileSink) {
-		fileSink.maxAge = days
+	return func(sinkFile *SinkFile) {
+		sinkFile.maxAge = days
 	}
 }
 func WithFileMaxBackups(count int) fileParams {
-	return func(fileSink *FileSink) {
-		fileSink.maxBackups = count
+	return func(sinkFile *SinkFile) {
+		sinkFile.maxBackups = count
 	}
 }
 func WithFileMaxSize(sizeMB int) fileParams {
-	return func(fileSink *FileSink) {
-		fileSink.maxSize = int64(sizeMB) * 1024 * 1024
+	return func(sinkFile *SinkFile) {
+		sinkFile.maxSize = int64(sizeMB) * 1024 * 1024
 	}
 }
 
 // Публичные методы
-func (fileSink *FileSink) Close() error {
-	fileSink.wg.Wait()
-	fileSink.mutex.Lock()
-	defer fileSink.mutex.Unlock()
-	if fileSink.file != nil {
-		return fileSink.file.Close()
+func (sinkFile *SinkFile) Close() error {
+	sinkFile.wg.Wait()
+	sinkFile.mutex.Lock()
+	defer sinkFile.mutex.Unlock()
+	if sinkFile.file != nil {
+		return sinkFile.file.Close()
 	}
 	return nil
 }
-func (fileSink *FileSink) Sync() error {
-	fileSink.mutex.Lock()
-	defer fileSink.mutex.Unlock()
-	if fileSink.file != nil {
-		return fileSink.file.Sync()
+func (sinkFile *SinkFile) Sync() error {
+	sinkFile.mutex.Lock()
+	defer sinkFile.mutex.Unlock()
+	if sinkFile.file != nil {
+		return sinkFile.file.Sync()
 	}
 	return nil
 }
-func (fileSink *FileSink) Write(p []byte) (n int, err error) {
-	fileSink.mutex.Lock()
-	needRotate := fileSink.currentSize+int64(len(p)) > fileSink.maxSize
-	fileSink.mutex.Unlock()
+func (sinkFile *SinkFile) Write(p []byte) (n int, err error) {
+	sinkFile.mutex.Lock()
+	needRotate := sinkFile.currentSize+int64(len(p)) > sinkFile.maxSize
+	sinkFile.mutex.Unlock()
 	if needRotate {
-		if err := fileSink.getRotateFile(); err != nil {
+		if err := sinkFile.getRotateFile(); err != nil {
 			return 0, err
 		}
 	}
 	for {
-		fileSink.mutex.Lock()
-		if fileSink.file != nil {
+		sinkFile.mutex.Lock()
+		if sinkFile.file != nil {
 			break
 		}
-		fileSink.mutex.Unlock()
+		sinkFile.mutex.Unlock()
 		time.Sleep(time.Microsecond)
 	}
-	defer fileSink.mutex.Unlock()
-	n, err = fileSink.file.Write(p)
+	defer sinkFile.mutex.Unlock()
+	n, err = sinkFile.file.Write(p)
 	if err == nil {
-		fileSink.currentSize += int64(n)
+		sinkFile.currentSize += int64(n)
 	}
 	return n, err
 }
-func (fileSink *FileSink) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
+func (sinkFile *SinkFile) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
 	bufData := dataPool.Get().(*bytes.Buffer)
 	bufData.Reset()
 	defer dataPool.Put(bufData)
@@ -126,36 +126,36 @@ func (fileSink *FileSink) WriteWithAttributes(attributes writeAttributes, fields
 		return 0, fmt.Errorf("unsupported format: %v", attributes.typeFormat)
 	}
 	data := bufData.Bytes()
-	fileSink.mutex.Lock()
-	needRotate := fileSink.currentSize+int64(len(data)) > fileSink.maxSize
-	fileSink.mutex.Unlock()
+	sinkFile.mutex.Lock()
+	needRotate := sinkFile.currentSize+int64(len(data)) > sinkFile.maxSize
+	sinkFile.mutex.Unlock()
 	if needRotate {
-		if err := fileSink.getRotateFile(); err != nil {
+		if err := sinkFile.getRotateFile(); err != nil {
 			return 0, err
 		}
 	}
 	for {
-		fileSink.mutex.Lock()
-		if fileSink.file != nil {
+		sinkFile.mutex.Lock()
+		if sinkFile.file != nil {
 			break
 		}
-		fileSink.mutex.Unlock()
+		sinkFile.mutex.Unlock()
 		time.Sleep(time.Microsecond)
 	}
-	defer fileSink.mutex.Unlock()
-	n, err = fileSink.file.Write(data)
+	defer sinkFile.mutex.Unlock()
+	n, err = sinkFile.file.Write(data)
 	if err == nil {
-		fileSink.currentSize += int64(n)
+		sinkFile.currentSize += int64(n)
 	}
 	return n, err
 }
 
 // Приватные структуры
-type fileParams func(*FileSink)
+type fileParams func(*SinkFile)
 
 // Приватные функции
-func (fileSink *FileSink) cleanupBackups() error {
-	pattern := fileSink.getBackupPattern() + ".gz"
+func (sinkFile *SinkFile) cleanupBackups() error {
+	pattern := sinkFile.getBackupPattern() + ".gz"
 	files, err := filepath.Glob(pattern)
 	if err != nil {
 		return err
@@ -171,16 +171,16 @@ func (fileSink *FileSink) cleanupBackups() error {
 		}
 		return infoI.ModTime().After(infoJ.ModTime())
 	})
-	if fileSink.maxBackups > 0 && len(files) > fileSink.maxBackups {
-		for _, file := range files[fileSink.maxBackups:] {
+	if sinkFile.maxBackups > 0 && len(files) > sinkFile.maxBackups {
+		for _, file := range files[sinkFile.maxBackups:] {
 			if err := os.Remove(file); err != nil {
 				fmt.Fprintf(DefaultWriterErr, "failed to remove old backup %s: %v\n", file, err)
 			}
 		}
-		files = files[:fileSink.maxBackups]
+		files = files[:sinkFile.maxBackups]
 	}
-	if fileSink.maxAge > 0 {
-		cutoff := time.Now().AddDate(0, 0, -fileSink.maxAge)
+	if sinkFile.maxAge > 0 {
+		cutoff := time.Now().AddDate(0, 0, -sinkFile.maxAge)
 		for _, file := range files {
 			info, err := os.Stat(file)
 			if err != nil {
@@ -195,25 +195,25 @@ func (fileSink *FileSink) cleanupBackups() error {
 	}
 	return nil
 }
-func (fileSink *FileSink) getBackupName(timestamp string) string {
-	ext := filepath.Ext(fileSink.filename)
+func (sinkFile *SinkFile) getBackupName(timestamp string) string {
+	ext := filepath.Ext(sinkFile.filename)
 	if ext == "" {
-		return fmt.Sprintf("%s-%s.log", fileSink.filename, timestamp)
+		return fmt.Sprintf("%s-%s.log", sinkFile.filename, timestamp)
 	}
-	nameWithoutExt := fileSink.filename[:len(fileSink.filename)-len(ext)]
+	nameWithoutExt := sinkFile.filename[:len(sinkFile.filename)-len(ext)]
 	return fmt.Sprintf("%s-%s%s", nameWithoutExt, timestamp, ext)
 }
-func (fileSink *FileSink) getBackupPattern() string {
-	base := filepath.Base(fileSink.filename)
-	dir := filepath.Dir(fileSink.filename)
-	ext := filepath.Ext(fileSink.filename)
+func (sinkFile *SinkFile) getBackupPattern() string {
+	base := filepath.Base(sinkFile.filename)
+	dir := filepath.Dir(sinkFile.filename)
+	ext := filepath.Ext(sinkFile.filename)
 	if ext == "" {
 		return filepath.Join(dir, base+"-*.log*")
 	}
 	nameWithoutExt := base[:len(base)-len(ext)]
 	return filepath.Join(dir, nameWithoutExt+"-*.log*")
 }
-func (fileSink *FileSink) getCompressFile(filename string) error {
+func (fileSink *SinkFile) getCompressFile(filename string) error {
 	src, err := os.Open(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -257,41 +257,41 @@ func (fileSink *FileSink) getCompressFile(filename string) error {
 	}
 	return err
 }
-func (fileSink *FileSink) getRotateFile() error {
-	if !fileSink.rotating.CompareAndSwap(false, true) {
+func (sinkFile *SinkFile) getRotateFile() error {
+	if !sinkFile.rotating.CompareAndSwap(false, true) {
 		return nil
 	}
-	defer fileSink.rotating.Store(false)
-	fileSink.mutex.Lock()
-	if fileSink.file != nil {
-		fileSink.file.Close()
-		fileSink.file = nil
+	defer sinkFile.rotating.Store(false)
+	sinkFile.mutex.Lock()
+	if sinkFile.file != nil {
+		sinkFile.file.Close()
+		sinkFile.file = nil
 	}
-	fileSink.mutex.Unlock()
+	sinkFile.mutex.Unlock()
 	timestamp := time.Now().Format("20060102-150405")
-	backupName := fileSink.getBackupName(timestamp)
-	if err := os.Rename(fileSink.filename, backupName); err != nil {
+	backupName := sinkFile.getBackupName(timestamp)
+	if err := os.Rename(sinkFile.filename, backupName); err != nil {
 		return err
 	}
-	fileSink.wg.Add(1)
+	sinkFile.wg.Add(1)
 	go func() {
-		defer fileSink.wg.Done()
-		if err := fileSink.getCompressFile(backupName); err != nil {
+		defer sinkFile.wg.Done()
+		if err := sinkFile.getCompressFile(backupName); err != nil {
 			fmt.Fprintf(DefaultWriterErr, "failed to compress %s: %v\n", backupName, err)
 		}
 	}()
-	newFile, err := os.OpenFile(fileSink.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	newFile, err := os.OpenFile(sinkFile.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	fileSink.mutex.Lock()
-	fileSink.file = newFile
-	fileSink.currentSize = 0
-	fileSink.mutex.Unlock()
-	fileSink.wg.Add(1)
+	sinkFile.mutex.Lock()
+	sinkFile.file = newFile
+	sinkFile.currentSize = 0
+	sinkFile.mutex.Unlock()
+	sinkFile.wg.Add(1)
 	go func() {
-		defer fileSink.wg.Done()
-		if err := fileSink.cleanupBackups(); err != nil {
+		defer sinkFile.wg.Done()
+		if err := sinkFile.cleanupBackups(); err != nil {
 			fmt.Fprintf(DefaultWriterErr, "failed to cleanup backups: %v\n", err)
 		}
 	}()
