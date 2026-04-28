@@ -259,48 +259,54 @@ export default defineConfig({
                 collapsed: true,
                 items: [
                   { 
-                    text: '主要', 
-                    link: '/zh/core_main-examples' 
+                    text: '核心', 
+                    collapsed: true,
+                    items: [
+                      { 
+                        text: '主要', 
+                        link: '/zh/core_main-examples' 
+                      },
+                      { 
+                        text: '选项', 
+                        link: '/zh/core_options-examples' 
+                      },
+                      { 
+                        text: '类别', 
+                        link: '/zh/core_types-examples' 
+                      }
+                    ] 
                   },
                   { 
-                    text: '选项', 
-                    link: '/zh/core_options-examples' 
+                    text: '写入文件', 
+                    collapsed: true,
+                    items: [
+                      { 
+                        text: '主要', 
+                        link: '/zh/sinkfile_main-examples' 
+                      },
+                      { 
+                        text: '帕拉姆斯', 
+                        link: '/zh/sinkfile_params-examples' 
+                      }
+                    ] 
                   },
                   { 
-                    text: '类别', 
-                    link: '/zh/core_types-examples' 
-                  }
-                ] 
-              },
-              { 
-                text: '写入文件', 
-                collapsed: true,
-                items: [
-                  { 
-                    text: '主要', 
-                    link: '/zh/sinkfile_main-examples' 
-                  },
-                  { 
-                    text: '帕拉姆斯', 
-                    link: '/zh/sinkfile_params-examples' 
-                  }
-                ] 
-              },
-              { 
-                text: '通过网络录制', 
-                collapsed: true,
-                items: [
-                  { 
-                    text: '主要', 
-                    link: '/zh/sinkhttp_main-examples' 
-                  },
-                  { 
-                    text: '工厂', 
-                    link: '/zh/sinkhttp_factories-examples' 
-                  },
-                  { 
-                    text: '帕拉姆斯', 
-                    link: '/zh/sinkhttp_params-examples' 
+                    text: '通过网络录制', 
+                    collapsed: true,
+                    items: [
+                      { 
+                        text: '主要', 
+                        link: '/zh/sinkhttp_main-examples' 
+                      },
+                      { 
+                        text: '工厂', 
+                        link: '/zh/sinkhttp_factories-examples' 
+                      },
+                      { 
+                        text: '帕拉姆斯', 
+                        link: '/zh/sinkhttp_params-examples' 
+                      }
+                    ] 
                   }
                 ] 
               }

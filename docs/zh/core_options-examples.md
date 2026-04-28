@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / 核心 / Options
+# API / 核心 / 选项
 
 ::: warning
 This page is under development

@@ -2,19 +2,19 @@
 outline: deep
 ---
 
-# Benchmarks
+# 基准
 
 ::: tip Note
-The best way to compare logging libraries is to run benchmarks in **your own environment** with **your own workload**. Every project has unique requirements — latency, throughput, memory, integration complexity — and no single benchmark can capture them all.
+比较日志记录库的最佳方法是在**您自己的环境**与**您自己的工作负载**中运行基准测试。 每个项目都有独特的需求--延迟、吞吐量、内存、集成复杂性--没有一个基准可以全部捕获它们。
 
-I recommend that you to test `ulog` alongside other libraries and choose the tool that best fits your needs.
+我建议您与其他库一起测试`ulog'，并选择最适合您需求的工具。
 :::
 
-## Core Write Performance
+## Core Performance
 
 These benchmarks measure **pure formatting and context extraction overhead** by writing to `io.Discard`.
 
-### Multi Thread
+### 多线程
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -27,7 +27,7 @@ These benchmarks measure **pure formatting and context extraction overhead** by 
 | Sync  | **InfoWithContext**  |       3.7M |        326.7 |          1794 |      5 |
 | Sync  | **WarnWithContext**  |       4.0M |        299.9 |          1794 |      5 |
 
-### Single Thread
+### 单读,单读
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -48,14 +48,14 @@ These benchmarks measure **pure formatting and context extraction overhead** by 
 
 Real-world benchmark writing structured JSON logs to a **real file** with **atomic rotation** enabled.
 
-### Multi Thread
+### 多线程
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
 |  Sync | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
 
-### Single Thread
+### 单读,单读
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -70,14 +70,14 @@ Real-world benchmark writing structured JSON logs to a **real file** with **atom
 
 Benchmark measuring HTTP sink overhead using `httptest.Server` (no network latency).
 
-### Multi Thread
+### 多线程
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
 |  Sync | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
 
-### Single Thread
+### 单读,单读
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
