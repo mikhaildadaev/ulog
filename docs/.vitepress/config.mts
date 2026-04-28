@@ -267,7 +267,7 @@ export default defineConfig({
                     link: '/zh/core_options-examples' 
                   },
                   { 
-                    text: '格式', 
+                    text: '类别', 
                     link: '/zh/core_types-examples' 
                   }
                 ] 

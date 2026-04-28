@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / Core / Formats
+# API / 核心 / 类别
 
 ::: warning
 This page is under development

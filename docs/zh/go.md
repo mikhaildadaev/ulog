@@ -15,8 +15,8 @@ go get github.com/mikhaildadaev/ulog
 - **API**
     - **核心**
         - [主要](/en/core_main-examples) — Telemetry setup, configuration, and standard logger adapter.
-        - [Options](/en/core_options-examples) — All configuration options: Extractor, Format, Level, Mode, Theme.
-        - [Types](/en/core_types-examples) — All data types and 16 field constructors.
+        - [选项](/en/core_options-examples) — All configuration options: Extractor, Format, Level, Mode, Theme.
+        - [类别](/en/core_types-examples) — All data types and 16 field constructors.
     - **SinkFile**
         - [主要](/en/sinkfile_main-examples) — Atomic file rotation with gzip compression.
         - [帕拉姆斯](/en/sinkfile_params-examples) — Configuration: MaxAge, MaxBackups, MaxSize.
