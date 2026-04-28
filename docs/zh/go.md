@@ -11,7 +11,7 @@ go get github.com/mikhaildadaev/ulog
 
 ## 快速导航
 
-- [Benchmarks](/en/benchmarks) - Performance data for core, fileSink and httpSink operations.
+- [基准](/en/benchmarks) - Performance data for core, fileSink and httpSink operations.
 - **API**
     - **核心**
         - [主要](/en/core_main-examples) — Telemetry setup, configuration, and standard logger adapter.
@@ -25,7 +25,7 @@ go get github.com/mikhaildadaev/ulog
         - [Factories](/en/sinkhttp_factories-examples) — Ready-to-use integrations: Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
         - [帕拉姆斯](/en/sinkhttp_params-examples) — Configuration: Batching, Circuit Breaker, Dedup, Retry, Sampling.
 
-## Key Features
+## 主要特点
 
 - **Unified API** — One API for logs, metrics, and traces.
 - **Context Extraction** — Automatic extract `node_id`, `trace_id`, etc. from `context.Context`.
