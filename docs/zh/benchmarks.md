@@ -44,7 +44,7 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 使用 `WithExtractor("node_id", "trace_id")` 自动从上下文中提取。 所有测试都写入 `io.Discard`。 以英特尔酷睿i9-9880h(2.30GHz)。
 :::
 
-## FileSink Write 工作表现
+## 文件写入性能
 
 基准数据将结构化JSON日志写入启用 **原子旋转** 的 **真实文件**。
 
@@ -66,7 +66,7 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 `Single Sync` 是推荐的工作配置。 使用的基准测试包括所有附加功能：JSON格式，上下文提取，文件I/O和非阻塞旋转验证。
 :::
 
-## HttpSink Write 工作表现
+## 网络记录性能
 
 使用 `httptest.Server` 测量 `ulog` HTTP接收器内部成本的基准数据。服务器'没有网络延迟。
 
