@@ -50,17 +50,17 @@ Real-world benchmark writing structured JSON logs to a **real file** with **atom
 
 ### Multi Thread
 
-| Mode  | Level           | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|-----------------|------------|--------------|---------------|--------|
-| Async | **All variant** |     999.9K |        6,900 |          1962 |      6 |
-|  Sync | **All variant** |     152.7K |        7,800 |          1801 |      5 |
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
+|  Sync | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
 
 ### Single Thread
 
-| Mode  | Level           | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|-----------------|------------|--------------|---------------|--------|
-| Async | **All variant** |     969.7K |        6,000 |          1962 |      6 |
-|  Sync | **All variant** |     234.4K |        5,500 |          1798 |      5 |
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
+|  Sync | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
 
 > **Note:** Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks. `Single Sync` is the recommended production configuration.
 
@@ -72,16 +72,16 @@ Benchmark measuring HTTP sink overhead using `httptest.Server` (no network laten
 
 ### Multi Thread
 
-| Mode  | Level              | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|--------------------|------------|--------------|---------------|--------|
-| Async | **AllWithContext** |     999.9K |       27,000 |         8,400 |     82 |
-|  Sync | **AllWithContext** |      45.4K |       26,400 |         9,100 |     89 |
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
+|  Sync | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
 
 ### Single Thread
 
-| Mode  | Level              | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|--------------------|------------|--------------|---------------|--------|
-| Async | **AllWithContext** |     555.2K |       42,100 |         9,100 |     82 |
-|  Sync | **AllWithContext** |      13.6K |       82,500 |         9,400 |     85 |
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
+|  Sync | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
 
 > **Note:** Real-world latency will be dominated by network I/O (typically 10-100x higher). These numbers reflect `ulog` internal overhead only.

@@ -12,7 +12,9 @@ I recommend that you to test `ulog` alongside other libraries and choose the too
 
 ## Core Write Performance
 
-These benchmarks measure **pure formatting and context extraction overhead** by writing to `io.Discard`.
+::: info Note
+Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context. All benchmarks write to `io.Discard`. Benchmarked on Intel Core i9-9880H (2.30 GHz).
+:::
 
 ### Multi Thread
 
@@ -40,48 +42,50 @@ These benchmarks measure **pure formatting and context extraction overhead** by 
 | Sync  | **InfoWithContext**  |       1.5M |        810.0 |          1794 |      5 |
 | Sync  | **WarnWithContext**  |       1.5M |        790.5 |          1794 |      5 |
 
-> **Note:** Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context. All benchmarks write to `io.Discard`. Benchmarked on Intel Core i9-9880H (2.30 GHz).
-
 ---
 
 ## FileSink Write Performance
 
+::: tip Note
+Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks. `Single Sync` is the recommended production configuration.
+
 Real-world benchmark writing structured JSON logs to a **real file** with **atomic rotation** enabled.
+:::
 
 ### Multi Thread
 
-| Mode  | Level           | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|-----------------|------------|--------------|---------------|--------|
-| Async | **All variant** |     999.9K |        6,900 |          1962 |      6 |
-|  Sync | **All variant** |     152.7K |        7,800 |          1801 |      5 |
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
+|  Sync | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
 
 ### Single Thread
 
-| Mode  | Level           | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|-----------------|------------|--------------|---------------|--------|
-| Async | **All variant** |     969.7K |        6,000 |          1962 |      6 |
-|  Sync | **All variant** |     234.4K |        5,500 |          1798 |      5 |
-
-> **Note:** Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks. `Single Sync` is the recommended production configuration.
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
+|  Sync | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
 
 ---
 
 ## HttpSink Write Performance
 
+::: tip Note
+Real-world latency will be dominated by network I/O (typically 10-100x higher). These numbers reflect `ulog` internal overhead only.
+
 Benchmark measuring HTTP sink overhead using `httptest.Server` (no network latency).
+:::
 
 ### Multi Thread
 
-| Mode  | Level              | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|--------------------|------------|--------------|---------------|--------|
-| Async | **AllWithContext** |     999.9K |       27,000 |         8,400 |     82 |
-|  Sync | **AllWithContext** |      45.4K |       26,400 |         9,100 |     89 |
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
+|  Sync | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
 
 ### Single Thread
 
-| Mode  | Level              | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|--------------------|------------|--------------|---------------|--------|
-| Async | **AllWithContext** |     555.2K |       42,100 |         9,100 |     82 |
-|  Sync | **AllWithContext** |      13.6K |       82,500 |         9,400 |     85 |
-
-> **Note:** Real-world latency will be dominated by network I/O (typically 10-100x higher). These numbers reflect `ulog` internal overhead only.
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
+|  Sync | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |

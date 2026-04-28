@@ -1,7 +1,7 @@
 ---
 layout: home
 hero:
-  text: "High-performance, zero-dependency platform for logs, metrics, and traces."
+  text: "High-performance, zero-dependency platform for logs, metrics and traces."
   tagline: Observability 2.0
   actions:
     - theme: brand
