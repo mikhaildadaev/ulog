@@ -44,6 +44,7 @@ telemetry.InfoWithContext(ctx, ulog.DataTrace,
     ulog.String("name", "login"),
     ulog.Int64("duration", 150),
 )
+telemetry.Sync()
 ```
 Output:
 ```json
