@@ -63,7 +63,7 @@ Benchmark data writes structured JSON logs to a **real file** with **atomic rota
 |  Sync | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
 
 ::: tip Note
-Includes all additional features: JSON formatting, context extraction, file I/O, and non-blocking rotation verification. `Single Sync` is the recommended working configuration.
+`Single Sync` is the recommended working configuration. The benchmarks used include all additional features: JSON formatting, context extraction, file I/O, and non-blocking rotation verification.
 :::
 
 ## HttpSink Write Performance
