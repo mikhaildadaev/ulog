@@ -14,7 +14,7 @@ I recommend that you test `ulog` alongside other libraries and choose the tool t
 
 These benchmarks measure the **cost of formatting and extracting context** by writing to `io.Discard`.
 
-### Multithread
+### MultiThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -27,7 +27,7 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 | Sync  | **InfoWithContext**  |       3.7M |        326.7 |          1794 |      5 |
 | Sync  | **WarnWithContext**  |       4.0M |        299.9 |          1794 |      5 |
 
-### Singlethread
+### SingleThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -44,18 +44,18 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 Uses `WithExtractor("node_id", "trace_id")` to automatically extract from the context. All tests write to `io.Discard`. Benchmarked on Intel Core i9-9880H (2.30GHz).
 :::
 
-## FileSink Write Performance
+## FileSink Performance
 
 Benchmark data writes structured JSON logs to a **real file** with **atomic rotation** enabled.
 
-### Multithread
+### MultiThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
 |  Sync | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
 
-### Singlethread
+### SingleThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -66,18 +66,18 @@ Benchmark data writes structured JSON logs to a **real file** with **atomic rota
 `Single Sync` is the recommended working configuration. The benchmarks used include all additional features: JSON formatting, context extraction, file I/O, and non-blocking rotation verification.
 :::
 
-## HttpSink Write Performance
+## HttpSink Performance
 
 Benchmark data that measures the internal costs of the `ulog` HTTP receiver using `httptest.Server` without network latency.
 
-### Multithread
+### MultiThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
 |  Sync | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
 
-### Singlethread
+### SingleThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
