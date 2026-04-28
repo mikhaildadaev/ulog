@@ -8,51 +8,51 @@ outline: deep
 This page is under development
 :::
 
-## NewDiscordSink
+## NewSinkDiscord
 Sends error logs to a Discord channel via webhook.
 ```go
-discordSink := ulog.NewDiscordSink("https://discord.com/api/webhooks/...", "MyBot", "")
-defer discordSink.Close()
+sinkDiscord := ulog.NewSinkDiscord("https://discord.com/api/webhooks/...", "MyBot", "")
+defer sinkDiscord.Close()
 ```
-## NewKafkaSink
+## NewSinkKafka
 Sends logs to Apache Kafka via REST Proxy for stream processing.
 ```go
-kafkaSink := ulog.NewKafkaSink("http://kafka-rest:8082", "logs")
-defer kafkaSink.Close()
+sinkKafka := ulog.NewSinkKafka("http://kafka-rest:8082", "logs")
+defer sinkKafka.Close()
 ```
-## NewLokiSink
+## NewSinkLoki
 Sends logs to Grafana Loki for storage and querying.
 ```go
-lokiSink := ulog.NewLokiSink("http://loki:3100",map[string]string{"app": "myapp", "env": "production"})
-defer lokiSink.Close()
+sinkLoki := ulog.NewSinkLoki("http://loki:3100",map[string]string{"app": "myapp", "env": "production"})
+defer sinkLoki.Close()
 ```
-## NewPrometheusSink
+## NewSinkPrometheus
 Sends metrics to Prometheus in exposition format.
 ```go
-prometheusSink := ulog.NewPrometheusSink("http://prometheus:9091")
-defer prometheusSink.Close()
+sinkPrometheus := ulog.NewSinkPrometheus("http://prometheus:9091")
+defer sinkPrometheus.Close()
 ```
-## NewSlackSink
+## NewSinkSlack
 Sends error logs to a Slack channel via webhook.
 ```go
-slackSink := ulog.NewSlackSink("https://hooks.slack.com/services/...", "ULog", ":robot:", "", "#alerts")
-defer slackSink.Close()
+sinkSlack := ulog.NewSinkSlack("https://hooks.slack.com/services/...", "ULog", ":robot:", "", "#alerts")
+defer sinkSlack.Close()
 ```
-## NewTelegramSink
+## NewSinkTelegram
 Sends error logs to a Telegram chat via bot API.
 ```go
-telegramSink := ulog.NewTelegramSink("botToken", "chatID")
-defer telegramSink.Close()
+sinkTelegram := ulog.NewSinkTelegram("botToken", "chatID")
+defer sinkTelegram.Close()
 ```
-## NewTempoSink
+## NewSinkTempo
 Sends traces to Grafana Tempo for distributed tracing.
 ```go
-tempoSink := ulog.NewTempoSink("http://tempo:4317")
-defer tempoSink.Close()
+sinkTempo := ulog.NewSinkTempo("http://tempo:4317")
+defer sinkTempo.Close()
 ```
-## NewWechatSink
+## NewSinkWechat
 Sends error logs to WeChat Work (企业微信) via webhook.
 ```go
-wechatSink := ulog.NewWechatSink("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...")
-defer wechatSink.Close()
+sinkWechat := ulog.NewSinkWechat("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...")
+defer sinkWechat.Close()
 ```
