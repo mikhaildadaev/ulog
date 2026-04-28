@@ -37,7 +37,7 @@ telemetry.Sync()
 
 ## 帕拉姆斯
 
-| Name                                                                    | Description                             | Default | 
+| 姓名                                                                     | 资料描述                                 | 违约情况 | 
 |-------------------------------------------------------------------------|-----------------------------------------|---------|
 | [`WithFileMaxAge(number)`](/en/sinkfile_params-examples#maxage)         | Maximum days to keep old log files      |      30 |
 | [`WithFileMaxBackups(number)`](/en/sinkfile_params-examples#maxbackups) | Maximum number of old log files to keep |      10 |

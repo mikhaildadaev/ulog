@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / 通过网络录制 / Factories
+# API / 通过网络录制 / 工厂
 
 ::: warning
 This page is under development
