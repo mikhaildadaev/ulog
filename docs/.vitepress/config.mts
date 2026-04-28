@@ -192,7 +192,7 @@ export default defineConfig({
                 ] 
               },
               { 
-                text: 'HTTP приёмник', 
+                text: 'Сетевой приёмник', 
                 collapsed: true,
                 items: [
                   { 

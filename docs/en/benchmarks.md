@@ -4,15 +4,15 @@ outline: deep
 
 # Benchmarks
 
-::: tip Note
-The best way to compare logging libraries is to run benchmarks in **your own environment** with **your own workload**. Every project has unique requirements — latency, throughput, memory, integration complexity — and no single benchmark can capture them all.
+::: info Information
+The best way to compare libraries is to run benchmarks in **your own environment** with **your own workload**. Each project has unique requirements — latency, throughput, memory usage, and integration complexity — and no single test can cover them all.
 
-I recommend that you to test `ulog` alongside other libraries and choose the tool that best fits your needs.
+I recommend that you test `ulog` alongside other libraries and choose the tool that best suits your needs.
 :::
 
 ## Core Write Performance
 
-These benchmarks measure **pure formatting and context extraction overhead** by writing to `io.Discard`.
+These benchmarks measure the **cost of formatting and extracting context** by writing to `io.Discard`.
 
 ### Multi Thread
 
@@ -40,13 +40,13 @@ These benchmarks measure **pure formatting and context extraction overhead** by 
 | Sync  | **InfoWithContext**  |       1.5M |        810.0 |          1794 |      5 |
 | Sync  | **WarnWithContext**  |       1.5M |        790.5 |          1794 |      5 |
 
-> **Note:** Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context. All benchmarks write to `io.Discard`. Benchmarked on Intel Core i9-9880H (2.30 GHz).
-
----
+::: tip Note
+Uses `WithExtractor("node_id", "trace_id")` to automatically extract from the context. All tests write to `io.Discard`. Benchmarked on Intel Core i9-9880H (2.30GHz).
+:::
 
 ## FileSink Write Performance
 
-Real-world benchmark writing structured JSON logs to a **real file** with **atomic rotation** enabled.
+Benchmark data writes structured JSON logs to a **real file** with **atomic rotation** enabled.
 
 ### Multi Thread
 
@@ -62,13 +62,15 @@ Real-world benchmark writing structured JSON logs to a **real file** with **atom
 | Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
 |  Sync | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
 
-> **Note:** Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks. `Single Sync` is the recommended production configuration.
+::: tip Note
+Includes all additional features: JSON formatting, context extraction, file I/O, and non-blocking rotation verification. 
 
----
+`Single Sync` is the recommended working configuration.
+:::
 
 ## HttpSink Write Performance
 
-Benchmark measuring HTTP sink overhead using `httptest.Server` (no network latency).
+Benchmark data that measures the internal costs of the `ulog` HTTP receiver using `httptest.Server` without network latency.
 
 ### Multi Thread
 
@@ -84,4 +86,6 @@ Benchmark measuring HTTP sink overhead using `httptest.Server` (no network laten
 | Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
 |  Sync | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
 
-> **Note:** Real-world latency will be dominated by network I/O (typically 10-100x higher). These numbers reflect `ulog` internal overhead only.
+::: tip Note
+In a real environment, the delay is mainly determined by network I/O (usually 10-100 times higher). These numbers only reflect the internal costs of `ulog`.
+:::.

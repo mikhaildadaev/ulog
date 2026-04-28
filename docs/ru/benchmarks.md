@@ -2,21 +2,19 @@
 outline: deep
 ---
 
-# Benchmarks
+# Бенчмарки
 
-::: tip Note
-The best way to compare logging libraries is to run benchmarks in **your own environment** with **your own workload**. Every project has unique requirements — latency, throughput, memory, integration complexity — and no single benchmark can capture them all.
+::: info Информация
+Лучший способ сравнить библиотеки - выполнить тесты в **вашей собственной среде** с **вашей собственной рабочей нагрузкой**. Каждый проект предъявляет уникальные требования — задержка, пропускная способность, объем памяти, сложность интеграции — и ни один тест не может учесть их все.
 
-I recommend that you to test `ulog` alongside other libraries and choose the tool that best fits your needs.
+Рекомендую вам протестировать `ulog` наряду с другими библиотеками и выбрать инструмент, который наилучшим образом соответствует вашим потребностям.
 :::
 
-## Core Write Performance
+## Производительность записи ядра
 
-::: info Note
-Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context. All benchmarks write to `io.Discard`. Benchmarked on Intel Core i9-9880H (2.30 GHz).
-:::
+Данные бенчмарки измеряют **затраты на форматирование и извлечение контекста** путем записи в `io.Discard`.
 
-### Multi Thread
+### Многопоточная среда
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -29,7 +27,7 @@ Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract f
 | Sync  | **InfoWithContext**  |       3.7M |        326.7 |          1794 |      5 |
 | Sync  | **WarnWithContext**  |       4.0M |        299.9 |          1794 |      5 |
 
-### Single Thread
+### Однопоточная среда
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
@@ -42,50 +40,52 @@ Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract f
 | Sync  | **InfoWithContext**  |       1.5M |        810.0 |          1794 |      5 |
 | Sync  | **WarnWithContext**  |       1.5M |        790.5 |          1794 |      5 |
 
----
-
-## FileSink Write Performance
-
-::: tip Note
-Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks. `Single Sync` is the recommended production configuration.
-
-Real-world benchmark writing structured JSON logs to a **real file** with **atomic rotation** enabled.
+::: tip Примечание
+Используется `WithExtractor("node_id", "trace_id")` для автоматического извлечения из контекста. Все тесты записывают данные в `io.Discard`. Тестировался на базе процессора Intel Core i9-9880H (2,30 ГГц).
 :::
 
-### Multi Thread
+## Производительность записи в файл
+
+Данные бенчмарки, записывают структурированные журналы JSON в **реальный файл** с включенным **атомарным ротированием**.
+
+### Многопоточная среда
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
 |  Sync | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
 
-### Single Thread
+### Однопоточная среда
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
 |  Sync | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
 
----
+::: tip Примечание
+Включают в себя все дополнительные функции: форматирование в формате JSON, извлечение контекста, ввод-вывод файлов и проверку неблокирующей ротации. 
 
-## HttpSink Write Performance
-
-::: tip Note
-Real-world latency will be dominated by network I/O (typically 10-100x higher). These numbers reflect `ulog` internal overhead only.
-
-Benchmark measuring HTTP sink overhead using `httptest.Server` (no network latency).
+`Single Sync` - рекомендуемая рабочая конфигурация.
 :::
 
-### Multi Thread
+## Производительность записи по сети
+
+Данные бенчмарки, измеряющие внутренние издержки HTTP-приемника ulog с помощью `httptest.Server` — без задержки в сети.
+
+### Многопоточная среда
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
 |  Sync | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
 
-### Single Thread
+### Однопоточная среда
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
 |  Sync | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
+
+::: tip Примечание
+В реальной среде задержка определяется в основном сетевым вводом-выводом (обычно в 10-100 раз выше). Эти цифры отражают только внутренние издержки `ulog`.
+:::
