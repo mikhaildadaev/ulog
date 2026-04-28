@@ -251,11 +251,11 @@ export default defineConfig({
                 link: '/zh/go' 
               },
               { 
-                text: 'Benchmarks', 
+                text: '基准', 
                 link: '/zh/benchmarks' 
               },
               { 
-                text: '核心', 
+                text: 'API', 
                 collapsed: true,
                 items: [
                   { 
@@ -273,7 +273,7 @@ export default defineConfig({
                 ] 
               },
               { 
-                text: '接收器 File', 
+                text: '写入文件', 
                 collapsed: true,
                 items: [
                   { 
@@ -287,7 +287,7 @@ export default defineConfig({
                 ] 
               },
               { 
-                text: '接收器 Http', 
+                text: '通过网络录制', 
                 collapsed: true,
                 items: [
                   { 
