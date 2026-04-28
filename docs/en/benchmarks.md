@@ -10,7 +10,7 @@ The best way to compare libraries is to run benchmarks in **your own environment
 I recommend that you test `ulog` alongside other libraries and choose the tool that best suits your needs.
 :::
 
-## Core Write Performance
+## Core Performance
 
 These benchmarks measure the **cost of formatting and extracting context** by writing to `io.Discard`.
 
