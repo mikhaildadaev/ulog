@@ -8,12 +8,12 @@ outline: deep
 Последняя стабильная версия `ulog` — **v1.26.12**.
 :::
 
-## Начать использование
+## Get Started
 ```bash
 go get github.com/mikhaildadaev/ulog
 ```
 
-## Быстрая навигация
+## Quick Navigation
 
 - [Бенчмарки](/ru/benchmarks) - Данные о производительности ядра, записи в файл и записи по сети.
 - **API**
@@ -29,7 +29,7 @@ go get github.com/mikhaildadaev/ulog
         - [Фабрики](/ru/sinkhttp_factories-examples) — Готовые к использованию интеграции: Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
         - [Параметры](/ru/sinkhttp_params-examples) — Конфигурация: Пакетной обработки, Автоматического выключателя, Дедупликации, Повторной отправке, Выборки.
 
-## Ключевые функции
+## Key Features
 
 - **Унифицированный API** — Единый API для логов, метрик и трассировок.
 - **Извлечение контекста** — Автоматическое извлечение `node_id`, `trace_id` и т.д. из `context.Context`.

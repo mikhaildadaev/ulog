@@ -4,12 +4,16 @@ outline: deep
 
 # Go
 
-## 开始吧
+::: info 资料
+`ulog` 的最新稳定版本是 **v1.26.12**.
+:::
+
+## Get Started
 ```bash
 go get github.com/mikhaildadaev/ulog
 ```
 
-## 快速导航
+## Quick Navigation
 
 - [基准](/en/benchmarks) - Performance data for core, fileSink and httpSink operations.
 - **API**
@@ -25,7 +29,7 @@ go get github.com/mikhaildadaev/ulog
         - [工厂](/en/sinkhttp_factories-examples) — Ready-to-use integrations: Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat.
         - [帕拉姆斯](/en/sinkhttp_params-examples) — Configuration: Batching, Circuit Breaker, Dedup, Retry, Sampling.
 
-## 主要特点
+## Key Features
 
 - **Unified API** — One API for logs, metrics, and traces.
 - **Context Extraction** — Automatic extract `node_id`, `trace_id`, etc. from `context.Context`.
