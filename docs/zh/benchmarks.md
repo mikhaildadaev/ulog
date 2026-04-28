@@ -10,9 +10,9 @@ outline: deep
 我建议您与其他库一起测试`ulog'，并选择最适合您需求的工具。
 :::
 
-## Core Performance
+## 核心表现
 
-These benchmarks measure **pure formatting and context extraction overhead** by writing to `io.Discard`.
+These benchmarks measure the **cost of formatting and extracting context** by writing to `io.Discard`.
 
 ### 多线程
 
@@ -40,13 +40,13 @@ These benchmarks measure **pure formatting and context extraction overhead** by 
 | Sync  | **InfoWithContext**  |       1.5M |        810.0 |          1794 |      5 |
 | Sync  | **WarnWithContext**  |       1.5M |        790.5 |          1794 |      5 |
 
-> **Note:** Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context. All benchmarks write to `io.Discard`. Benchmarked on Intel Core i9-9880H (2.30 GHz).
+::: tip Note
+使用 `WithExtractor("node_id", "trace_id")` 自动从上下文中提取。 所有测试都写入 `io.Discard`。 以英特尔酷睿i9-9880h(2.30GHz)。
+:::
 
----
+## FileSink Write 工作表现
 
-## FileSink Write Performance
-
-Real-world benchmark writing structured JSON logs to a **real file** with **atomic rotation** enabled.
+基准数据将结构化JSON日志写入启用 **原子旋转** 的 **真实文件**。
 
 ### 多线程
 
@@ -62,13 +62,13 @@ Real-world benchmark writing structured JSON logs to a **real file** with **atom
 | Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
 |  Sync | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
 
-> **Note:** Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks. `Single Sync` is the recommended production configuration.
+::: tip Note
+`Single Sync` 是推荐的工作配置。 使用的基准测试包括所有附加功能：JSON格式，上下文提取，文件I/O和非阻塞旋转验证。
+:::
 
----
+## HttpSink Write 工作表现
 
-## HttpSink Write Performance
-
-Benchmark measuring HTTP sink overhead using `httptest.Server` (no network latency).
+使用 `httptest.Server` 测量 `ulog` HTTP接收器内部成本的基准数据。服务器'没有网络延迟。
 
 ### 多线程
 
@@ -84,4 +84,6 @@ Benchmark measuring HTTP sink overhead using `httptest.Server` (no network laten
 | Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
 |  Sync | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
 
-> **Note:** Real-world latency will be dominated by network I/O (typically 10-100x higher). These numbers reflect `ulog` internal overhead only.
+::: tip Note
+在真实环境中，延迟主要由网络I/O决定（通常高出10-100倍）。 这些数字只反映了`ulog`的内部成本。
+:::

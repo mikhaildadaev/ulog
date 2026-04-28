@@ -44,7 +44,7 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 Uses `WithExtractor("node_id", "trace_id")` to automatically extract from the context. All tests write to `io.Discard`. Benchmarked on Intel Core i9-9880H (2.30GHz).
 :::
 
-## FileSink Write Performance
+## 文件写入性能
 
 Benchmark data writes structured JSON logs to a **real file** with **atomic rotation** enabled.
 
@@ -66,7 +66,7 @@ Benchmark data writes structured JSON logs to a **real file** with **atomic rota
 `Single Sync` is the recommended working configuration. The benchmarks used include all additional features: JSON formatting, context extraction, file I/O, and non-blocking rotation verification.
 :::
 
-## HttpSink Write Performance
+## 网络记录性能
 
 Benchmark data that measures the internal costs of the `ulog` HTTP receiver using `httptest.Server` without network latency.
 
