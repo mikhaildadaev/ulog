@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / SinkFile / Основное
+# API / Экспортёр в файл / Основное
 
 ::: warning
 This page is under development

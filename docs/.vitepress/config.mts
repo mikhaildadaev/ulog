@@ -178,7 +178,7 @@ export default defineConfig({
                 ] 
               },
               { 
-                text: 'Файловый приёмник', 
+                text: 'Экспортёр в файл', 
                 collapsed: true,
                 items: [
                   { 
@@ -192,7 +192,7 @@ export default defineConfig({
                 ] 
               },
               { 
-                text: 'Сетевой приёмник', 
+                text: 'Экспортёр в сеть', 
                 collapsed: true,
                 items: [
                   { 

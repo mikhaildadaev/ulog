@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / SinkHttp / Фабрики
+# API / Экспортёр в сеть / Фабрики
 
 ::: warning
 This page is under development
