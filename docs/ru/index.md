@@ -5,7 +5,7 @@ hero:
   tagline: Observability 2.0
   actions:
     - theme: brand
-      text: Get Started
+      text: Начать использование
       link: /ru/go#get-started
 features:
   - title: Логи

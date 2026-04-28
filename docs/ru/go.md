@@ -8,7 +8,7 @@ outline: deep
 Последняя стабильная версия `ulog` — **v1.26.12**.
 :::
 
-## Быстрый старт
+## Начать использование
 ```bash
 go get github.com/mikhaildadaev/ulog
 ```
