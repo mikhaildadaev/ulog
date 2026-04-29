@@ -4,25 +4,25 @@
   const currentPath = window.location.pathname;
   const supportedLangs = ['en', 'ru', 'zh'];
   const base = '/ulog/';
-  function getRestPath(path) {
-    for (const l of supportedLangs) {
-      const prefix = base + l + '/';
-      if (path.startsWith(prefix)) {
-        return path.substring(prefix.length - 1);
-      }
-    }
-    if (path.startsWith(base)) {
-      return path.substring(base.length - 1);
-    }
-    return '/';
-  }
   if (savedLang && supportedLangs.includes(savedLang)) {
-    const targetPrefix = base + savedLang + '/';
-    if (!currentPath.startsWith(targetPrefix)) {
-      const rest = getRestPath(currentPath);
-      window.location.replace(targetPrefix + rest.replace(/^\//, ''));
+    const expectedPrefix = base + savedLang + '/';
+    if (currentPath.startsWith(expectedPrefix)) {
       return;
     }
+    let rest = '/';
+    for (const l of supportedLangs) {
+      const langPrefix = base + l + '/';
+      if (currentPath.startsWith(langPrefix)) {
+        rest = currentPath.substring(langPrefix.length - 1);
+        break;
+      }
+    }
+    if (currentPath === base || currentPath === base.slice(0, -1)) {
+      rest = '/';
+    }
+    const newPath = base + savedLang + rest;
+    window.location.replace(newPath);
+    return;
   }
   const lang = document.documentElement.lang;
   if (lang) {
