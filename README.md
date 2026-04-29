@@ -60,26 +60,26 @@ These benchmarks measure the cost of formatting and extracting context by writin
 #### MultiThread
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
-| Async | **DebugWithContext** |       5.8M |      180.700 |           536 |      3 |
-| Async | **ErrorWithContext** |       2.0M |      578.300 |          1922 |      6 |
-| Async | **InfoWithContext**  |       2.3M |      555.900 |	      1922 |      6 |
-| Async | **WarnWithContext**  |       2.4M |      470.700 |          1922 |      6 |
-| Sync  | **DebugWithContext** |       6.3M |      203.300 |	       536 |      3 |
-| Sync  | **ErrorWithContext** |       3.2M |      372.100 |          1794 |      5 |
-| Sync  | **InfoWithContext**  |       3.7M |      326.700 |	      1794 |      5 |
-| Sync  | **WarnWithContext**  |       4.0M |      299.900 |          1794 |      5 |
+| Async | **DebugWithContext** |       5.8M |        180.7 |           536 |      3 |
+| Async | **ErrorWithContext** |       2.0M |        578.3 |          1922 |      6 |
+| Async | **InfoWithContext**  |       2.3M |        555.9 |	      1922 |      6 |
+| Async | **WarnWithContext**  |       2.4M |        470.7 |          1922 |      6 |
+| Sync  | **DebugWithContext** |       6.3M |        203.3 |	       536 |      3 |
+| Sync  | **ErrorWithContext** |       3.2M |        372.1 |          1794 |      5 |
+| Sync  | **InfoWithContext**  |       3.7M |        326.7 |	      1794 |      5 |
+| Sync  | **WarnWithContext**  |       4.0M |        299.9 |          1794 |      5 |
 
 #### SingleThread
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
-| Async | **DebugWithContext** |       2.1M |      567.100 |	       536 |      3 |
-| Async | **ErrorWithContext** |       1.0M |     1045.000 |	      1922 |      6 |
-| Async | **InfoWithContext**  |       1.0M |     1006.000 |          1922 |      6 |
-| Async | **WarnWithContext**  |       1.2M |      953.600 |          1922 |      6 |
-| Sync  | **DebugWithContext** |       2.1M |      562.600 |	       536 |      3 |
-| Sync  | **ErrorWithContext** |       1.4M |      875.100 |	      1794 |	  5 |
-| Sync  | **InfoWithContext**  |       1.5M |      810.000 |	      1794 |      5 |
-| Sync  | **WarnWithContext**  |       1.5M |      790.500 |	      1794 |      5 |
+| Async | **DebugWithContext** |       2.1M |        567.1 |	       536 |      3 |
+| Async | **ErrorWithContext** |       1.0M |       1045.0 |	      1922 |      6 |
+| Async | **InfoWithContext**  |       1.0M |       1006.0 |          1922 |      6 |
+| Async | **WarnWithContext**  |       1.2M |        953.6 |          1922 |      6 |
+| Sync  | **DebugWithContext** |       2.1M |        562.6 |	       536 |      3 |
+| Sync  | **ErrorWithContext** |       1.4M |        875.1 |	      1794 |	  5 |
+| Sync  | **InfoWithContext**  |       1.5M |        810.0 |	      1794 |      5 |
+| Sync  | **WarnWithContext**  |       1.5M |        790.5 |	      1794 |      5 |
 
 > **Note**
 >
