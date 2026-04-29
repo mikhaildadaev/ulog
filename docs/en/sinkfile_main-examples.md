@@ -5,11 +5,11 @@ outline: deep
 # API / SinkFile / Main
 
 ::: info Info
-This page is under development
+`SinkFile` provides non-blocking atomic file rotation with gzip compression. Your service never blocks during log rotation or compression.
 :::
 
 ## NewSinkFile
-Atomic file rotation with gzip compression. Non-blocking — your service won't stall during rotation
+Atomic file rotation with `gzip` compression. Non-blocking — your service won't stall during rotation
 ```go
 var writer io.Writer = ulog.DefaultWriterOut
 sinkFile, err := ulog.NewSinkFile("app.log",

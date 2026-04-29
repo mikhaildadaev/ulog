@@ -5,11 +5,11 @@ outline: deep
 # API / Запись в файл / Основное
 
 ::: info Информация
-This page is under development
+`SinkFile` обеспечивает неблокирующую атомарную ротацию файлов со сжатием gzip. Ваш сервис никогда не блокируется во время ротации или сжатия логов.
 :::
 
 ## NewSinkFile
-Atomic file rotation with gzip compression. Non-blocking — your service won't stall during rotation
+Атомарная ротация файлов со сжатием `gzip`. Неблокирующая — ваш сервис не зависнет во время ротации.
 ```go
 var writer io.Writer = ulog.DefaultWriterOut
 sinkFile, err := ulog.NewSinkFile("app.log",

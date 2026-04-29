@@ -5,11 +5,11 @@ outline: deep
 # API / 写入文件 / 主要
 
 ::: info 关于
-This page is under development
+`SinkFile` 提供非阻塞的原子文件轮转，支持 gzip 压缩。您的服务在日志轮转或压缩期间永远不会阻塞。
 :::
 
 ## NewSinkFile
-Atomic file rotation with gzip compression. Non-blocking — your service won't stall during rotation
+原子文件轮转，支持 `gzip` 压缩。完全非阻塞 — 您的服务在轮转期间不会停顿。
 ```go
 var writer io.Writer = ulog.DefaultWriterOut
 sinkFile, err := ulog.NewSinkFile("app.log",

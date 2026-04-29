@@ -5,11 +5,11 @@ outline: deep
 # API / Запись по сети / Основное
 
 ::: info Информация
-This page is under development
+`SinkHttp` — готовый к промышленной эксплуатации HTTP-синк с батчингом, circuit breaker, дедупликацией, повтором и выборкой. Ваш сервис никогда не блокируется при сетевой доставке.
 :::
 
 ## NewSinkHttp
-Creates an HTTP sink for sending logs to a remote endpoint with **Batching**, **Circuit Breaker**, **Deduplication**, **Retry**, and **Sampling** built in
+Создаёт HTTP-синк для отправки логов на удалённый сервер со встроенными `Batching`, `Circuit Breaker`, `Deduplication`, `Retry`, `Sampling`.
 ```go
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpBatch(100, 5*time.Second),

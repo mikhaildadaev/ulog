@@ -5,11 +5,11 @@ outline: deep
 # API / SinkHttp / Main
 
 ::: info Info
-This page is under development
+`SinkHttp` — production-ready HTTP sink with batching, circuit breaker, deduplication, retry, and sampling. Your service never blocks during network delivery.
 :::
 
 ## NewSinkHttp
-Creates an HTTP sink for sending logs to a remote endpoint with **Batching**, **Circuit Breaker**, **Deduplication**, **Retry**, and **Sampling** built in
+Creates an HTTP sink for sending logs to a remote endpoint with `Batching`, `Circuit Breaker`, `Deduplication`, `Retry`, `Sampling` built in
 ```go
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpBatch(100, 5*time.Second),

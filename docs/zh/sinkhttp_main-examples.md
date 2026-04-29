@@ -5,11 +5,11 @@ outline: deep
 # API / 通过网络录制 / 主要
 
 ::: info 关于
-This page is under development
+`SinkHttp` — 生产就绪的 HTTP 接收器，内置批处理、断路器、去重、重试和采样。您的服务在网络传输期间永远不会阻塞。
 :::
 
 ## NewSinkHttp
-Creates an HTTP sink for sending logs to a remote endpoint with **Batching**, **Circuit Breaker**, **Deduplication**, **Retry**, and **Sampling** built in
+创建一个 HTTP 接收器，用于将日志发送到远程端点，内置 `Batching`、`Circuit Breaker`、`Deduplication`、`Retry`、`Sampling`。
 ```go
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpBatch(100, 5*time.Second),
