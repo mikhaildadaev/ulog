@@ -5,11 +5,11 @@ outline: deep
 # API / 核心 / 主要
 
 ::: info 关于
-API 的核心是 `ulog` 的基础。 在这里，您将学习如何创建遥测实例、配置所有参数以及了解每个数据类型和字段构造函数。
+核心 是 `ulog` 的基础。在这里，您将学习如何创建遥测实例、配置所有选项，并了解每种数据类型和字段构造函数。
 :::
 
 ## NewTelemetry
-Telemetry instance with all configuration options
+创建包含所有配置选项的遥测实例
 ```go
 ctx := context.Background()
 ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -80,7 +80,7 @@ Output:
 | [`TypeField`](/en/core_types-examples#field) | 16 type-safe field constructors                | `Bool`, `Bools`, `Duration`, `Durations`, `Error`, `Errors`, `Float64`, `Floats64`, `Int`, `Ints`, `Int64`, `Ints64`, `String`, `Strings`, `Time`, `Times` |
 
 ## NewTelemetryLog
-Adapter for standard `log.Logger`
+标准 `log.Logger` 适配器
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithFormat(ulog.FormatText),

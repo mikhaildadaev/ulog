@@ -5,11 +5,11 @@ outline: deep
 # API / Ядро / Основное
 
 ::: info
-Ядро API — это основа `ulog`. Здесь вы узнаете, как создать экземпляр телеметрии, настроить все параметры и понять каждый тип данных и конструктор полей.
+Ядро — это основа `ulog`. Здесь вы узнаете, как создать экземпляр телеметрии, настроить все параметры и понять каждый тип данных и конструктор полей.
 :::
 
 ## NewTelemetry
-Telemetry instance with all configuration options
+Создание экземпляра телеметрии со всеми параметрами конфигурации
 ```go
 ctx := context.Background()
 ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -80,7 +80,7 @@ Output:
 | [`TypeField`](/ru/core_types-examples#field) | 16 type-safe field constructors                | `Bool`, `Bools`, `Duration`, `Durations`, `Error`, `Errors`, `Float64`, `Floats64`, `Int`, `Ints`, `Int64`, `Ints64`, `String`, `Strings`, `Time`, `Times` |
 
 ## NewTelemetryLog
-Adapter for standard `log.Logger`
+Адаптер для стандартного `log.Logger`
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithFormat(ulog.FormatText),
