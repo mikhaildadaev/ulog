@@ -21,6 +21,7 @@ export default defineConfig({
       })()`
     ]
   ],
+  lastUpdated: true,
   locales: {
     en: {
       description: 'A high-performance, zero-dependency platform for logs, metrics and traces.',
@@ -117,9 +118,28 @@ export default defineConfig({
             ]
           }
         ],
+        darkModeSwitchLabel: "Appearance",
+        darkModeSwitchTitle: "Switch to dark theme",
+        lightModeSwitchTitle: "Switch to light theme",
+        sidebarMenuLabel: "Menu",
+        returnToTopLabel: "Return to top",
+        outline: {
+          label: "On this page"
+        },
+        lastUpdated: {
+          text: "Last Updated",
+          formatOptions: {
+            dateStyle: "short",
+            timeStyle: "short"
+          }
+        },
+        docFooter: {
+          prev: "Previous page",
+          next: "Next page"
+        },
         footer: {
           message: 'Released under the Apache License 2.0.',
-          copyright: 'Copyright © 2026 Mikhail Dadaev'
+          copyright: '© 2026 Mikhail Dadaev'
         }
       }
     },
@@ -212,6 +232,25 @@ export default defineConfig({
             ]
           }
         ],
+        darkModeSwitchLabel: "Внешний вид",
+        darkModeSwitchTitle: "Переключиться на тёмную тему",
+        lightModeSwitchTitle: "Переключиться на светлую тему",
+        sidebarMenuLabel: "Меню",
+        returnToTopLabel: "Вернуться наверх",
+        outline: {
+          label: "Содержание страницы"
+        },
+        lastUpdated: {
+          text: "Последние изменения",
+          formatOptions: {
+            dateStyle: "short",
+            timeStyle: "short"
+          }
+        },
+        docFooter: {
+          prev: "Предыдущая страница",
+          next: "Следующая страница"
+        },
         footer: {
           message: 'Распространяется под лицензией Apache 2.0.',
           copyright: '© 2026 Михаил Дадаев'
@@ -313,6 +352,25 @@ export default defineConfig({
             ]
           }
         ],
+        darkModeSwitchLabel: "深色模式",
+        darkModeSwitchTitle: "切换至深色主题",
+        lightModeSwitchTitle: "切换至浅色主题",
+        sidebarMenuLabel: "目录",
+        returnToTopLabel: "返回至顶部",
+        outline: {
+          label: "页面导航"
+        },
+        lastUpdated: {
+          text: "最近更改",
+          formatOptions: {
+            dateStyle: "short",
+            timeStyle: "short"
+          }
+        },
+        docFooter: {
+          prev: "上一页",
+          next: "下一页"
+        },
         footer: {
           message: '根据 Apache 2.0 许可证发布。',
           copyright: '© 2026 Mikhail Dadaev'
