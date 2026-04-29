@@ -3,8 +3,8 @@ export default defineConfig({
   appearance: 'dark',
   base: '/ulog/',
   head: [
-    ['link', { rel: 'stylesheet', href: '/ulog/styles.css' }],
-    ['script', { src: '/ulog/scripts.js' }]
+    ['link', { rel: 'stylesheet', href: '/styles.css' }],
+    ['script', { src: '/scripts.js' }]
   ],
   lastUpdated: true,
   locales: {
