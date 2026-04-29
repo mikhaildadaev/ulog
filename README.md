@@ -10,10 +10,22 @@ A high-performance, zero-dependency platform for logs, metrics and traces.
 
 ## Go
 
+> **Information:**
+> The latest stable version of ulog is v1.26.12.
+
 ### Get Started
 
 ```bash
 go get github.com/mikhaildadaev/ulog
+```
+
+### Get Test 
+
+```bash
+go test ./...
+go test -bench=. ./...
+go test -cover ./...
+go test -race ./...
 ```
 
 ### Key Features
@@ -237,17 +249,6 @@ func main() {
 - **Loki sink**: uses HTTP API (`/loki/api/v1/push`) – labels must be pre-configured
 - **Context extraction**: only works with values stored via `context.WithValue()`
 - **Zero dependencies**: by design; no external libraries for features like Kafka native protocol
-
-## Tests
-
-Run:
-
-```bash
-go test ./...
-go test -bench=. ./...
-go test -cover ./...
-go test -race ./...
-```
 
 ## Roadmap
 
