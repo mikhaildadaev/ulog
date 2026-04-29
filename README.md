@@ -4,13 +4,19 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/mikhaildadaev/ulog)](https://github.com/mikhaildadaev/ulog)
 [![CI](https://github.com/mikhaildadaev/ulog/actions/workflows/ci.yml/badge.svg)](https://github.com/mikhaildadaev/ulog/actions/workflows/ci.yml)
 
-# ULOG Toolkit
+# ULOG
 
-A high-performance, zero-dependency **Observability 2.0 platform** for Go.  
-One API for **Logs**, **Metrics**, and **Traces** with production-ready integrations out of the box. 
-Structured, colored, async, context-aware.
+A high-performance, zero-dependency platform for logs, metrics and traces.  
 
-## Features
+## Go
+
+### Get Started
+
+```bash
+go get github.com/mikhaildadaev/ulog
+```
+
+### Key Features
 
 - **Observability 2.0** – One API for Logs, Metrics, and Traces
 - **Blazing fast** – 180-580 ns/op, 5.8 µs file write with rotation
@@ -21,11 +27,92 @@ Structured, colored, async, context-aware.
 - **Colored output** – Dark/Light themes with auto-detection
 - **Zero dependencies** – Only standard library
 
-## Installation
+## Benchmarks
 
-```bash
-go get github.com/mikhaildadaev/ulog
-```
+::: info Information
+The best way to compare libraries is to run benchmarks in **your own environment** with **your own workload**. Each project has unique requirements — latency, throughput, memory usage, and integration complexity — and no single test can cover them all.
+
+I recommend that you test `ulog` alongside other libraries and choose the tool that best suits your needs.
+:::
+
+### Core Performance
+
+#### MultiThread
+
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **DebugWithContext** |       5.8M |      180.700 |           536 |      3 |
+| Async | **ErrorWithContext** |       2.0M |      578.300 |          1922 |      6 |
+| Async | **InfoWithContext**  |       2.3M |      555.900 |	      1922 |      6 |
+| Async | **WarnWithContext**  |       2.4M |      470.700 |          1922 |      6 |
+| Sync  | **DebugWithContext** |       6.3M |      203.300 |	       536 |      3 |
+| Sync  | **ErrorWithContext** |       3.2M |      372.100 |          1794 |      5 |
+| Sync  | **InfoWithContext**  |       3.7M |      326.700 |	      1794 |      5 |
+| Sync  | **WarnWithContext**  |       4.0M |      299.900 |          1794 |      5 |
+
+#### SingleThread
+
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **DebugWithContext** |       2.1M |      567.100 |	       536 |      3 |
+| Async | **ErrorWithContext** |       1.0M |     1045.000 |	      1922 |      6 |
+| Async | **InfoWithContext**  |       1.0M |     1006.000 |          1922 |      6 |
+| Async | **WarnWithContext**  |       1.2M |      953.600 |          1922 |      6 |
+| Sync  | **DebugWithContext** |       2.1M |      562.600 |	       536 |      3 |
+| Sync  | **ErrorWithContext** |       1.4M |      875.100 |	      1794 |	  5 |
+| Sync  | **InfoWithContext**  |       1.5M |      810.000 |	      1794 |      5 |
+| Sync  | **WarnWithContext**  |       1.5M |      790.500 |	      1794 |      5 |
+
+> **Note:**
+> - Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context.
+> - All benchmarks write to `io.Discard` (equivalent to `/dev/null` on Unix or `NUL` on Windows).
+> - This measures only the logging overhead (field formatting, JSON encoding, context extraction) without disk or network I/O.
+> - Real-world performance will depend on your output destination (file, network, etc.).
+> - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
+
+### SinkFile Performance
+
+#### MultiThread
+
+| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|------------|--------------|---------------|--------|
+| Async |     999.9K |        6,900 |          1962 |      6 |
+| Sync  |     152,7K |        7,800 |          1801 |      5 |
+
+#### SingleThread
+
+| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|------------|--------------|---------------|--------|
+| Async |     969,7K |        6,000 |          1962 |      6 |
+| Sync  |     234,4K |        5,500 |          1798 |      5 |
+
+> **Note:**
+> - Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context.
+> - Writes structured JSON logs to a **real file** with **atomic rotation** enabled (`WithFileMaxSize(15)`).
+> - Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks.
+> - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
+
+### SinkHttp Performance
+
+#### MultiThread
+
+| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|------------|--------------|---------------|--------|
+| Async |     999,9M |       27,000 |         8,400 |     82 |
+| Sync  |      45,4K |       26,400 |         9,100 |     89 |
+
+#### SingleThread
+
+| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|------------|--------------|---------------|--------|
+| Async |     555,2K |       42,100 |         9,100 |     82 |
+| Sync  |      13,6K |       82,500 |         9,400 |     85 |
+
+> **Note:**
+> - Benchmarks use `httptest.Server` to simulate HTTP endpoint.
+> - Measures full overhead: JSON formatting, context extraction, HTTP request/response.
+> - *Multi* benchmarks use `b.RunParallel` to simulate real-world concurrent load.
+> - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
 ## Quick API
 
@@ -78,73 +165,6 @@ go get github.com/mikhaildadaev/ulog
 - ulog.WithLevel(level TypeLevel)
 - ulog.WithMode(mode TypeMode, writer io.Writer, bufferSize ...int)
 - ulog.WithTheme(theme TypeTheme)
-
-## Performance
-
-### Core Write Performance
-
-#### Multi Thread
-
-|         Level        |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|----------------------|-------|------------|--------------|---------------|--------|
-| **DebugWithContext** | Async |       5.8M |      180.700 |           536 |      3 |
-| **DebugWithContext** |  Sync |       6.3M |      203.300 |	       536 |      3 |
-| **ErrorWithContext** | Async |       2.0M |      578.300 |          1922 |      6 |
-| **ErrorWithContext** |  Sync |       3.2M |      372.100 |          1794 |      5 |
-|  **InfoWithContext** | Async |       2.3M |      555.900 |	      1922 |      6 |
-|  **InfoWithContext** |  Sync |       3.7M |      326.700 |	      1794 |      5 |
-|  **WarnWithContext** | Async |       2.4M |      470.700 |          1922 |      6 |
-|  **WarnWithContext** |  Sync |       4.0M |      299.900 |          1794 |      5 |
-
-#### Single Thread
-
-|         Level        |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|----------------------|-------|------------|--------------|---------------|--------|
-| **DebugWithContext** | Async |       2.1M |      567.100 |	       536 |      3 |
-| **DebugWithContext** |  Sync |       2.1M |      562.600 |	       536 |      3 |
-| **ErrorWithContext** | Async |       1.0M |     1045.000 |	      1922 |      6 |
-| **ErrorWithContext** |  Sync |       1.4M |      875.100 |	      1794 |	  5 |
-|  **InfoWithContext** | Async |       1.0M |     1006.000 |          1922 |      6 |
-|  **InfoWithContext** |  Sync |       1.5M |      810.000 |	      1794 |      5 |
-|  **WarnWithContext** | Async |       1.2M |      953.600 |          1922 |      6 |
-|  **WarnWithContext** |  Sync |       1.5M |      790.500 |	      1794 |      5 |
-
-> **Note:**
-> - Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context.
-> - All benchmarks write to `io.Discard` (equivalent to `/dev/null` on Unix or `NUL` on Windows).
-> - This measures only the logging overhead (field formatting, JSON encoding, context extraction) without disk or network I/O.
-> - Real-world performance will depend on your output destination (file, network, etc.).
-> - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
-
-### File Write with rotation (Local)
-
-|   Thread   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|------------|-------|------------|--------------|---------------|--------|
-|  **Multi** | Async |       1.0M |        6,900 |          1962 |      6 |
-|  **Multi** |  Sync |     152,7K |        7,800 |          1801 |      5 |
-| **Single** | Async |     969,7K |        6,000 |          1962 |      6 |
-| **Single** |  Sync |     234,4K |        5,500 |          1798 |      5 |
-
-> **Note:**
-> - Benchmarks use `WithExtractor("node_id", "trace_id")` to automatically extract from context.
-> - Writes structured JSON logs to a **real file** with **atomic rotation** enabled (`WithFileMaxSize(15)`).
-> - Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks.
-> - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
-
-### HTTP Write Overhead (Local)
-
-|   Thread   |  Mode | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|------------|-------|------------|--------------|---------------|--------|
-|  **Multi** | Async |       1,0M |       27,000 |         8,400 |     82 |
-|  **Multi** |  Sync |      45,4K |       26,400 |         9,100 |     89 |
-| **Single** | Async |     555,2K |       42,100 |         9,100 |     82 |
-| **Single** |  Sync |      13,6K |       82,500 |         9,400 |     85 |
-
-> **Note:**
-> - Benchmarks use `httptest.Server` to simulate HTTP endpoint.
-> - Measures full overhead: JSON formatting, context extraction, HTTP request/response.
-> - *Multi* benchmarks use `b.RunParallel` to simulate real-world concurrent load.
-> - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
 ## Usage
 
@@ -213,7 +233,7 @@ func main() {
 - **Context extraction**: only works with values stored via `context.WithValue()`
 - **Zero dependencies**: by design; no external libraries for features like Kafka native protocol
 
-## Tests and Benchmarks
+## Tests
 
 Run:
 
