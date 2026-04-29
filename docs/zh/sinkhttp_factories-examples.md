@@ -4,7 +4,7 @@ outline: deep
 
 # API / 通过网络录制 / 工厂
 
-::: warning
+::: info 关于
 This page is under development
 :::
 

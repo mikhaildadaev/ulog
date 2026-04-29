@@ -4,7 +4,7 @@ outline: deep
 
 # API / SinkHttp / Main
 
-::: warning
+::: info Info
 This page is under development
 :::
 

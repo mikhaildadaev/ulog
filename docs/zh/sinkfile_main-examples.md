@@ -4,7 +4,7 @@ outline: deep
 
 # API / 写入文件 / 主要
 
-::: warning
+::: info 关于
 This page is under development
 :::
 

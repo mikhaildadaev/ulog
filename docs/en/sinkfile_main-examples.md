@@ -4,7 +4,7 @@ outline: deep
 
 # API / SinkFile / Main
 
-::: warning
+::: info Info
 This page is under development
 :::
 

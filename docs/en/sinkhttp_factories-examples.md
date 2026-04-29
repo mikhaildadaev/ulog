@@ -4,7 +4,7 @@ outline: deep
 
 # API / SinkHttp / Factories
 
-::: warning
+::: info Info
 This page is under development
 :::
 

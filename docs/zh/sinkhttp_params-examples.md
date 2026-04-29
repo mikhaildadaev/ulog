@@ -4,22 +4,22 @@ outline: deep
 
 # API / 通过网络录制 / 帕拉姆斯
 
-::: warning
+::: info 关于
 This page is under development
 :::
 
-## Batch
-## CircuitBreaker
-## DedupWindow
-## DisabledBatch
-## DisabledCircuit
-## DisableKeepAlive
-## FilterData
-## FilterLevel
-## Formatter
-## Header
-## Method
-## Retry
-## SampleRate
-## SampleWindow
-## Timeout
+## WithHttpBatch
+## WithHttpCircuitBreaker
+## WithHttpDedupWindow
+## WithHttpDisabledBatch
+## WithHttpDisabledCircuit
+## WithHttpDisableKeepAlive
+## WithHttpFilterData
+## WithHttpFilterLevel
+## WithHttpFormatter
+## WithHttpHeader
+## WithHttpMethod
+## WithHttpRetry
+## WithHttpSampleRate
+## WithHttpSampleWindow
+## WithHttpTimeout

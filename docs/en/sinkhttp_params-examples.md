@@ -4,22 +4,22 @@ outline: deep
 
 # API / SinkHttp / Params
 
-::: warning
+::: info Info
 This page is under development
 :::
 
-## Batch
-## CircuitBreaker
-## DedupWindow
-## DisabledBatch
-## DisabledCircuit
-## DisableKeepAlive
-## FilterData
-## FilterLevel
-## Formatter
-## Header
-## Method
-## Retry
-## SampleRate
-## SampleWindow
-## Timeout
+## WithHttpBatch
+## WithHttpCircuitBreaker
+## WithHttpDedupWindow
+## WithHttpDisabledBatch
+## WithHttpDisabledCircuit
+## WithHttpDisableKeepAlive
+## WithHttpFilterData
+## WithHttpFilterLevel
+## WithHttpFormatter
+## WithHttpHeader
+## WithHttpMethod
+## WithHttpRetry
+## WithHttpSampleRate
+## WithHttpSampleWindow
+## WithHttpTimeout

@@ -4,10 +4,10 @@ outline: deep
 
 # API / Запись в файл / Параметры
 
-::: warning
+::: info Информация
 This page is under development
 :::
 
-## MaxAge
-## MaxBackups
-## MaxSize
+## WithFileMaxAge
+## WithFileMaxBackups
+## WithFileMaxSize

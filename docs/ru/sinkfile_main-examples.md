@@ -4,7 +4,7 @@ outline: deep
 
 # API / Запись в файл / Основное
 
-::: warning
+::: info Информация
 This page is under development
 :::
 

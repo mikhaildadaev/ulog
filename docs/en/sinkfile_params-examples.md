@@ -4,10 +4,10 @@ outline: deep
 
 # API / SinkFile / Params
 
-::: warning
+::: info Info
 This page is under development
 :::
 
-## MaxAge
-## MaxBackups
-## MaxSize
+## WithFileMaxAge
+## WithFileMaxBackups
+## WithFileMaxSize

@@ -4,7 +4,7 @@ outline: deep
 
 # API / Core / Main
 
-::: info
+::: info Info
 The Core API is the foundation of `ulog`. Here you'll learn how to create a telemetry instance, configure all options, and understand every data type and field constructor.
 :::
 
