@@ -9,9 +9,9 @@ outline: deep
 :::
 
 ## Data
-One API for three signal types: logs, metrics, and traces
+Один API для трёх типов сигналов: логи, метрики и трейсы
 ### Log
-Human-readable log messages
+Человекочитаемые сообщения логов
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -29,7 +29,7 @@ Output:
 }
 ```
 ### Metric
-Machine metrics
+Машинные метрики
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -45,11 +45,11 @@ Output:
     "level":"info",
     "type":"metric",
     "name":"logins",
-    "value":1
+    "value":1.0
 }
 ```
 ### Trace
-Distributed traces
+Распределённые трейсы
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -72,7 +72,7 @@ Output:
 ```
 
 ## Field
-All 16 type-safe field constructors.
+16 типобезопасных конструкторов полей.
 ### Bool
 Boolean field
 ```go
@@ -364,7 +364,7 @@ Slice of times
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
-    ulog.Times("times", []time.Time{...}),
+    ulog.Times("times", []time.Time{time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC),time.Date(2025, 4, 22, 12, 0, 0, 0, time.UTC)}),
 )
 telemetry.Sync()
 ```

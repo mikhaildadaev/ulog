@@ -364,7 +364,7 @@ Slice of times
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
-    ulog.Times("times", []time.Time{...}),
+    ulog.Times("times", []time.Time{time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC),time.Date(2025, 4, 22, 12, 0, 0, 0, time.UTC)}),
 )
 telemetry.Sync()
 ```

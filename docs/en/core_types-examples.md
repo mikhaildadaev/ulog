@@ -45,7 +45,7 @@ Output:
     "level":"info",
     "type":"metric",
     "name":"logins",
-    "value":1
+    "value":1.0
 }
 ```
 ### Trace
@@ -72,9 +72,9 @@ Output:
 ```
 
 ## Field
-All 16 type-safe field constructors.
+16 type-safe field constructors.
 ### Bool
-Boolean field
+Boolean поле
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -93,7 +93,7 @@ Output:
 ```
 
 ### Bools
-Slice of booleans
+Срез boolean значений
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -112,7 +112,7 @@ Output:
 ```
 
 ### Duration
-Time duration field
+Time duration поле
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -131,7 +131,7 @@ Output:
 ```
 
 ### Durations
-Slice of durations
+Срез duration значений
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -150,7 +150,7 @@ Output:
 ```
 
 ### Error
-Error field
+Error поле
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -169,7 +169,7 @@ Output:
 ```
 
 ### Errors
-Slice of errors
+Срез error значений
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -188,7 +188,7 @@ Output:
 ```
 
 ### Float64
-Float64 field
+Float64 поле
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -207,7 +207,7 @@ Output:
 ```
 
 ### Floats64
-Slice of float64
+Срез float64 значений
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -226,7 +226,7 @@ Output:
 ```
 
 ### Int
-Int field
+Int поле
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -245,7 +245,7 @@ Output:
 ```
 
 ### Ints
-Slice of ints
+Срез ints значений
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -264,7 +264,7 @@ Output:
 ```
 
 ### Int64
-Int64 field
+Int64 поле
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -283,7 +283,7 @@ Output:
 ```
 
 ### Ints64
-Slice of int64
+Срез int64 значений
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -302,7 +302,7 @@ Output:
 ```
 
 ### String
-String field
+String поле
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -321,7 +321,7 @@ Output:
 ```
 
 ### Strings
-Slice of strings
+Срез string значений
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -340,7 +340,7 @@ Output:
 ```
 
 ### Time
-Time field
+Time поле
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -359,12 +359,12 @@ Output:
 ```
 
 ### Times
-Slice of times
+Срез time значений
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
-    ulog.Times("times", []time.Time{...}),
+    ulog.Times("times", []time.Time{time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC),time.Date(2025, 4, 22, 12, 0, 0, 0, time.UTC)}),
 )
 telemetry.Sync()
 ```
