@@ -1,9 +1,9 @@
 (function() {
   'use strict';
-  const savedLang = localStorage.getItem('vitepress-lang');
-  const currentPath = window.location.pathname;
-  const supportedLangs = ['en', 'ru', 'zh'];
   const base = '/ulog/';
+  const currentPath = window.location.pathname;
+  const savedLang = localStorage.getItem('vitepress-lang');
+  const supportedLangs = ['en', 'ru', 'zh'];
   if (savedLang && supportedLangs.includes(savedLang)) {
     const expectedPrefix = base + savedLang + '/';
     if (currentPath.startsWith(expectedPrefix)) {
