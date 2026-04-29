@@ -29,11 +29,10 @@ go get github.com/mikhaildadaev/ulog
 
 ## Benchmarks
 
-::: info Information
-The best way to compare libraries is to run benchmarks in **your own environment** with **your own workload**. Each project has unique requirements — latency, throughput, memory usage, and integration complexity — and no single test can cover them all.
+> **Information:**
+> The best way to compare libraries is to run benchmarks in **your own environment** with **your own workload**. Each > project has unique requirements — latency, throughput, memory usage, and integration complexity — and no single test can > cover them all.
+> I recommend that you test `ulog` alongside other libraries and choose the tool that best suits your needs.
 
-I recommend that you test `ulog` alongside other libraries and choose the tool that best suits your needs.
-:::
 
 ### Core Performance
 
