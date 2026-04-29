@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / 通过网络录制 / 帕拉姆斯
+# API / HTTP 接收器 / 参数
 
 ::: warning 警告
 本页正在开发中

@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / 通过网络录制 / 工厂
+# API / HTTP 接收器 / 工厂
 
 ::: info 关于
 This page is under development
