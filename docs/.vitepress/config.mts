@@ -301,7 +301,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: '写入文件', 
+                    text: '文件接收器', 
                     collapsed: true,
                     items: [
                       { 
@@ -309,13 +309,13 @@ export default defineConfig({
                         link: '/zh/sinkfile_main-examples' 
                       },
                       { 
-                        text: '帕拉姆斯', 
+                        text: '参数 ', 
                         link: '/zh/sinkfile_params-examples' 
                       }
                     ] 
                   },
                   { 
-                    text: '通过网络录制', 
+                    text: 'HTTP 接收器', 
                     collapsed: true,
                     items: [
                       { 
@@ -327,7 +327,7 @@ export default defineConfig({
                         link: '/zh/sinkhttp_factories-examples' 
                       },
                       { 
-                        text: '帕拉姆斯', 
+                        text: '参数', 
                         link: '/zh/sinkhttp_params-examples' 
                       }
                     ] 
