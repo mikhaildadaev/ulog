@@ -5,11 +5,11 @@ outline: deep
 # API / Ядро / Опции
 
 ::: info
-На этой странице описаны все опции конфигурации: `Extractor`, `Format`, `Level`, `Mode`, `Theme`. Каждая опция показана с рабочим примером кода и ожидаемым выводом.
+На этой странице описаны все параметры конфигурации: `Extractor`, `Format`, `Level`, `Mode`, `Theme`. Каждая опция показана с рабочим примером кода и ожидаемым выводом.
 :::
 
 ## WithExtractor/SetExtractor
-Automatic context extraction. Fields from `context.Context` are added to every log, metric, and trace automatically
+Автоматическое извлечение контекста. Поля из `context.Context` автоматически добавляются в каждый лог, метрику и трейс.
 ```go
 ctx := context.Background()
 ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -58,7 +58,7 @@ Output:
     "level":"info",
     "type":"metric",
     "name":"logins",
-    "value":1,
+    "value":1.0,
     "node_id":"123-abc"
 }
 {
@@ -79,7 +79,7 @@ Output:
     "level":"info",
     "type":"metric",
     "name":"logins",
-    "value":1,
+    "value":1.0,
     "trace_id":"abc-123"
 }
 {
@@ -93,7 +93,7 @@ Output:
 ```
 
 ## WithFormat/SetFormat
-Switch between Text and JSON output on the fly
+Переключение между TEXT и JSON выводом на лету
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithFormat(ulog.FormatJson),
@@ -118,7 +118,7 @@ Output:
 ```
 
 ## WithLevel/SetLevel
-Filter logs by severity. Only messages at or above the configured level are written
+Фильтрация логов по важности. Записываются только сообщения с уровнем не ниже настроенного
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithLevel(ulog.LevelDebug),
@@ -149,7 +149,7 @@ Output:
 ```
 
 ## WithMode/SetMode
-Switch between synchronous and asynchronous writing on the fly
+Переключение между синхронной и асинхронной записью на лету
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithMode(ulog.ModeAsync, ulog.DefaultWriterOut, 1000),
@@ -172,7 +172,7 @@ Output:
 ```
 
 ## WithTheme/SetTheme
-Switch between Dark and Light color themes for Text output. Themes only affect Text format, not JSON
+Переключение между тёмной и светлой цветовыми темами для TEXT вывода.
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithFormat(ulog.FormatText),

@@ -5,11 +5,11 @@ outline: deep
 # API / 核心 / 选项
 
 ::: info 关于
-本页涵盖所有配置选项：`Extractor`, `Format`, `Level`, `Mode`, `Theme`。每个选项都附有可运行的代码示例和预期输出。
+本页涵盖所有配置选项：`Extractor`、`Format`、`Level`、`Mode`、`Theme`。每个选项都附有可运行的代码示例和预期输出。
 :::
 
 ## WithExtractor/SetExtractor
-Automatic context extraction. Fields from `context.Context` are added to every log, metric, and trace automatically
+自动上下文提取。来自 `context.Context` 的字段会自动添加到每条日志、指标和追踪中
 ```go
 ctx := context.Background()
 ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -58,7 +58,7 @@ Output:
     "level":"info",
     "type":"metric",
     "name":"logins",
-    "value":1,
+    "value":1.0,
     "node_id":"123-abc"
 }
 {
@@ -79,7 +79,7 @@ Output:
     "level":"info",
     "type":"metric",
     "name":"logins",
-    "value":1,
+    "value":1.0,
     "trace_id":"abc-123"
 }
 {
@@ -93,7 +93,7 @@ Output:
 ```
 
 ## WithFormat/SetFormat
-Switch between Text and JSON output on the fly
+在 TEXT 和 JSON 输出之间动态切换
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithFormat(ulog.FormatJson),
@@ -118,7 +118,7 @@ Output:
 ```
 
 ## WithLevel/SetLevel
-Filter logs by severity. Only messages at or above the configured level are written
+按严重程度过滤日志。仅写入达到或超过配置级别的消息
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithLevel(ulog.LevelDebug),
@@ -149,7 +149,7 @@ Output:
 ```
 
 ## WithMode/SetMode
-Switch between synchronous and asynchronous writing on the fly
+动态切换同步和异步写入模式
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithMode(ulog.ModeAsync, ulog.DefaultWriterOut, 1000),
@@ -172,7 +172,7 @@ Output:
 ```
 
 ## WithTheme/SetTheme
-Switch between Dark and Light color themes for Text output. Themes only affect Text format, not JSON
+在深色和浅色主题之间切换文本输出。
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithFormat(ulog.FormatText),

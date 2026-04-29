@@ -58,7 +58,7 @@ Output:
     "level":"info",
     "type":"metric",
     "name":"logins",
-    "value":1,
+    "value":1.0,
     "node_id":"123-abc"
 }
 {
@@ -79,7 +79,7 @@ Output:
     "level":"info",
     "type":"metric",
     "name":"logins",
-    "value":1,
+    "value":1.0,
     "trace_id":"abc-123"
 }
 {
@@ -172,7 +172,7 @@ Output:
 ```
 
 ## WithTheme/SetTheme
-Switch between Dark and Light color themes for Text output. Themes only affect Text format, not JSON
+Switch between Dark and Light color themes for Text output.
 ```go
 telemetry := ulog.NewTelemetry(
     ulog.WithFormat(ulog.FormatText),
