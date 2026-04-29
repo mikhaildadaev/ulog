@@ -5,13 +5,14 @@ outline: deep
 # API / 核心 / 类别
 
 ::: info 关于
-本页记录了所有数据类型 `DataLog`, `DataMetric`, `DataTrace` 和全部 16 种字段构造器。每种字段都附有可运行的代码示例和预期的 JSON 输出。
+本页记录了所有数据类型 `DataLog`、`DataMetric`、`DataTrace` 以及全部 16 种字段类型。每种字段都附有可运行的代码示例和预期的 JSON 输出。
 :::
 
+
 ## Data
-One API for three signal types: logs, metrics, and traces
+一个 API 支持三种信号类型：日志、指标和追踪
 ### Log
-Human-readable log messages
+人类可读的日志消息
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -29,7 +30,7 @@ Output:
 }
 ```
 ### Metric
-Machine metrics
+机器指标
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -49,7 +50,7 @@ Output:
 }
 ```
 ### Trace
-Distributed traces
+分布式追踪
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -72,9 +73,9 @@ Output:
 ```
 
 ## Field
-All 16 type-safe field constructors.
+16 个类型安全的字段构造函数。
 ### Bool
-Boolean field
+Boolean 字段
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -93,7 +94,7 @@ Output:
 ```
 
 ### Bools
-Slice of booleans
+Boolean 切片
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -112,7 +113,7 @@ Output:
 ```
 
 ### Duration
-Time duration field
+Duration 字段
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -131,7 +132,7 @@ Output:
 ```
 
 ### Durations
-Slice of durations
+Duration 切片
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -150,7 +151,7 @@ Output:
 ```
 
 ### Error
-Error field
+Error 字段
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -169,7 +170,7 @@ Output:
 ```
 
 ### Errors
-Slice of errors
+Errors 切片
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -188,7 +189,7 @@ Output:
 ```
 
 ### Float64
-Float64 field
+Float64 字段
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -207,7 +208,7 @@ Output:
 ```
 
 ### Floats64
-Slice of float64
+Float64 切片
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -226,7 +227,7 @@ Output:
 ```
 
 ### Int
-Int field
+Int 字段
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -245,7 +246,7 @@ Output:
 ```
 
 ### Ints
-Slice of ints
+Int 切片
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -264,7 +265,7 @@ Output:
 ```
 
 ### Int64
-Int64 field
+Int64 字段
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -283,7 +284,7 @@ Output:
 ```
 
 ### Ints64
-Slice of int64
+Int64 切片
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -302,7 +303,7 @@ Output:
 ```
 
 ### String
-String field
+String 字段
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -321,7 +322,7 @@ Output:
 ```
 
 ### Strings
-Slice of strings
+String 切片
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -340,7 +341,7 @@ Output:
 ```
 
 ### Time
-Time field
+Time 字段
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
@@ -359,7 +360,7 @@ Output:
 ```
 
 ### Times
-Slice of times
+Time 切片
 ```go
 telemetry := ulog.NewTelemetry()
 defer telemetry.Close()
