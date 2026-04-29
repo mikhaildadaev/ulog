@@ -129,52 +129,6 @@ Benchmark data that measures the internal costs of the `ulog` HTTP receiver usin
 >
 >*Benchmarked on Intel Core i9-9880H (2.30 GHz).*
 
-## Quick navigation
-
-### Сonstructors
-- ulog.Bool(key string, value bool) Field
-- ulog.Bools(key string, value []bool) Field
-- ulog.Duration(key string, value time.Duration) Field
-- ulog.Durations(key string, value []time.Duration) Field
-- ulog.Error(err error) Field
-- ulog.Errors(errs []error) Field
-- ulog.Float64(key string, value float64) Field
-- ulog.Floats64(key string, value []float64) Field
-- ulog.Int(key string, value int) Field
-- ulog.Ints(key string, value []int) Field
-- ulog.Int64(key string, value int64) Field
-- ulog.Ints64(key string, value []int64) Field
-- ulog.String(key string, value string) Field
-- ulog.Strings(key string, value []string) Field
-- ulog.Time(key string, value time.Time) Field
-- ulog.Times(key string, value []time.Time) Field
-
-### Functions
-- ulog.Close() error
-- ulog.Debug(typeData TypeData, fields ...Field)
-- ulog.DebugWithContext(ctx context.Context, typeData TypeData, fields ...Field)
-- ulog.Error(typeData TypeData, fields ...Field)
-- ulog.ErrorWithContext(ctx context.Context, typeData TypeData, fields ...Field)
-- ulog.Fatal(typeData TypeData, fields ...Field)
-- ulog.FatalWithContext(ctx context.Context, typeData TypeData, fields ...Field)
-- ulog.Info(typeData TypeData, fields ...Field)
-- ulog.InfoWithContext(ctx context.Context, typeData TypeData, fields ...Field)
-- ulog.SetExtractor(keys ...string)
-- ulog.SetFormat(format TypeFormat)
-- ulog.SetLevel(level TypeLevel)
-- ulog.SetMode(mode TypeMode, writer io.Writer, bufferSize ...int)
-- ulog.SetTheme(theme TypeTheme)
-- ulog.Sync() error
-- ulog.Warn(typeData TypeData, fields ...Field)
-- ulog.WarnWithContext(ctx context.Context, typeData TypeData, fields ...Field)
-
-### Methods
-- ulog.WithExtractor(keys ...string)
-- ulog.WithFormat(format TypeFormat)
-- ulog.WithLevel(level TypeLevel)
-- ulog.WithMode(mode TypeMode, writer io.Writer, bufferSize ...int)
-- ulog.WithTheme(theme TypeTheme)
-
 ## Usage
 ```go
 import (
@@ -182,7 +136,6 @@ import (
     "log"
     "github.com/mikhaildadaev/ulog"
 )
-
 func main() {
     ctx := context.Background()
     ctx = context.WithValue(ctx, "node_id", "123-abc")
@@ -224,5 +177,4 @@ func main() {
 ```
 
 ## Roadmap
-
 - **More `io.Writer` implementations** – OpenTelemetry
