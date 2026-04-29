@@ -9,11 +9,6 @@
     : 'en';
   let needsRedirect = false;
   let rest = '/';
-  if (!currentPath.includes('/ulog/') && !currentPath.includes('/ulog')) {
-    const newPath = base + targetLang + rest;
-    window.location.replace(newPath);
-    return;
-  }
   const expectedPrefix = base + targetLang + '/';
   if (!currentPath.startsWith(expectedPrefix)) {
     needsRedirect = true;
