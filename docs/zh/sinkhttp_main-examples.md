@@ -33,20 +33,20 @@ telemetry.Error(ulog.DataLog,
 telemetry.Sync()
 ```
 
-| Name                                                                                          | Description                                                                            | Default      |
-|-----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|--------------|
-| [`WithHttpBatch(size, flushInterval)`](/en/sinkhttp_params-examples#batch)                    | Batch messages: send up to `size` messages or every `flushInterval`                    | `100, 5s`    |
-| [`WithHttpCircuitBreaker(maxFailures, timeout)`](/en/sinkhttp_params-examples#circuitbreaker) | Open circuit after `maxFailures` errors, wait `timeout` before recovery                | `10, 10s`    |
-| [`WithHttpDedupWindow(window)`](/en/sinkhttp_params-examples#dedupwindow)                     | Ignore duplicate messages within `window` time                                         | `0`          |
-| [`WithHttpDisabledBatch()`](/en/sinkhttp_params-examples#disabledbatch)                       | Disable message batching (send immediately)                                            | `false`      |
-| [`WithHttpDisabledCircuit()`](/en/sinkhttp_params-examples#disabledcircuit)                   | Disable Circuit Breaker                                                                | `false`      |
-| [`WithHttpDisableKeepAlive()`](/en/sinkhttp_params-examples#disablekeepalive)                 | Disable HTTP Keep-Alive connections                                                    | `false`      |
-| [`WithHttpFilterData(type)`](/en/sinkhttp_params-examples#filterdata)                         | Filter by data type: `DataLog`, `DataMetric`, `DataTrace`                              | (all)        |
-| [`WithHttpFilterLevel(level)`](/en/sinkhttp_params-examples#filterlevel)                      | Filter by minimum level: `LevelDebug`,`LevelError`,`LevelFatal`,`LevelInfo`,`LevelWarn`| `LevelError` |
-| [`WithHttpFormatter(fn)`](/en/sinkhttp_params-examples#formatter)                             | Custom formatter function `func(attributes, fields) ([]byte, error)`                   |              |
-| [`WithHttpHeader(key, value)`](/en/sinkhttp_params-examples#header)                           | Add custom HTTP header                                                                 |              |
-| [`WithHttpMethod(method)`](/en/sinkhttp_params-examples#method)                               | HTTP method: `POST`, `PUT`, etc.                                                       | `POST`       |
-| [`WithHttpRetry(maxRetries, backoff)`](/en/sinkhttp_params-examples#retry)                    | Retry failed requests up to `maxRetries` times with exponential `backoff`              | `0, 1s`      |
-| [`WithHttpSampleRate(rate)`](/en/sinkhttp_params-examples#samplerate)                         | Sample 1 out of `rate` messages for non-error levels                                   | `0`          |
-| [`WithHttpSampleWindow(window)`](/en/sinkhttp_params-examples#samplewindow)                   | Reset sample counter every `window`                                                    | `0`          |
-| [`WithHttpTimeout(timeout)`](/en/sinkhttp_params-examples#timeout)                            | HTTP client timeout                                                                    | `10s`        |
+| Name                                                                                                  | Description                                                                            | Default      |
+|-------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|--------------|
+| [`WithHttpBatch(size, flushInterval)`](/en/sinkhttp_params-examples#withhttpbatch)                    | Batch messages: send up to `size` messages or every `flushInterval`                    | `100, 5s`    |
+| [`WithHttpCircuitBreaker(maxFailures, timeout)`](/en/sinkhttp_params-examples#withhttpcircuitbreaker) | Open circuit after `maxFailures` errors, wait `timeout` before recovery                | `10, 10s`    |
+| [`WithHttpDedupWindow(window)`](/en/sinkhttp_params-examples#withhttpdedupwindow)                     | Ignore duplicate messages within `window` time                                         | `0`          |
+| [`WithHttpDisabledBatch()`](/en/sinkhttp_params-examples#withhttpdisabledbatch)                       | Disable message batching (send immediately)                                            | `false`      |
+| [`WithHttpDisabledCircuit()`](/en/sinkhttp_params-examples#withhttpdisabledcircuit)                   | Disable Circuit Breaker                                                                | `false`      |
+| [`WithHttpDisableKeepAlive()`](/en/sinkhttp_params-examples#withhttpdisablekeepalive)                 | Disable HTTP Keep-Alive connections                                                    | `false`      |
+| [`WithHttpFilterData(type)`](/en/sinkhttp_params-examples#withhttpfilterdata)                         | Filter by data type: `DataLog`, `DataMetric`, `DataTrace`                              | (all)        |
+| [`WithHttpFilterLevel(level)`](/en/sinkhttp_params-examples#withhttpfilterlevel)                      | Filter by minimum level: `LevelDebug`,`LevelError`,`LevelFatal`,`LevelInfo`,`LevelWarn`| `LevelError` |
+| [`WithHttpFormatter(fn)`](/en/sinkhttp_params-examples#withhttpformatter)                             | Custom formatter function `func(attributes, fields) ([]byte, error)`                   |              |
+| [`WithHttpHeader(key, value)`](/en/sinkhttp_params-examples#withhttpheader)                           | Add custom HTTP header                                                                 |              |
+| [`WithHttpMethod(method)`](/en/sinkhttp_params-examples#withhttpmethod)                               | HTTP method: `POST`, `PUT`, etc.                                                       | `POST`       |
+| [`WithHttpRetry(maxRetries, backoff)`](/en/sinkhttp_params-examples#withhttpretry)                    | Retry failed requests up to `maxRetries` times with exponential `backoff`              | `0, 1s`      |
+| [`WithHttpSampleRate(rate)`](/en/sinkhttp_params-examples#withhttpsamplerate)                         | Sample 1 out of `rate` messages for non-error levels                                   | `0`          |
+| [`WithHttpSampleWindow(window)`](/en/sinkhttp_params-examples#withhttpsamplewindow)                   | Reset sample counter every `window`                                                    | `0`          |
+| [`WithHttpTimeout(timeout)`](/en/sinkhttp_params-examples#withhttptimeout)                            | HTTP client timeout                                                                    | `10s`        |
