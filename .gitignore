@@ -1,6 +1,6 @@
 # OS Linux 
 .directory
-core.*
+core.dump
 *.pid
 *.socket
 *.part
