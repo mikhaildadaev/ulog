@@ -177,4 +177,5 @@ func main() {
 ```
 
 ## Roadmap
-- **More `io.Writer` implementations** – OpenTelemetry
+- **Observability** — OpenTelemetry (OTLP) support.
+- **Cloud** — Alibaba Cloud Log Service, AWS CloudWatch, Google Cloud Logging.
