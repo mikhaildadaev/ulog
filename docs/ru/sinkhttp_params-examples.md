@@ -4,7 +4,7 @@ outline: deep
 
 # API / Запись по сети / Параметры
 
-::: info Информация
+::: warning Предупреждение
 This page is under development
 :::
 
