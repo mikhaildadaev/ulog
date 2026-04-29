@@ -53,14 +53,14 @@ outline: deep
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
-|  Sync | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
+| Sync  | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
 
 ### SingleThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
-|  Sync | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
+| Sync  | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
 
 ::: tip Примечание
 `Single Sync` - рекомендуемая рабочая конфигурация. Используемые бенчмарки включают в себя все дополнительные функции: форматирование в формате JSON, извлечение контекста, ввод-вывод файлов и проверку неблокирующей ротации.
@@ -75,14 +75,14 @@ outline: deep
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
-|  Sync | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
+| Sync  | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
 
 ### SingleThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
-|  Sync | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
+| Sync  | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
 
 ::: tip Примечание
 В реальной среде задержка определяется в основном сетевым вводом-выводом (обычно в 10-100 раз выше). Эти цифры отражают только внутренние издержки `ulog`.

@@ -53,14 +53,14 @@ Benchmark data writes structured JSON logs to a **real file** with **atomic rota
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
-|  Sync | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
+| Sync  | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
 
 ### SingleThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
-|  Sync | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
+| Sync  | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
 
 ::: tip Note
 `Single Sync` is the recommended working configuration. The benchmarks used include all additional features: JSON formatting, context extraction, file I/O, and non-blocking rotation verification.
@@ -75,14 +75,14 @@ Benchmark data that measures the internal costs of the `ulog` HTTP receiver usin
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
-|  Sync | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
+| Sync  | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
 
 ### SingleThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
-|  Sync | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
+| Sync  | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
 
 ::: tip Note
 In a real environment, the delay is mainly determined by network I/O (usually 10-100 times higher). These numbers only reflect the internal costs of `ulog`.
