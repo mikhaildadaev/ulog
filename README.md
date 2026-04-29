@@ -9,7 +9,7 @@
 A high-performance, zero-dependency platform for logs, metrics, and traces.  
 
 ## Go
-> **Information:**
+> **Info:**
 > The latest stable version of ulog is v1.26.12.
 
 ### Get Started
@@ -48,7 +48,7 @@ go test -race ./...
 - **Zero dependencies**: by design; no external libraries for features like Kafka native protocol
 
 ## Benchmarks
-> **Information:**
+> **Info:**
 > The best way to compare libraries is to run benchmarks in **your own environment** with **your own workload**. Each project has unique requirements — latency, throughput, memory usage, and integration complexity — and no single test can cover them all.
 > I recommend that you test `ulog` alongside other libraries and choose the tool that best suits your needs.
 
