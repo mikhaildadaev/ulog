@@ -9,18 +9,15 @@
 A high-performance, zero-dependency platform for logs, metrics, and traces.  
 
 ## Go
-
 > **Information:**
 > The latest stable version of ulog is v1.26.12.
 
 ### Get Started
-
 ```bash
 go get github.com/mikhaildadaev/ulog
 ```
 
 ### Get Test 
-
 ```bash
 go test ./...
 go test -bench=. ./...
@@ -28,30 +25,37 @@ go test -cover ./...
 go test -race ./...
 ```
 
-### Key Features
+## Key Features
+- **Unified API** — One API for logs, metrics, and traces.
+- **Context Extraction** — Automatic extraction `node_id`, `trace_id`, etc. from `context.Context`.
+- **Colored output** – `Dark` and `Light` themes with auto-detection for TEXT format.
+- **16 Field Types** — `Bool`, `Bools`, `Duration`, `Durations`, `Error`, `Errors`, `Float64`, `Floats64`, `Int`, `Ints`, `Int64`, `Ints64`, `String`, `Strings`, `Time`, `Times`.
+- **SinkFile** — Non-blocking atomic rotation with `gzip`.
+- **SinkHttp** — `Batching`, `Circuit Breaker`, `Deduplication`, `Retry`, `Sampling`.
+- **8 Integrations** — `Discord`, `Kafka`, `Loki`, `Prometheus`, `Slack`, `Telegram`, `Tempo`, `WeChat`.
 
-- **Observability 2.0** – One API for Logs, Metrics, and Traces
-- **Blazing fast** – 180-580 ns/op, 5.8 µs file write with rotation
-- **Atomic file rotation** – Non-blocking, gzip compression, auto-cleanup
-- **Circuit Breaker** – Production-ready HTTP sink with retry, dedup, sampling
-- **8 ready integrations** – Discord, Kafka, Loki, Prometheus, Slack, Telegram, Tempo, WeChat
-- **Context-aware** – Automatic `trace_id` extraction
-- **Colored output** – Dark/Light themes with auto-detection
-- **Zero dependencies** – Only standard library
+## Key Limits
+- **Async buffer**: if full, log is written synchronously (no blocking)
+- **Caller information**: only for `LevelDebug` (performance optimization)
+- **Time precision**: microseconds (6 digits) — sufficient for 99% of use cases, reduces allocations
+- **Deduplication cache**: in-memory only, cleared periodically (no persistence across restarts)
+- **Circuit Breaker**: resets on application restart (no persistent state)
+- **File rotation**: checks size on each write; rotation triggered by first write exceeding limit
+- **HTTP batching**: messages may be lost if application crashes before flush
+- **Kafka sink**: uses REST Proxy API (not native Kafka protocol) — requires Confluent REST Proxy
+- **Loki sink**: uses HTTP API (`/loki/api/v1/push`) — labels must be pre-configured
+- **Context extraction**: only works with values stored via `context.WithValue()`
+- **Zero dependencies**: by design; no external libraries for features like Kafka native protocol
 
 ## Benchmarks
-
 > **Information:**
 > The best way to compare libraries is to run benchmarks in **your own environment** with **your own workload**. Each project has unique requirements — latency, throughput, memory usage, and integration complexity — and no single test can cover them all.
 > I recommend that you test `ulog` alongside other libraries and choose the tool that best suits your needs.
 
-
 ### Core Performance
-
 These benchmarks measure the cost of formatting and extracting context by writing to io.Discard.
 
 #### MultiThread
-
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **DebugWithContext** |       5.8M |      180.700 |           536 |      3 |
@@ -64,7 +68,6 @@ These benchmarks measure the cost of formatting and extracting context by writin
 | Sync  | **WarnWithContext**  |       4.0M |      299.900 |          1794 |      5 |
 
 #### SingleThread
-
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
 | Async | **DebugWithContext** |       2.1M |      567.100 |	       536 |      3 |
@@ -84,7 +87,6 @@ These benchmarks measure the cost of formatting and extracting context by writin
 > - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
 ### SinkFile Performance
-
 Benchmark data writes structured JSON logs to a real file with atomic rotation enabled.
 
 #### MultiThread
@@ -108,7 +110,6 @@ Benchmark data writes structured JSON logs to a real file with atomic rotation e
 > - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
 ### SinkHttp Performance
-
 Benchmark data that measures the internal costs of the ulog HTTP receiver using httptest.Server without network latency.
 
 #### MultiThread
@@ -178,7 +179,6 @@ Benchmark data that measures the internal costs of the ulog HTTP receiver using 
 - ulog.WithTheme(theme TypeTheme)
 
 ## Usage
-
 ```go
 import (
     "fmt"
@@ -225,21 +225,6 @@ func main() {
     telemetryLog.Print("error from standard logger")
 }
 ```
-
-## Limits
-
-- **Async buffer**: if full, log is written synchronously (no blocking)
-- **Caller information**: only for `LevelDebug` (performance optimization)
-- **Field keys**: any string, will be JSON-escaped
-- **Time precision**: microseconds (6 digits) – sufficient for 99% of use cases, reduces allocations
-- **Deduplication cache**: in-memory only, cleared periodically (no persistence across restarts)
-- **Circuit Breaker**: resets on application restart (no persistent state)
-- **File rotation**: checks size on each write; rotation triggered by first write exceeding limit
-- **HTTP batching**: messages may be lost if application crashes before flush
-- **Kafka sink**: uses REST Proxy API (not native Kafka protocol) – requires Confluent REST Proxy
-- **Loki sink**: uses HTTP API (`/loki/api/v1/push`) – labels must be pre-configured
-- **Context extraction**: only works with values stored via `context.WithValue()`
-- **Zero dependencies**: by design; no external libraries for features like Kafka native protocol
 
 ## Roadmap
 
