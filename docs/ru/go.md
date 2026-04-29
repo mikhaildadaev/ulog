@@ -13,7 +13,7 @@ outline: deep
 go get github.com/mikhaildadaev/ulog
 ```
 
-## Get Test 
+## Run Test 
 ```bash
 go test ./...
 go test -bench=. ./...
@@ -30,7 +30,7 @@ go test -race ./...
 - **Запись по сети** — `Batching`, `Circuit Breaker`, `Deduplication`, `Retry`, `Sampling`.
 - **8 интеграций** — `Discord`, `Kafka`, `Loki`, `Prometheus`, `Slack`, `Telegram`, `Tempo`, `WeChat`.
 
-## Key Limits
+## Limits
 - **Асинхронный буфер**: при переполнении запись выполняется синхронно (без блокировки)
 - **Информация о вызывающем коде**: только для `LevelDebug` (оптимизация производительности)
 - **Точность времени**: микросекунды (6 знаков) — достаточно для 99% случаев, снижает аллокации

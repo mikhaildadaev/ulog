@@ -13,7 +13,7 @@ outline: deep
 go get github.com/mikhaildadaev/ulog
 ```
 
-## Get Test 
+## Run Test 
 ```bash
 go test ./...
 go test -bench=. ./...
@@ -30,7 +30,7 @@ go test -race ./...
 - **网络写入** — `Batching`、`Circuit Breaker`、`Deduplication`、`Retry`、`Sampling`。
 - **8 种集成** — `Discord`、`Kafka`、`Loki`、`Prometheus`、`Slack`、`Telegram`、`Tempo`、`WeChat`。
 
-## Key Limits
+## Limits
 - **异步缓冲区**：缓冲区满时同步写入（无阻塞）
 - **调用者信息**：仅 `LevelDebug` 级别可用（性能优化）
 - **时间精度**：微秒（6 位数字）—— 满足 99% 的使用场景，减少内存分配

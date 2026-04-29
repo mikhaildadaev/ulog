@@ -13,7 +13,7 @@ The latest stable version of `ulog` is **v1.26.12**.
 go get github.com/mikhaildadaev/ulog
 ```
 
-## Get Test 
+## Run Test 
 ```bash
 go test ./...
 go test -bench=. ./...
@@ -30,7 +30,7 @@ go test -race ./...
 - **SinkHttp** — `Batching`, `Circuit Breaker`, `Deduplication`, `Retry`, `Sampling`.
 - **8 Integrations** — `Discord`, `Kafka`, `Loki`, `Prometheus`, `Slack`, `Telegram`, `Tempo`, `WeChat`.
 
-## Key Limits
+## Limits
 - **Async buffer**: if full, log is written synchronously (no blocking)
 - **Caller information**: only for `LevelDebug` (performance optimization)
 - **Time precision**: microseconds (6 digits) — sufficient for 99% of use cases, reduces allocations
