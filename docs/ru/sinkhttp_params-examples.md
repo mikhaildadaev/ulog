@@ -5,7 +5,7 @@ outline: deep
 # API / Запись по сети / Параметры
 
 ::: warning Предупреждение
-This page is under development
+Эта страница находится в стадии разработки
 :::
 
 ## WithHttpBatch
