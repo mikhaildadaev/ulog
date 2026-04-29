@@ -5,53 +5,53 @@ outline: deep
 # API / Запись по сети / Фабрики
 
 ::: info Информация
-This page is under development
+Готовые к использованию фабрики для `Discord`, `Kafka`, `Loki`, `Prometheus`, `Slack`, `Telegram`, `Tempo`, `WeChat`. Каждая фабрика — это предварительно настроенный `SinkHttp` с правильным форматером, заголовками и фильтрами.
 :::
 
 ## NewSinkDiscord
-Sends error logs to a Discord channel via webhook.
+Отправляет логи ошибок в канал Discord через вебхук.
 ```go
 sinkDiscord := ulog.NewSinkDiscord("https://discord.com/api/webhooks/...", "MyBot", "")
 defer sinkDiscord.Close()
 ```
 ## NewSinkKafka
-Sends logs to Apache Kafka via REST Proxy for stream processing.
+Отправляет логи в Apache Kafka через REST Proxy для потоковой обработки.
 ```go
 sinkKafka := ulog.NewSinkKafka("http://kafka-rest:8082", "logs")
 defer sinkKafka.Close()
 ```
 ## NewSinkLoki
-Sends logs to Grafana Loki for storage and querying.
+Отправляет логи в Grafana Loki для хранения и запросов.
 ```go
 sinkLoki := ulog.NewSinkLoki("http://loki:3100",map[string]string{"app": "myapp", "env": "production"})
 defer sinkLoki.Close()
 ```
 ## NewSinkPrometheus
-Sends metrics to Prometheus in exposition format.
+Отправляет метрики в Prometheus в формате exposition.
 ```go
-sinkPrometheus := ulog.NewSinkPrometheus("http://prometheus:9091")
+sinkPrometheus := ulog.NewSinkPrometheus("http://pushgateway:9091")
 defer sinkPrometheus.Close()
 ```
 ## NewSinkSlack
-Sends error logs to a Slack channel via webhook.
+Отправляет логи ошибок в канал Slack через вебхук.
 ```go
 sinkSlack := ulog.NewSinkSlack("https://hooks.slack.com/services/...", "ULog", ":robot:", "", "#alerts")
 defer sinkSlack.Close()
 ```
 ## NewSinkTelegram
-Sends error logs to a Telegram chat via bot API.
+Отправляет логи ошибок в чат Telegram через Bot API.
 ```go
 sinkTelegram := ulog.NewSinkTelegram("botToken", "chatID")
 defer sinkTelegram.Close()
 ```
 ## NewSinkTempo
-Sends traces to Grafana Tempo for distributed tracing.
+Отправляет трейсы в Grafana Tempo для распределённой трассировки.
 ```go
-sinkTempo := ulog.NewSinkTempo("http://tempo:4317")
+sinkTempo := ulog.NewSinkTempo("http://tempo:4318")
 defer sinkTempo.Close()
 ```
 ## NewSinkWechat
-Sends error logs to WeChat Work (企业微信) via webhook.
+Отправляет логи ошибок в WeChat Work через вебхук.
 ```go
 sinkWechat := ulog.NewSinkWechat("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...")
 defer sinkWechat.Close()

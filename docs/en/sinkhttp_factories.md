@@ -5,7 +5,7 @@ outline: deep
 # API / SinkHttp / Factories
 
 ::: info Info
-This page is under development
+Ready-to-use factories for `Discord`, `Kafka`, `Loki`, `Prometheus`, `Slack`, `Telegram`, `Tempo`, `WeChat`. Each factory is a pre-configured `SinkHttp` with the right formatter, headers, and filters.
 :::
 
 ## NewSinkDiscord
@@ -29,7 +29,7 @@ defer sinkLoki.Close()
 ## NewSinkPrometheus
 Sends metrics to Prometheus in exposition format.
 ```go
-sinkPrometheus := ulog.NewSinkPrometheus("http://prometheus:9091")
+sinkPrometheus := ulog.NewSinkPrometheus("http://pushgateway:9091")
 defer sinkPrometheus.Close()
 ```
 ## NewSinkSlack
@@ -47,11 +47,11 @@ defer sinkTelegram.Close()
 ## NewSinkTempo
 Sends traces to Grafana Tempo for distributed tracing.
 ```go
-sinkTempo := ulog.NewSinkTempo("http://tempo:4317")
+sinkTempo := ulog.NewSinkTempo("http://tempo:4318")
 defer sinkTempo.Close()
 ```
 ## NewSinkWechat
-Sends error logs to WeChat Work (企业微信) via webhook.
+Sends error logs to WeChat Work via webhook.
 ```go
 sinkWechat := ulog.NewSinkWechat("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...")
 defer sinkWechat.Close()
