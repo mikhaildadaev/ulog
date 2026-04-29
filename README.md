@@ -1,12 +1,12 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/mikhaildadaev/ulog/blob/main/LICENSE.md)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/mikhaildadaev/ulog)](https://github.com/mikhaildadaev/ulog)
 [![Go Reference](https://pkg.go.dev/badge/github.com/mikhaildadaev/ulog.svg)](https://pkg.go.dev/github.com/mikhaildadaev/ulog)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mikhaildadaev/ulog)](https://goreportcard.com/report/github.com/mikhaildadaev/ulog)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/mikhaildadaev/ulog)](https://github.com/mikhaildadaev/ulog)
 [![CI](https://github.com/mikhaildadaev/ulog/actions/workflows/ci.yml/badge.svg)](https://github.com/mikhaildadaev/ulog/actions/workflows/ci.yml)
 
 # ULOG
 
-A high-performance, zero-dependency platform for logs, metrics and traces.  
+A high-performance, zero-dependency platform for logs, metrics, and traces.  
 
 ## Go
 
@@ -42,7 +42,7 @@ go test -race ./...
 ## Benchmarks
 
 > **Information:**
-> The best way to compare libraries is to run benchmarks in **your own environment** with **your own workload**. Each > project has unique requirements — latency, throughput, memory usage, and integration complexity — and no single test can > cover them all.
+> The best way to compare libraries is to run benchmarks in **your own environment** with **your own workload**. Each project has unique requirements — latency, throughput, memory usage, and integration complexity — and no single test can cover them all.
 > I recommend that you test `ulog` alongside other libraries and choose the tool that best suits your needs.
 
 
@@ -131,11 +131,9 @@ Benchmark data that measures the internal costs of the ulog HTTP receiver using 
 > - *Multi* benchmarks use `b.RunParallel` to simulate real-world concurrent load.
 > - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
-## Quick API
+## Quick navigation
 
 ### Сonstructors
-
-#### API
 - ulog.Bool(key string, value bool) Field
 - ulog.Bools(key string, value []bool) Field
 - ulog.Duration(key string, value time.Duration) Field
@@ -154,8 +152,6 @@ Benchmark data that measures the internal costs of the ulog HTTP receiver using 
 - ulog.Times(key string, value []time.Time) Field
 
 ### Functions
-
-#### API
 - ulog.Close() error
 - ulog.Debug(typeData TypeData, fields ...Field)
 - ulog.DebugWithContext(ctx context.Context, typeData TypeData, fields ...Field)
@@ -175,8 +171,6 @@ Benchmark data that measures the internal costs of the ulog HTTP receiver using 
 - ulog.WarnWithContext(ctx context.Context, typeData TypeData, fields ...Field)
 
 ### Methods
-
-#### API
 - ulog.WithExtractor(keys ...string)
 - ulog.WithFormat(format TypeFormat)
 - ulog.WithLevel(level TypeLevel)
@@ -196,7 +190,6 @@ func main() {
     ctx := context.Background()
     ctx = context.WithValue(ctx, "node_id", "123-abc")
     ctx = context.WithValue(ctx, "trace_id", "abc-123")
-    // Universal telemetry async mode with JSON output
     telemetryAsync := ulog.NewTelemetry(
         ulog.WithFormat(ulog.FormatJson),
         ulog.WithMode(ulog.ModeAsync, os.Stdout, 10000),
@@ -211,7 +204,6 @@ func main() {
     telemetryAsync.Error(DataLog, "database error", ulog.Error(nil))
     telemetryAsync.ErrorWithContext(ctx, DataLog, "database error", ulog.Error(nil))
     telemetryAsync.Sync()
-    // Universal telemetry sync mode with TEXT output
     telemetrySync := ulog.NewTelemetry(
         ulog.WithFormat(ulog.FormatText),
         ulog.WithMode(ulog.ModeSync, os.Stdout),
@@ -225,7 +217,6 @@ func main() {
     telemetrySync.WarnWithContext(ctx, DataLog, "high latency", ulog.Duration("latency", 150*time.Millisecond))
     telemetrySync.Error(DataLog, "database error", ulog.Error(nil))
     telemetrySync.ErrorWithContext(ctx, DataLog, "database error", ulog.Error(nil))
-    // Standard logger adapter (writes only errors)
     telemetry := ulog.NewTelemetry(
         ulog.WithFormat(ulog.FormatJson),
         ulog.WithMode(ulog.ModeSync, os.Stdout),

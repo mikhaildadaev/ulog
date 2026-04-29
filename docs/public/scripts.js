@@ -3,18 +3,24 @@
   const savedLang = localStorage.getItem('vitepress-lang');
   const currentPath = window.location.pathname;
   const supportedLangs = ['en', 'ru', 'zh'];
-  if (savedLang && supportedLangs.includes(savedLang)) {
-    const prefix = '/' + savedLang + '/';
-    if (!currentPath.startsWith(prefix)) {
-      let rest = currentPath;
-      for (const l of supportedLangs) {
-        const p = '/' + l + '/';
-        if (currentPath.startsWith(p)) {
-          rest = currentPath.substring(p.length - 1);
-          break;
-        }
+  const base = '/ulog/';
+  function getRestPath(path) {
+    for (const l of supportedLangs) {
+      const prefix = base + l + '/';
+      if (path.startsWith(prefix)) {
+        return path.substring(prefix.length - 1);
       }
-      window.location.replace(prefix + rest.replace(/^\//, ''));
+    }
+    if (path.startsWith(base)) {
+      return path.substring(base.length - 1);
+    }
+    return '/';
+  }
+  if (savedLang && supportedLangs.includes(savedLang)) {
+    const targetPrefix = base + savedLang + '/';
+    if (!currentPath.startsWith(targetPrefix)) {
+      const rest = getRestPath(currentPath);
+      window.location.replace(targetPrefix + rest.replace(/^\//, ''));
       return;
     }
   }
