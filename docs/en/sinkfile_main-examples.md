@@ -35,8 +35,8 @@ telemetry.Error(ulog.DataLog,
 telemetry.Sync()
 ```
 
-| Name                                                                       | Description                             | Default | 
-|----------------------------------------------------------------------------|-----------------------------------------|---------|
-| [`WithFileMaxAge(dayCount)`](/en/sinkfile_params-examples#maxage)          | Maximum days to keep old log files      |      30 |
-| [`WithFileMaxBackups(fileCount)`](/en/sinkfile_params-examples#maxbackups) | Maximum number of old log files to keep |      10 |
-| [`WithFileMaxSize(fileSize)`](/en/sinkfile_params-examples#maxsize)        | Maximum file size (MB) before rotation  |     100 |
+| Name                                                                               | Description                             | Default | 
+|------------------------------------------------------------------------------------|-----------------------------------------|---------|
+| [`WithFileMaxAge(dayCount)`](/en/sinkfile_params-examples#withfilemaxage)          | Maximum days to keep old log files      |      30 |
+| [`WithFileMaxBackups(fileCount)`](/en/sinkfile_params-examples#withfilemaxbackups) | Maximum number of old log files to keep |      10 |
+| [`WithFileMaxSize(fileSize)`](/en/sinkfile_params-examples#withfilemaxsize)        | Maximum file size (MB) before rotation  |     100 |

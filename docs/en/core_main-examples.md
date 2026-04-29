@@ -66,13 +66,13 @@ Output:
 [INFO] type="trace" name="payment_processing" duration=150 span_id="span-456"
 ```
 
-| Name                                                    | Description                                                                     | Values                                                             | Default      |
-|---------------------------------------------------------|---------------------------------------------------------------------------------|--------------------------------------------------------------------|--------------|
-| [`WithExtractor()`](/en/core_options-examples#extractor)| Auto-extract fields from `context.Context` by key names                         | `keys ...string`                                                   |              |
-| [`WithFormat()`](/en/core_options-examples#format)      | Output format: structured JSON or human-readable TEXT with optional ANSI colors | `FormatJson`, `FormatText`                                         | `FormatJson` |
-| [`WithLevel()`](/en/core_options-examples#level)        | Minimum log severity. Only messages at or above this level are written          | `LevelDebug`, `LevelError`, `LevelFatal`, `LevelInfo`, `LevelWarn` | `LevelInfo`  |
-| [`WithMode()`](/en/core_options-examples#mode)          | Write mode: non-blocking `ModeAsync` with buffer or blocking `ModeSync`         | `ModeAsync`, `ModeSync`                                            | `ModeSync`   |
-| [`WithTheme()`](/en/core_options-examples#theme)        | ANSI color theme for TEXT output: optimized for dark or light terminals         | `ThemeDark`, `ThemeLight`                                          | `ThemeDark`  |
+| Name                                                                     | Description                                                                     | Values                                                             | Default      |
+|--------------------------------------------------------------------------|---------------------------------------------------------------------------------|--------------------------------------------------------------------|--------------|
+| [`WithExtractor()`](/en/core_options-examples#withextractor-setextractor)| Auto-extract fields from `context.Context` by key names                         | `keys ...string`                                                   |              |
+| [`WithFormat()`](/en/core_options-examples#withformat-setformat)         | Output format: structured JSON or human-readable TEXT with optional ANSI colors | `FormatJson`, `FormatText`                                         | `FormatJson` |
+| [`WithLevel()`](/en/core_options-examples#withlevel-setlevel)            | Minimum log severity. Only messages at or above this level are written          | `LevelDebug`, `LevelError`, `LevelFatal`, `LevelInfo`, `LevelWarn` | `LevelInfo`  |
+| [`WithMode()`](/en/core_options-examples#withmode-setmode)               | Write mode: non-blocking `ModeAsync` with buffer or blocking `ModeSync`         | `ModeAsync`, `ModeSync`                                            | `ModeSync`   |
+| [`WithTheme()`](/en/core_options-examples#withtheme-settheme)            | ANSI color theme for TEXT output: optimized for dark or light terminals         | `ThemeDark`, `ThemeLight`                                          | `ThemeDark`  |
 
 | Name                                         | Description                                    | Values                                                                                                                                                     |
 |----------------------------------------------|------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
