@@ -123,7 +123,7 @@ export default defineConfig({
           next: "Next page"
         },
         footer: {
-          message: 'Released under the Apache License 2.0.',
+          message: 'Released under the Apache License 2.0',
           copyright: '© 2026 Mikhail Dadaev'
         }
       }
@@ -237,7 +237,7 @@ export default defineConfig({
           next: "Следующая страница"
         },
         footer: {
-          message: 'Распространяется под лицензией Apache 2.0.',
+          message: 'Под лицензией Apache 2.0',
           copyright: '© 2026 Михаил Дадаев'
         },
       }
@@ -357,7 +357,7 @@ export default defineConfig({
           next: "下一页"
         },
         footer: {
-          message: '根据 Apache 2.0 许可证发布。',
+          message: '根据 Apache 2.0 许可证发布',
           copyright: '© 2026 Mikhail Dadaev'
         },
       }
