@@ -75,5 +75,5 @@ Benchmark data that measures the internal costs of the `ulog` HTTP receiver usin
 | Sync  | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
 
 ::: tip Note
-IBenchmarks use `httptest.Server` to simulate HTTP endpoint. Measures full overhead: JSON formatting, context extraction, HTTP request/response. In a real environment, the delay is mainly determined by network I/O (usually 10-100 times higher). These numbers only reflect the internal costs of `ulog`. *Multi* benchmarks use `b.RunParallel` to simulate real-world concurrent load. *Benchmarked on Intel Core i9-9880H (2.30 GHz).*
+Uses `httptest.Server` to simulate HTTP endpoint. Measures full overhead: JSON formatting, context extraction, HTTP request/response. In a real environment, the delay is mainly determined by network I/O (usually 10-100 times higher). These numbers only reflect the internal costs of `ulog`. *Multi* benchmarks use `b.RunParallel` to simulate real-world concurrent load. *Benchmarked on Intel Core i9-9880H (2.30 GHz).*
 :::
