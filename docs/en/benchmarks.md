@@ -38,6 +38,7 @@ These benchmarks measure the **cost of formatting and extracting context** by wr
 
 ::: tip Note
 Uses `WithExtractor("node_id", "trace_id")` to automatically extract from context. All tests write to `io.Discard` (equivalent to `/dev/null` on Unix or `NUL` on Windows). This measures only the logging overhead (field formatting, JSON encoding, context extraction) without disk or network I/O. Real-world performance will depend on your output destination (file, network, etc.). 
+
 *Benchmarked on Intel Core i9-9880H (2.30 GHz).*
 :::
 
@@ -58,6 +59,7 @@ Benchmark data writes structured JSON logs to a **real file** with **atomic rota
 
 ::: tip Note
 Uses `WithExtractor("node_id", "trace_id")` to automatically extract from context. Writes structured JSON logs to a **real file** with **atomic rotation** enabled (`WithFileMaxSize(15)`). Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks. 
+
 *Benchmarked on Intel Core i9-9880H (2.30 GHz).*
 :::
 
@@ -78,5 +80,6 @@ Benchmark data that measures the internal costs of the `ulog` HTTP receiver usin
 
 ::: tip Note
 Uses `httptest.Server` to simulate HTTP endpoint. Measures full overhead: JSON formatting, context extraction, HTTP request/response. In a real environment, the delay is mainly determined by network I/O (usually 10-100 times higher). These numbers only reflect the internal costs of `ulog`. *Multi* benchmarks use `b.RunParallel` to simulate real-world concurrent load. 
+
 *Benchmarked on Intel Core i9-9880H (2.30 GHz).*
 :::
