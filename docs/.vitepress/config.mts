@@ -30,7 +30,7 @@ export default defineConfig({
           },
           { 
             text: 'API', 
-            link: '/en/core_main-examples' 
+            link: '/en/core_main' 
           },
         ],
         sidebar: [
@@ -54,15 +54,15 @@ export default defineConfig({
                     items: [
                       { 
                         text: 'Main', 
-                        link: '/en/core_main-examples' 
+                        link: '/en/core_main' 
                       },
                       { 
                         text: 'Options', 
-                        link: '/en/core_options-examples' 
+                        link: '/en/core_options' 
                       },
                       { 
                         text: 'Types', 
-                        link: '/en/core_types-examples' 
+                        link: '/en/core_types' 
                       }
                     ] 
                   },
@@ -72,11 +72,11 @@ export default defineConfig({
                     items: [
                       { 
                         text: 'Main', 
-                        link: '/en/sinkfile_main-examples' 
+                        link: '/en/sinkfile_main' 
                       },
                       { 
                         text: 'Params', 
-                        link: '/en/sinkfile_params-examples' 
+                        link: '/en/sinkfile_params' 
                       }
                     ]
                   },
@@ -86,15 +86,15 @@ export default defineConfig({
                     items: [
                       { 
                         text: 'Main', 
-                        link: '/en/sinkhttp_main-examples' 
+                        link: '/en/sinkhttp_main' 
                       },
                       { 
                         text: 'Factories', 
-                        link: '/en/sinkhttp_factories-examples' 
+                        link: '/en/sinkhttp_factories' 
                       },
                       { 
                         text: 'Params', 
-                        link: '/en/sinkhttp_params-examples' 
+                        link: '/en/sinkhttp_params' 
                       }
                     ]
                   }
@@ -150,7 +150,7 @@ export default defineConfig({
           },
           { 
             text: 'API', 
-            link: '/ru/core_main-examples' 
+            link: '/ru/core_main' 
           },
         ],
         sidebar: [
@@ -170,15 +170,15 @@ export default defineConfig({
                 items: [
                   { 
                     text: 'Основное', 
-                    link: '/ru/core_main-examples' 
+                    link: '/ru/core_main' 
                   },
                   { 
                     text: 'Опции', 
-                    link: '/ru/core_options-examples' 
+                    link: '/ru/core_options' 
                   },
                   { 
                     text: 'Типы', 
-                    link: '/ru/core_types-examples' 
+                    link: '/ru/core_types' 
                   }
                 ] 
               },
@@ -188,11 +188,11 @@ export default defineConfig({
                 items: [
                   { 
                     text: 'Основное', 
-                    link: '/ru/sinkfile_main-examples' 
+                    link: '/ru/sinkfile_main' 
                   },
                   { 
                     text: 'Параметры', 
-                    link: '/ru/sinkfile_params-examples' 
+                    link: '/ru/sinkfile_params' 
                   }
                 ] 
               },
@@ -202,15 +202,15 @@ export default defineConfig({
                 items: [
                   { 
                     text: 'Основное', 
-                    link: '/ru/sinkhttp_main-examples' 
+                    link: '/ru/sinkhttp_main' 
                   },
                   { 
                     text: 'Фабрики', 
-                    link: '/ru/sinkhttp_factories-examples' 
+                    link: '/ru/sinkhttp_factories' 
                   },
                   { 
                     text: 'Параметры', 
-                    link: '/ru/sinkhttp_params-examples' 
+                    link: '/ru/sinkhttp_params' 
                   }
                 ] 
               }
@@ -264,7 +264,7 @@ export default defineConfig({
           },
           { 
             text: 'API', 
-            link: '/zh/core_main-examples' 
+            link: '/zh/core_main' 
           },
         ],
         sidebar: [
@@ -288,15 +288,15 @@ export default defineConfig({
                     items: [
                       { 
                         text: '主要', 
-                        link: '/zh/core_main-examples' 
+                        link: '/zh/core_main' 
                       },
                       { 
                         text: '选项', 
-                        link: '/zh/core_options-examples' 
+                        link: '/zh/core_options' 
                       },
                       { 
                         text: '类别', 
-                        link: '/zh/core_types-examples' 
+                        link: '/zh/core_types' 
                       }
                     ] 
                   },
@@ -306,11 +306,11 @@ export default defineConfig({
                     items: [
                       { 
                         text: '主要', 
-                        link: '/zh/sinkfile_main-examples' 
+                        link: '/zh/sinkfile_main' 
                       },
                       { 
                         text: '参数 ', 
-                        link: '/zh/sinkfile_params-examples' 
+                        link: '/zh/sinkfile_params' 
                       }
                     ] 
                   },
@@ -320,15 +320,15 @@ export default defineConfig({
                     items: [
                       { 
                         text: '主要', 
-                        link: '/zh/sinkhttp_main-examples' 
+                        link: '/zh/sinkhttp_main' 
                       },
                       { 
                         text: '工厂', 
-                        link: '/zh/sinkhttp_factories-examples' 
+                        link: '/zh/sinkhttp_factories' 
                       },
                       { 
                         text: '参数', 
-                        link: '/zh/sinkhttp_params-examples' 
+                        link: '/zh/sinkhttp_params' 
                       }
                     ] 
                   }

@@ -47,13 +47,13 @@ go test -race ./...
 - [基准测试](/en/benchmarks) - 核心、文件和网络的性能数据。
 - **API**
     - **核心**
-        - [主要](/en/core_main-examples) — 遥测设置、配置和标准日志适配器。
-        - [选项](/en/core_options-examples) — 所有配置参数：提取器、格式、级别、模式、主题。
-        - [类型](/en/core_types-examples) — 所有数据类型和 16 个字段构造函数。
+        - [主要](/en/core_main) — 遥测设置、配置和标准日志适配器。
+        - [选项](/en/core_options) — 所有配置参数：提取器、格式、级别、模式、主题。
+        - [类型](/en/core_types) — 所有数据类型和 16 个字段构造函数。
     - **文件接收器**
-        - [主要](/en/sinkfile_main-examples) — 创建文件接收器和基本设置。
-        - [参数](/en/sinkfile_params-examples) — 轮转和压缩配置：最大大小、保留天数、备份数量。
+        - [主要](/en/sinkfile_main) — 创建文件接收器和基本设置。
+        - [参数](/en/sinkfile_params) — 轮转和压缩配置：最大大小、保留天数、备份数量。
     - **HTTP 接收器**
-        - [主要](/en/sinkhttp_main-examples) — 创建 HTTP 接收器和基本设置。
-        - [工厂](/en/sinkhttp_factories-examples) — 8 个开箱即用的集成工厂。
-        - [参数](/en/sinkhttp_params-examples) — 发送配置：批处理、去重、重试、采样、断路器。
+        - [主要](/en/sinkhttp_main) — 创建 HTTP 接收器和基本设置。
+        - [工厂](/en/sinkhttp_factories) — 8 个开箱即用的集成工厂。
+        - [参数](/en/sinkhttp_params) — 发送配置：批处理、去重、重试、采样、断路器。
