@@ -36,6 +36,8 @@ go get github.com/mikhaildadaev/ulog
 
 ### Core Performance
 
+These benchmarks measure the cost of formatting and extracting context by writing to io.Discard.
+
 #### MultiThread
 
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
@@ -71,6 +73,8 @@ go get github.com/mikhaildadaev/ulog
 
 ### SinkFile Performance
 
+Benchmark data writes structured JSON logs to a real file with atomic rotation enabled.
+
 #### MultiThread
 
 | Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
@@ -92,6 +96,8 @@ go get github.com/mikhaildadaev/ulog
 > - *Benchmarked on Intel Core i9-9880H (2.30 GHz)*
 
 ### SinkHttp Performance
+
+Benchmark data that measures the internal costs of the ulog HTTP receiver using httptest.Server without network latency.
 
 #### MultiThread
 

@@ -44,7 +44,7 @@ outline: deep
 使用 `WithExtractor("node_id", "trace_id")` 自动从上下文中提取。 所有测试都写入 `io.Discard`。 以英特尔酷睿i9-9880h(2.30GHz)。
 :::
 
-## FileSink Performance
+## SinkFile Performance
 
 基准数据将结构化JSON日志写入启用 **原子旋转** 的 **真实文件**。
 
@@ -66,7 +66,7 @@ outline: deep
 `Single Sync` 是推荐的工作配置。 使用的基准测试包括所有附加功能：JSON格式，上下文提取，文件I/O和非阻塞旋转验证。
 :::
 
-## HttpSink Performance
+## SinkHttp Performance
 
 使用 `httptest.Server` 测量 `ulog` HTTP接收器内部成本的基准数据。服务器'没有网络延迟。
 
