@@ -39,7 +39,7 @@ telemetry.SetExtractor()
 telemetry.SetFormat(ulog.FormatText)
 telemetry.SetLevel(ulog.LevelDebug)
 telemetry.SetMode(ulog.ModeSync, ulog.DefaultWriterOut)
-telemetry.SetTheme(ulog.ThemeDark),
+telemetry.SetTheme(ulog.ThemeDark)
 telemetry.Info(ulog.DataLog,
 	ulog.String("message", "text"),
 )
