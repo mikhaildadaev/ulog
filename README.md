@@ -9,7 +9,8 @@
 A high-performance, zero-dependency platform for logs, metrics, and traces.  
 
 ## Go
-> **Info:**
+> **Info**
+>
 > The latest stable version of ulog is v1.26.12.
 
 ### Get Started
