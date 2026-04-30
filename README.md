@@ -180,3 +180,4 @@ func main() {
 ## Roadmap
 - **Observability** — OpenTelemetry (OTLP) support.
 - **Cloud** — Alibaba Cloud Log Service, AWS CloudWatch, Google Cloud Logging.
+- **Enterprise** — `SinkS3` for long-term log archival with automatic compression.
