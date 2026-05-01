@@ -164,55 +164,61 @@ export default defineConfig({
                 text: 'Бенчмарки', 
                 link: '/ru/benchmarks' 
               },
-              { 
-                text: 'Ядро', 
+              {
+                text: 'API', 
                 collapsed: true,
                 items: [
                   { 
-                    text: 'Основное', 
-                    link: '/ru/core_main' 
+                    text: 'Ядро', 
+                    collapsed: true,
+                    items: [
+                      { 
+                        text: 'Основное', 
+                        link: '/ru/core_main' 
+                      },
+                      { 
+                        text: 'Опции', 
+                        link: '/ru/core_options' 
+                      },
+                      { 
+                        text: 'Типы', 
+                        link: '/ru/core_types' 
+                      }
+                    ] 
                   },
                   { 
-                    text: 'Опции', 
-                    link: '/ru/core_options' 
+                    text: 'Запись в файл', 
+                    collapsed: true,
+                    items: [
+                      { 
+                        text: 'Основное', 
+                        link: '/ru/sinkfile_main' 
+                      },
+                      { 
+                        text: 'Параметры', 
+                        link: '/ru/sinkfile_params' 
+                      }
+                    ] 
                   },
                   { 
-                    text: 'Типы', 
-                    link: '/ru/core_types' 
+                    text: 'Запись по сети', 
+                    collapsed: true,
+                    items: [
+                      { 
+                        text: 'Основное', 
+                        link: '/ru/sinkhttp_main' 
+                      },
+                      { 
+                        text: 'Фабрики', 
+                        link: '/ru/sinkhttp_factories' 
+                      },
+                      { 
+                        text: 'Параметры', 
+                        link: '/ru/sinkhttp_params' 
+                      }
+                    ] 
                   }
-                ] 
-              },
-              { 
-                text: 'Запись в файл', 
-                collapsed: true,
-                items: [
-                  { 
-                    text: 'Основное', 
-                    link: '/ru/sinkfile_main' 
-                  },
-                  { 
-                    text: 'Параметры', 
-                    link: '/ru/sinkfile_params' 
-                  }
-                ] 
-              },
-              { 
-                text: 'Запись по сети', 
-                collapsed: true,
-                items: [
-                  { 
-                    text: 'Основное', 
-                    link: '/ru/sinkhttp_main' 
-                  },
-                  { 
-                    text: 'Фабрики', 
-                    link: '/ru/sinkhttp_factories' 
-                  },
-                  { 
-                    text: 'Параметры', 
-                    link: '/ru/sinkhttp_params' 
-                  }
-                ] 
+                ]
               }
             ]
           }
