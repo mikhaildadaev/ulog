@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / HTTP 接收器 / 主要
+# API / HTTP 接收器 / 构造函数
 
 ::: info **关于**
 `SinkHttp` — 生产就绪的 HTTP 接收器，内置批处理、断路器、去重、重试和采样。您的服务在网络传输期间永远不会阻塞。

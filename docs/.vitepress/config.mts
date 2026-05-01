@@ -30,7 +30,7 @@ export default defineConfig({
           },
           { 
             text: 'API', 
-            link: '/en/core_main' 
+            link: '/en/core_constructors' 
           },
         ],
         sidebar: [
@@ -53,8 +53,8 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                       { 
-                        text: 'Main', 
-                        link: '/en/core_main' 
+                        text: 'Constructors', 
+                        link: '/en/core_constructors' 
                       },
                       { 
                         text: 'Options', 
@@ -71,8 +71,8 @@ export default defineConfig({
                     collapsed: true, 
                     items: [
                       { 
-                        text: 'Main', 
-                        link: '/en/sinkfile_main' 
+                        text: 'Constructors', 
+                        link: '/en/sinkfile_constructors' 
                       },
                       { 
                         text: 'Params', 
@@ -85,8 +85,8 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                       { 
-                        text: 'Main', 
-                        link: '/en/sinkhttp_main' 
+                        text: 'Constructors', 
+                        link: '/en/sinkhttp_constructors' 
                       },
                       { 
                         text: 'Factories', 
@@ -150,7 +150,7 @@ export default defineConfig({
           },
           { 
             text: 'API', 
-            link: '/ru/core_main' 
+            link: '/ru/core_constructors' 
           },
         ],
         sidebar: [
@@ -173,8 +173,8 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                       { 
-                        text: 'Основное', 
-                        link: '/ru/core_main' 
+                        text: 'Конструкторы', 
+                        link: '/ru/core_constructors' 
                       },
                       { 
                         text: 'Опции', 
@@ -191,8 +191,8 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                       { 
-                        text: 'Основное', 
-                        link: '/ru/sinkfile_main' 
+                        text: 'Конструкторы', 
+                        link: '/ru/sinkfile_constructors' 
                       },
                       { 
                         text: 'Параметры', 
@@ -205,8 +205,8 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                       { 
-                        text: 'Основное', 
-                        link: '/ru/sinkhttp_main' 
+                        text: 'Конструкторы', 
+                        link: '/ru/sinkhttp_constructors' 
                       },
                       { 
                         text: 'Фабрики', 
@@ -270,7 +270,7 @@ export default defineConfig({
           },
           { 
             text: 'API', 
-            link: '/zh/core_main' 
+            link: '/zh/core_constructors' 
           },
         ],
         sidebar: [
@@ -293,8 +293,8 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                       { 
-                        text: '主要', 
-                        link: '/zh/core_main' 
+                        text: '构造函数', 
+                        link: '/zh/core_constructors' 
                       },
                       { 
                         text: '选项', 
@@ -311,8 +311,8 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                       { 
-                        text: '主要', 
-                        link: '/zh/sinkfile_main' 
+                        text: '构造函数', 
+                        link: '/zh/sinkfile_constructors' 
                       },
                       { 
                         text: '参数 ', 
@@ -325,8 +325,8 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                       { 
-                        text: '主要', 
-                        link: '/zh/sinkhttp_main' 
+                        text: '构造函数', 
+                        link: '/zh/sinkhttp_constructors' 
                       },
                       { 
                         text: '工厂', 
