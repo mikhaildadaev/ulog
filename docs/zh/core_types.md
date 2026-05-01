@@ -4,7 +4,7 @@ outline: deep
 
 # API / 核心 / 类型
 
-::: info 关于
+::: info **关于**
 本页记录了所有数据类型 `DataLog`、`DataMetric`、`DataTrace` 以及全部 16 种字段类型。每种字段都附有可运行的代码示例和预期的 JSON 输出。
 :::
 

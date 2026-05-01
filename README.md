@@ -9,14 +9,13 @@
 A high-performance, zero-dependency platform for logs, metrics, and traces.  
 
 ## Go
-> **Info**
->
-> The latest stable version of ulog is v1.26.12.
-
-### Get Started
 ```bash
 go get github.com/mikhaildadaev/ulog
 ```
+
+> **Info**
+>
+> The latest stable version of ulog is v1.26.12.
 
 ### Run Test 
 ```bash

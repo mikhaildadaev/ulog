@@ -3,15 +3,13 @@ outline: deep
 ---
 
 # Go
-
-::: info 关于
-`ulog` 的最新稳定版本是 **v1.26.12**.
-:::
-
-## Get Started
 ```bash
 go get github.com/mikhaildadaev/ulog
 ```
+
+::: info **关于**
+`ulog` 的最新稳定版本是 **v1.26.12**.
+:::
 
 ## Run Test 
 ```bash
@@ -42,18 +40,3 @@ go test -race ./...
 - **Loki 接收器**：使用 HTTP API (`/loki/api/v1/push`) —— 标签需预先配置
 - **上下文提取**：仅适用于通过 `context.WithValue()` 存储的值
 - **零依赖**：有意为之；像原生 Kafka 协议等功能不使用外部库
-
-## Quick Navigation
-- [基准测试](/en/benchmarks) - 核心、文件和网络的性能数据。
-- **API**
-    - **核心**
-        - [主要](/en/core_main) — 遥测设置、配置和标准日志适配器。
-        - [选项](/en/core_options) — 所有配置参数：提取器、格式、级别、模式、主题。
-        - [类型](/en/core_types) — 所有数据类型和 16 个字段构造函数。
-    - **文件接收器**
-        - [主要](/en/sinkfile_main) — 创建文件接收器和基本设置。
-        - [参数](/en/sinkfile_params) — 轮转和压缩配置：最大大小、保留天数、备份数量。
-    - **HTTP 接收器**
-        - [主要](/en/sinkhttp_main) — 创建 HTTP 接收器和基本设置。
-        - [工厂](/en/sinkhttp_factories) — 8 个开箱即用的集成工厂。
-        - [参数](/en/sinkhttp_params) — 发送配置：批处理、去重、重试、采样、断路器。

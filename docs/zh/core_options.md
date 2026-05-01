@@ -4,7 +4,7 @@ outline: deep
 
 # API / 核心 / 选项
 
-::: info 关于
+::: info **关于**
 本页涵盖所有配置选项：`Extractor`、`Format`、`Level`、`Mode`、`Theme`。每个选项都附有可运行的代码示例和预期输出。
 :::
 

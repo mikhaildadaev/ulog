@@ -3,15 +3,13 @@ outline: deep
 ---
 
 # Go
-
-::: info Info
-The latest stable version of `ulog` is **v1.26.12**.
-:::
-
-## Get Started
 ```bash
 go get github.com/mikhaildadaev/ulog
 ```
+
+::: info **Info**
+The latest stable version of `ulog` is **v1.26.12**.
+:::
 
 ## Run Test 
 ```bash
@@ -42,19 +40,3 @@ go test -race ./...
 - **Loki sink**: uses HTTP API (`/loki/api/v1/push`) — labels must be pre-configured
 - **Context extraction**: only works with values stored via `context.WithValue()`
 - **Zero dependencies**: by design; no external libraries for features like Kafka native protocol
-
-## Quick Navigation
-- [Benchmarks](/en/benchmarks) - Core, file, and network performance data.
-- **API**
-    - **Core**
-        - [Main](/en/core_main) — Telemetry setup, configuration, and standard logger adapter.
-        - [Options](/en/core_options) — All configuration options: Extractor, Formats, Levels, Modes, Themes.
-        - [Types](/en/core_types) — All data types and 16 field constructors.
-    - **SinkFile**
-        - [Main](/en/sinkfile_main) — Creating a file sink and basic setup.
-        - [Params](/en/sinkfile_params) — Rotation and compression config: max size, age, backup count.
-    - **SinkHttp**
-        - [Main](/en/sinkhttp_main) — Creating an http sink and basic setup.
-        - [Factories](/en/sinkhttp_factories) — 8 ready-to-use integration factories.
-        - [Params](/en/sinkhttp_params) — Delivery config: batching, deduplication, retry, sampling, circuit breaker.
-
