@@ -13,7 +13,7 @@ outline: deep
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxAge(30),
@@ -29,7 +29,7 @@ defer sinkFile.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxBackups(10),
@@ -45,7 +45,7 @@ defer sinkFile.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxSize(100),

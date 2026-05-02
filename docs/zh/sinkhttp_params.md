@@ -13,7 +13,7 @@ outline: deep
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpBatch(100, 5*time.Second),
@@ -26,7 +26,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpCircuitBreaker(10, 10*time.Second),
@@ -39,7 +39,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpDedupWindow(5*time.Second),
@@ -52,7 +52,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpDisabledBatch(),
@@ -65,7 +65,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpDisabledCircuit(),
@@ -78,7 +78,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpDisableKeepAlive(),
@@ -91,7 +91,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpFilterData(ulog.DataLog),
@@ -104,7 +104,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpFilterLevel(ulog.LevelError),
@@ -117,7 +117,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
@@ -133,7 +133,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpHeader("Authorization", "Bearer token"),
@@ -147,7 +147,7 @@ HTTP 方法：`POST`、`PUT` 等。
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpMethod("POST"),
@@ -160,7 +160,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpRetry(3, time.Second),
@@ -173,7 +173,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpSampleRate(100),
@@ -186,7 +186,7 @@ defer sinkHttp.Close()
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpSampleWindow(1*time.Minute),
@@ -199,7 +199,7 @@ HTTP 客户端超时。
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpTimeout(30*time.Second),

@@ -13,7 +13,7 @@ Batch messages: send up to `size` messages or every `flushInterval`.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpBatch(100, 5*time.Second),
@@ -26,7 +26,7 @@ Open circuit after `maxFailures` errors, wait `timeout` before recovery.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpCircuitBreaker(10, 10*time.Second),
@@ -39,7 +39,7 @@ Ignore duplicate messages within `window` time.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpDedupWindow(5*time.Second),
@@ -52,7 +52,7 @@ Disable message batching (send immediately).
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpDisabledBatch(),
@@ -65,7 +65,7 @@ Disable Circuit Breaker.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpDisabledCircuit(),
@@ -78,7 +78,7 @@ Disable HTTP Keep-Alive connections.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpDisableKeepAlive(),
@@ -91,7 +91,7 @@ Filter by data type: `DataLog`, `DataMetric`, `DataTrace`.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpFilterData(ulog.DataLog),
@@ -104,7 +104,7 @@ Filter by minimum level: `LevelDebug`, `LevelError`, `LevelFatal`, `LevelInfo`, 
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpFilterLevel(ulog.LevelError),
@@ -117,7 +117,7 @@ Custom formatter function `func(attributes, fields) ([]byte, error)`.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
@@ -133,7 +133,7 @@ Add custom HTTP header.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpHeader("Authorization", "Bearer token"),
@@ -147,7 +147,7 @@ HTTP method: `POST`, `PUT`, etc.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpMethod("POST"),
@@ -160,7 +160,7 @@ Retry failed requests up to `maxRetries` times with exponential `backoff`.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpRetry(3, time.Second),
@@ -173,7 +173,7 @@ Sample 1 out of `rate` messages for non-error levels.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpSampleRate(100),
@@ -186,7 +186,7 @@ Reset sample counter every `window`.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpSampleWindow(1*time.Minute),
@@ -199,7 +199,7 @@ HTTP client timeout.
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkHttp := ulog.NewSinkHttp("http://localhost:8080/logs",
     ulog.WithHttpTimeout(30*time.Second),

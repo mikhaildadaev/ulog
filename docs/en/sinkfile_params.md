@@ -13,7 +13,7 @@ Sets the maximum number of days to keep old log files. Files older than this wil
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxAge(30),
@@ -29,7 +29,7 @@ Sets the maximum number of old log files to keep. When this limit is exceeded, t
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxBackups(10),
@@ -45,7 +45,7 @@ Sets the maximum file size in megabytes before rotation is triggered. When the c
 ```go
 import (
     "fmt"
-    "github.com/mikhaildadaev/uuid"
+    "github.com/mikhaildadaev/ulog"
 )
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxSize(100),
