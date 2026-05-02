@@ -11,10 +11,6 @@ outline: deep
 ## WithFileMaxAge
 Устанавливает максимальное количество дней хранения старых лог-файлов. Файлы старше этого срока будут автоматически удалены при ротации.
 ```go
-import (
-    "fmt"
-    "github.com/mikhaildadaev/ulog"
-)
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxAge(30),
 )
@@ -27,10 +23,6 @@ defer sinkFile.Close()
 ## WithFileMaxBackups
 Устанавливает максимальное количество старых лог-файлов. При превышении этого лимита самые старые файлы удаляются при ротации.
 ```go
-import (
-    "fmt"
-    "github.com/mikhaildadaev/ulog"
-)
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxBackups(10),
 )
@@ -43,10 +35,6 @@ defer sinkFile.Close()
 ## WithFileMaxSize
 Устанавливает максимальный размер файла в мегабайтах перед ротацией. Когда текущий лог-файл превышает этот размер, он переименовывается, сжимается, и создаётся новый файл.
 ```go
-import (
-    "fmt"
-    "github.com/mikhaildadaev/ulog"
-)
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxSize(100),
 )

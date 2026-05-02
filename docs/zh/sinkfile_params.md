@@ -11,10 +11,6 @@ outline: deep
 ## WithFileMaxAge
 设置旧日志文件的最大保留天数。超过此期限的文件将在轮换时自动删除。
 ```go
-import (
-    "fmt"
-    "github.com/mikhaildadaev/ulog"
-)
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxAge(30),
 )
@@ -27,10 +23,6 @@ defer sinkFile.Close()
 ## WithFileMaxBackups
 设置旧日志文件的最大保留数量。超过此限制时，最旧的备份文件将在轮换时删除。
 ```go
-import (
-    "fmt"
-    "github.com/mikhaildadaev/ulog"
-)
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxBackups(10),
 )
@@ -43,10 +35,6 @@ defer sinkFile.Close()
 ## WithFileMaxSize
 设置触发轮换的最大文件大小（以兆字节为单位）。当前日志文件超过此大小时，将被重命名、压缩，并创建新文件。
 ```go
-import (
-    "fmt"
-    "github.com/mikhaildadaev/ulog"
-)
 sinkFile, err := ulog.NewSinkFile("app.log",
     ulog.WithFileMaxSize(100),
 )
