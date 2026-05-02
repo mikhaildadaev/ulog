@@ -5,7 +5,7 @@ outline: deep
 # API / SinkHttp / Constructors
 
 ::: info **Info**
-`SinkHttp` — production-ready HTTP sink with batching, circuit breaker, deduplication, retry, and sampling. Your service never blocks during network delivery.
+This page documents `SinkHttp`, a production-ready HTTP sink with batching, circuit breaker, deduplication, retry, and sampling. Your service never blocks during network delivery.
 :::
 
 ## NewSinkHttp

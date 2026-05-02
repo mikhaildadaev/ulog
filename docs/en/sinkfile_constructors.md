@@ -5,7 +5,7 @@ outline: deep
 # API / SinkFile / Constructors
 
 ::: info **Info**
-`SinkFile` provides non-blocking atomic file rotation with `gzip` compression. Your service never blocks during log rotation or compression.
+This page documents `SinkFile`, which provides non-blocking atomic file rotation with `gzip` compression. Your service never blocks during log rotation or compression.
 :::
 
 ## NewSinkFile

@@ -5,7 +5,7 @@ outline: deep
 # API / Core / Constructors
 
 ::: info **Info**
-Core — это основа `ulog`. Здесь вы узнаете, как создать экземпляр телеметрии, настроить все параметры и понять каждый тип данных и конструктор полей.
+This page describes how to create a telemetry instance, configure all the settings, and understand each data type and field constructor.
 :::
 
 ## NewTelemetry
