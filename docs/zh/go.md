@@ -8,7 +8,7 @@ go get github.com/mikhaildadaev/ulog
 ```
 
 ::: info **关于**
-`ulog` 的最新稳定版本是 **v1.26.12**.
+`ulog` 的最新稳定版本是 **v1.26.11**.
 :::
 
 ## Run Test 
