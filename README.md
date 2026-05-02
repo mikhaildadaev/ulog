@@ -15,7 +15,7 @@ go get github.com/mikhaildadaev/ulog
 
 > **Info**
 >
-> The latest stable version of ulog is v1.26.12.
+> The latest stable version of ulog is v1.26.11.
 
 ### Run Test 
 ```bash
