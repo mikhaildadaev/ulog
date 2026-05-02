@@ -5,7 +5,7 @@ outline: deep
 # API / SinkHttp / Params
 
 ::: info **Info**
-This page covers all configuration options for **SinkHttp**: batching, circuit breaker, deduplication, retry, sampling, and more. Each option is shown with its default value and a brief description.
+This page covers all configuration options for `SinkHttp`: batching, circuit breaker, deduplication, retry, sampling, and more. Each option is shown with its default value and a brief description.
 :::
 
 ## WithHttpBatch
