@@ -5,7 +5,7 @@ outline: deep
 # API / SinkFile / Params
 
 ::: info **Info**
-This page covers all configuration options for **SinkFile**: maximum file age, backup count, and file size before rotation. Each option is shown with a working code example and expected behavior.
+This page covers all configuration options for `SinkFile`: maximum file age, backup count, and file size before rotation. Each option is shown with a working code example and expected behavior.
 :::
 
 ## WithFileMaxAge
