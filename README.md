@@ -25,7 +25,7 @@ go test -cover ./...
 go test -race ./...
 ```
 
-## Key Features
+### Key Features
 - **Unified API** — One API for logs, metrics, and traces.
 - **Context Extraction** — Automatic extraction `node_id`, `trace_id`, etc. from `context.Context`.
 - **Colored output** – `Dark` and `Light` themes with auto-detection for TEXT format.
@@ -34,7 +34,7 @@ go test -race ./...
 - **SinkHttp** — `Batching`, `Circuit Breaker`, `Deduplication`, `Retry`, `Sampling`.
 - **8 Integrations** — `Discord`, `Kafka`, `Loki`, `Prometheus`, `Slack`, `Telegram`, `Tempo`, `WeChat`.
 
-## Limits
+### Limits
 - **Async buffer**: if full, log is written synchronously (no blocking)
 - **Caller information**: only for `LevelDebug` (performance optimization)
 - **Time precision**: microseconds (6 digits) — sufficient for 99% of use cases, reduces allocations
