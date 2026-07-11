@@ -49,8 +49,8 @@ Dockerfile.dev
 .env.*.local
 
 # IDEs and editors
-.vscode/
-.idea/
+**/.vscode/
+**/.idea/
 *.swp
 *.swo
 
@@ -78,17 +78,18 @@ Dockerfile.dev
 *.token
 
 # Go specific
+**/bin/
+**/dist/
 *.test
 coverage.out
 coverage.html
 go.work
 go.work.sum
-/bin/
-/dist/
 
 # Node specific
-node_modules/
+**/node_modules/
 
 # VitePress specific
-docs/.vitepress/dist/
-docs/.vitepress/cache/
+**/.vitepress/dist/
+**/.vitepress/cache/
+**/.vitepress/temp/
