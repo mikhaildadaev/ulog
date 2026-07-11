@@ -90,6 +90,6 @@ go.work.sum
 **/node_modules/
 
 # VitePress specific
-**/.vitepress/dist/
 **/.vitepress/cache/
+**/.vitepress/dist/
 **/.vitepress/temp/
