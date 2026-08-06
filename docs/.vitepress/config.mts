@@ -3,9 +3,9 @@ export default defineConfig({
   appearance: 'dark',
   base: '/ulog/',
   head: [
-    ['link', { rel: 'stylesheet', href: '/ulog/styles.css' }],
-    ['script', { src: '/ulog/scripts.js' }]
+    ['meta', { name: 'viewport', content: 'width=device-width, initial-scale=1.0, viewport-fit=cover' }]
   ],
+  cleanUrls: true,
   lastUpdated: true,
   locales: {
     en: {
@@ -65,12 +65,10 @@ export default defineConfig({
                 link: '/en/benchmarks' 
               },
               { 
-                text: 'API', 
-                collapsed: true,
+                text: 'API',
                 items: [
                   { 
-                    text: 'Core', 
-                    collapsed: true,
+                    text: 'Core',
                     items: [
                       { 
                         text: 'Constructors', 
@@ -88,7 +86,6 @@ export default defineConfig({
                   },
                   {
                     text: 'SinkFile',
-                    collapsed: true, 
                     items: [
                       { 
                         text: 'Constructors', 
@@ -101,8 +98,7 @@ export default defineConfig({
                     ]
                   },
                   {
-                    text: 'SinkHttp', 
-                    collapsed: true,
+                    text: 'SinkHttp',
                     items: [
                       { 
                         text: 'Constructors', 
@@ -205,12 +201,10 @@ export default defineConfig({
                 link: '/ru/benchmarks' 
               },
               {
-                text: 'API', 
-                collapsed: true,
+                text: 'API',
                 items: [
                   { 
-                    text: 'Ядро', 
-                    collapsed: true,
+                    text: 'Ядро',
                     items: [
                       { 
                         text: 'Конструкторы', 
@@ -227,8 +221,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: 'Запись в файл', 
-                    collapsed: true,
+                    text: 'Запись в файл',
                     items: [
                       { 
                         text: 'Конструкторы', 
@@ -241,8 +234,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: 'Запись по сети', 
-                    collapsed: true,
+                    text: 'Запись по сети',
                     items: [
                       { 
                         text: 'Конструкторы', 
@@ -345,12 +337,10 @@ export default defineConfig({
                 link: '/zh/benchmarks' 
               },
               { 
-                text: 'API', 
-                collapsed: true,
+                text: 'API',
                 items: [
                   { 
-                    text: '核心', 
-                    collapsed: true,
+                    text: '核心',
                     items: [
                       { 
                         text: '构造函数', 
@@ -367,8 +357,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: '文件接收器', 
-                    collapsed: true,
+                    text: '文件接收器',
                     items: [
                       { 
                         text: '构造函数', 
@@ -381,8 +370,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: 'HTTP 接收器', 
-                    collapsed: true,
+                    text: 'HTTP 接收器',
                     items: [
                       { 
                         text: '构造函数', 

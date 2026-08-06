@@ -1,0 +1,61 @@
+/* ============================================
+   РЕДИРЕКТ
+   ============================================ */
+.redirect {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vp-c-bg, #fdfaf6);
+}
+.redirect .container {
+  width: 90%;
+  max-width: 380px;
+  padding: 48px 32px 40px;
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+.redirect .container .wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+}
+.redirect .container .wrapper .loader {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.redirect .container .wrapper .loader .bg {
+  fill: none;
+  stroke: var(--vp-c-border, #e0d5c5);
+  stroke-width: 3;
+}
+.redirect .container .wrapper .loader .progress-ring {
+  fill: none;
+  stroke: var(--vp-c-brand, #e67e22);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 125.6;
+  stroke-dashoffset: 125.6;
+  transition: stroke 0.5s ease, stroke-dashoffset 0.3s ease;
+}
+.redirect .container.status-error .wrapper .loader .progress-ring {
+  stroke: #f87171;
+}
+.redirect .container.status-success .wrapper .loader .progress-ring {
+  stroke: #4ade80;
+}
+
+/* ============================================
+   АНИМАЦИИ
+   ============================================ */
+@keyframes fadeIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
