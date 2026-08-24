@@ -1,4 +1,4 @@
-// ULOG (Universal Logger Observability)
+// ULOG (Universal Logger Observability Gateway)
 // Copyright (C) 2026 Mikhail Dadaev
 //
 // This program is free software: you can redistribute it and/or modify
