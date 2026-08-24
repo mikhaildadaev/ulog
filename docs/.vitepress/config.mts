@@ -41,6 +41,10 @@ export default defineConfig({
             link: '/en/' 
           },
           { 
+            text: 'License', 
+            link: '/en/license' 
+          },
+          { 
             text: 'Go', 
             link: '/en/go' 
           },
@@ -56,6 +60,10 @@ export default defineConfig({
         sidebar: [
           {
             items: [
+              { 
+                text: 'License', 
+                link: '/en/license' 
+              },
               { 
                 text: 'Go', 
                 link: '/en/go' 
@@ -139,7 +147,7 @@ export default defineConfig({
           next: "Next page"
         },
         footer: {
-          message: 'Released under the Apache License 2.0',
+          message: 'Dual-licensed under AGPLv3 and Commercial',
           copyright: '© 2026 Mikhail Dadaev'
         }
       }
@@ -177,11 +185,15 @@ export default defineConfig({
             link: '/ru/' 
           },
           { 
+            text: 'License', 
+            link: '/ru/license' 
+          },
+          { 
             text: 'Go', 
             link: '/ru/go' 
           },
           { 
-            text: 'Бенчмарки', 
+            text: 'Benchmarks', 
             link: '/ru/benchmarks' 
           },
           { 
@@ -193,18 +205,22 @@ export default defineConfig({
           {
             items: [
               { 
+                text: 'License', 
+                link: '/ru/license' 
+              },
+              { 
                 text: 'Go', 
                 link: '/ru/go' 
               },
               { 
-                text: 'Бенчмарки', 
+                text: 'Benchmarks', 
                 link: '/ru/benchmarks' 
               },
               {
                 text: 'API',
                 items: [
                   { 
-                    text: 'Ядро',
+                    text: 'Core',
                     items: [
                       { 
                         text: 'Конструкторы', 
@@ -221,7 +237,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: 'Запись в файл',
+                    text: 'Sinkfile',
                     items: [
                       { 
                         text: 'Конструкторы', 
@@ -234,7 +250,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: 'Запись по сети',
+                    text: 'Sinkhttp',
                     items: [
                       { 
                         text: 'Конструкторы', 
@@ -275,7 +291,7 @@ export default defineConfig({
           next: "Следующая страница"
         },
         footer: {
-          message: 'Под лицензией Apache 2.0',
+          message: 'Двойное лицензирование: AGPLv3 и Коммерческая',
           copyright: '© 2026 Михаил Дадаев'
         },
       }
@@ -313,11 +329,15 @@ export default defineConfig({
             link: '/zh/' 
           },
           { 
+            text: 'License', 
+            link: '/zh/license' 
+          },
+          { 
             text: 'Go', 
             link: '/zh/go' 
           },
           { 
-            text: '基准测试', 
+            text: 'Benchmarks', 
             link: '/zh/benchmarks' 
           },
           { 
@@ -329,18 +349,22 @@ export default defineConfig({
           {
             items: [
               { 
+                text: 'License', 
+                link: '/zh/license' 
+              },
+              { 
                 text: 'Go', 
                 link: '/zh/go' 
               },
               { 
-                text: '基准', 
+                text: 'Benchmarks', 
                 link: '/zh/benchmarks' 
               },
               { 
                 text: 'API',
                 items: [
                   { 
-                    text: '核心',
+                    text: 'Core',
                     items: [
                       { 
                         text: '构造函数', 
@@ -357,7 +381,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: '文件接收器',
+                    text: 'Sinkfile',
                     items: [
                       { 
                         text: '构造函数', 
@@ -370,7 +394,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: 'HTTP 接收器',
+                    text: 'Sinkhttp',
                     items: [
                       { 
                         text: '构造函数', 
@@ -411,7 +435,7 @@ export default defineConfig({
           next: "下一页"
         },
         footer: {
-          message: '根据 Apache 2.0 许可证发布',
+          message: '根据 AGPLv3 和商业许可证双许可',
           copyright: '© 2026 Mikhail Dadaev'
         },
       }
