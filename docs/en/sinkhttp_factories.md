@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / SinkHttp / Factories
+# API / SinkHTTP / Factories
 
 ::: info **Info**
 This page documents ready-to-use factories for `Discord`, `Kafka`, `Loki`, `Prometheus`, `Slack`, `Telegram`, `Tempo`, `WeChat`. Each factory is a pre-configured `SinkHttp` with the right formatter, headers, and filters.

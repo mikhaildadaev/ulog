@@ -106,7 +106,7 @@ export default defineConfig({
                     ]
                   },
                   {
-                    text: 'SinkHttp',
+                    text: 'SinkHTTP',
                     items: [
                       { 
                         text: 'Constructors', 
@@ -237,7 +237,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: 'Sinkfile',
+                    text: 'SinkFile',
                     items: [
                       { 
                         text: 'Конструкторы', 
@@ -250,7 +250,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: 'Sinkhttp',
+                    text: 'SinkHTTP',
                     items: [
                       { 
                         text: 'Конструкторы', 
@@ -381,7 +381,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: 'Sinkfile',
+                    text: 'SinkFile',
                     items: [
                       { 
                         text: '构造函数', 
@@ -394,7 +394,7 @@ export default defineConfig({
                     ] 
                   },
                   { 
-                    text: 'Sinkhttp',
+                    text: 'SinkHTTP',
                     items: [
                       { 
                         text: '构造函数', 

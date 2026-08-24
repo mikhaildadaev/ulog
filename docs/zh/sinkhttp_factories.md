@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# API / HTTP 接收器 / 工厂
+# API / SinkHTTP / 工厂
 
 ::: info **关于**
 本页记录了 `Discord`、`Kafka`、`Loki`、`Prometheus`、`Slack`、`Telegram`、`Tempo`、`WeChat` 工厂。每个工厂都是一个预配置的 `SinkHttp`，具有正确的格式化器、请求头和过滤器。
