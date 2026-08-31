@@ -43,8 +43,6 @@ What has changed.
 A link to the related issue (if any).
 Notes for the reviewer.
 
-# Legal Requirements
-
 ## Contributor License Agreement (CLA)
 
 **Important:** The ulog projects are dual-licensed (AGPLv3 + Commercial). To protect this model, we require a signed Individual Contributor License Agreement (CLA) for all significant contributions.
