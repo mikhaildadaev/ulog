@@ -31,7 +31,7 @@ This software is dual-licensed under the terms of the AGPLv3 (GNU Affero General
    - Permission to distribute the software as part of a proprietary product.
 
    For commercial licensing inquiries, please contact:
-   mikhaildadaev@mail.ru
+   [mikhaildadaev@mail.ru](mailto:mikhaildadaev@mail.ru)
    https://mikhaildadaev.github.io/ulog/
 
 **NO ADDITIONAL RESTRICTIONS**
