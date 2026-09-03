@@ -53,7 +53,6 @@ func ExampleNewTelemetry() {
 		ulog.Int64("duration", 150),
 		ulog.String("span_id", "span-456"),
 	)
-	telemetry.Sync()
 	telemetry.SetExtractor()
 	telemetry.SetFormat(ulog.FormatText)
 	telemetry.SetLevel(ulog.LevelDebug)
@@ -70,7 +69,6 @@ func ExampleNewTelemetry() {
 		ulog.Int64("duration", 150),
 		ulog.String("span_id", "span-456"),
 	)
-	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
@@ -88,6 +86,7 @@ func ExampleNewTelemetryLog() {
 		ulog.WithFormat(ulog.FormatText),
 		ulog.WithLevel(ulog.LevelError),
 	)
+	defer telemetry.Close()
 	telemetryLog := ulog.NewTelemetryLog(ulog.LevelError, telemetry)
 	telemetryLog.Print("this will be logged as ERROR")
 	telemetryLog.Printf("user %s failed to login", "john")
@@ -136,7 +135,6 @@ func ExampleTelemetry_data() {
 		ulog.String("name", "login"),
 		ulog.Int64("duration", 150),
 	)
-	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
@@ -172,7 +170,6 @@ func ExampleTelemetry_field() {
 		ulog.Time("time", time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC)),
 		ulog.Times("times", []time.Time{time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC), time.Date(2025, 4, 22, 12, 0, 0, 0, time.UTC)}),
 	)
-	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
@@ -190,10 +187,8 @@ func ExampleTelemetry_format() {
 	)
 	defer telemetry.Close()
 	telemetry.Info(ulog.DataLog, ulog.String("message", "info text"))
-	telemetry.Sync()
 	telemetry.SetFormat(ulog.FormatJson)
 	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "info text"))
-	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
@@ -215,7 +210,6 @@ func ExampleTelemetry_level() {
 	telemetry.ErrorWithContext(ctx, ulog.DataLog, ulog.String("message", "error text"))
 	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "info text"))
 	telemetry.WarnWithContext(ctx, ulog.DataLog, ulog.String("message", "warn text"))
-	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
@@ -235,10 +229,8 @@ func ExampleTelemetry_mode() {
 	)
 	defer telemetry.Close()
 	telemetry.Info(ulog.DataLog, ulog.String("message", "info text"))
-	telemetry.Sync()
 	telemetry.SetMode(ulog.ModeSync, buf)
 	telemetry.InfoWithContext(ctx, ulog.DataLog, ulog.String("message", "info text"))
-	telemetry.Sync()
 	output := formatOutput(buf.String())
 	fmt.Print(output)
 	// Output:
