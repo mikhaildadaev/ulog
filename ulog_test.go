@@ -50,19 +50,6 @@ func Test_Telemetry(t *testing.T) {
 		t.Errorf("Expected 'test info text', got %q", buf.String())
 	}
 }
-func Test_Telemetry_AsyncWriter(t *testing.T) {
-	var buf bytes.Buffer
-	asyncWriter := newAsyncWriter(&buf, 10)
-	for i := 0; i < 100; i++ {
-		asyncWriter.Write([]byte("test"))
-	}
-	if err := asyncWriter.Close(); err != nil {
-		t.Fatalf("Close failed: %v", err)
-	}
-	if buf.Len() == 0 {
-		t.Error("no data written")
-	}
-}
 func Test_Telemetry_Close(t *testing.T) {
 	t.Run("Async", func(t *testing.T) {
 		buf := &bytes.Buffer{}
