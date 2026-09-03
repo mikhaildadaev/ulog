@@ -35,11 +35,11 @@ type SinkHttp struct {
 	batchSize          int
 	batchTicker        *time.Ticker
 	circuitEnabled     bool
-	circuitFailures    int32
+	circuitFailures    atomic.Int32
 	circuitMaxFailures int
 	circuitLastFailure atomic.Int64
 	circuitMutex       sync.Mutex
-	circuitState       int32
+	circuitState       atomic.Int32
 	circuitTimeout     time.Duration
 	client             *http.Client
 	closed             bool
@@ -53,6 +53,7 @@ type SinkHttp struct {
 	headers            map[string]string
 	method             string
 	mutex              sync.Mutex
+	once               sync.Once
 	retryBackoff       time.Duration
 	retryMax           int
 	sampleCounter      int32
@@ -71,7 +72,6 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 		batchTicker:        time.NewTicker(5 * time.Second),
 		circuitEnabled:     true,
 		circuitMaxFailures: 10,
-		circuitState:       circuitStateClosed,
 		circuitTimeout:     10 * time.Second,
 		client: &http.Client{
 			Timeout: 10 * time.Second,
@@ -92,6 +92,8 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 		retryBackoff:  time.Second,
 		retryMax:      0,
 	}
+	sinkHttp.circuitState.Store(circuitStateClosed)
+	sinkHttp.circuitFailures.Store(0)
 	for _, param := range params {
 		param(sinkHttp)
 	}
@@ -113,7 +115,7 @@ func WithHttpCircuitBreaker(maxFailures int, timeout time.Duration) httpParams {
 	return func(sinkHttp *SinkHttp) {
 		sinkHttp.circuitEnabled = true
 		sinkHttp.circuitMaxFailures = maxFailures
-		sinkHttp.circuitState = circuitStateClosed
+		sinkHttp.circuitState.Store(circuitStateClosed)
 		sinkHttp.circuitTimeout = timeout
 	}
 }
@@ -189,49 +191,71 @@ func WithHttpTimeout(timeout time.Duration) httpParams {
 
 // Публичные методы
 func (sinkHttp *SinkHttp) Close() error {
-	sinkHttp.mutex.Lock()
-	if sinkHttp.closed {
-		sinkHttp.mutex.Unlock()
-		return nil
-	}
-	sinkHttp.closed = true
-	sinkHttp.mutex.Unlock()
-	if sinkHttp.batchSize > 0 {
-		sinkHttp.wg.Add(1)
-		go func() {
-			defer sinkHttp.wg.Done()
-			sinkHttp.flush()
+	var err error
+	sinkHttp.once.Do(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("ulog: panic during SinkHttp.Close(): %v", r)
+			}
 		}()
-	}
-	if sinkHttp.dedupStopChan != nil {
-		close(sinkHttp.dedupStopChan)
-	}
-	sinkHttp.batchMutex.Lock()
-	ticker := sinkHttp.batchTicker
-	sinkHttp.batchMutex.Unlock()
-	if sinkHttp.batchSize > 0 {
-		close(sinkHttp.batchChan)
-		if ticker != nil {
-			ticker.Stop()
+		sinkHttp.mutex.Lock()
+		if sinkHttp.closed {
+			sinkHttp.mutex.Unlock()
+			return
 		}
-	}
-	done := make(chan struct{})
-	go func() {
-		sinkHttp.wg.Wait()
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(3 * time.Second):
-	}
-	sinkHttp.client.CloseIdleConnections()
-	return nil
-}
-func (sinkHttp *SinkHttp) Sync() error {
-	if sinkHttp.batchSize > 0 {
-		return sinkHttp.flush()
-	}
-	return nil
+		sinkHttp.closed = true
+		sinkHttp.mutex.Unlock()
+		if sinkHttp.batchSize > 0 {
+			sinkHttp.wg.Add(1)
+			go func() {
+				defer sinkHttp.wg.Done()
+				done := make(chan struct{})
+				go func() {
+					sinkHttp.flush()
+					close(done)
+				}()
+				select {
+				case <-done:
+				case <-time.After(5 * time.Second):
+					fmt.Fprintf(DefaultWriterErr, "ulog: SinkHttp.flush() timeout\n")
+				}
+			}()
+		}
+		if sinkHttp.dedupStopChan != nil {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Fprintf(DefaultWriterErr, "ulog: panic closing dedupStopChan: %v\n", r)
+				}
+			}()
+			close(sinkHttp.dedupStopChan)
+		}
+		sinkHttp.batchMutex.Lock()
+		ticker := sinkHttp.batchTicker
+		sinkHttp.batchMutex.Unlock()
+		if sinkHttp.batchSize > 0 {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Fprintf(DefaultWriterErr, "ulog: panic closing batchChan: %v\n", r)
+				}
+			}()
+			close(sinkHttp.batchChan)
+			if ticker != nil {
+				ticker.Stop()
+			}
+		}
+		done := make(chan struct{})
+		go func() {
+			sinkHttp.wg.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(maxWaitHttp):
+			fmt.Fprintf(DefaultWriterErr, "ulog: SinkHttp.Close() timeout waiting for wg\n")
+		}
+		sinkHttp.client.CloseIdleConnections()
+	})
+	return err
 }
 func (sinkHttp *SinkHttp) Write(p []byte) (n int, err error) {
 	return sinkHttp.sendWithRetry(p)
@@ -396,7 +420,7 @@ func (sinkHttp *SinkHttp) circuitAllow() bool {
 	if !sinkHttp.circuitEnabled {
 		return true
 	}
-	state := atomic.LoadInt32(&sinkHttp.circuitState)
+	state := sinkHttp.circuitState.Load()
 	switch state {
 	case circuitStateClosed:
 		return true
@@ -404,8 +428,8 @@ func (sinkHttp *SinkHttp) circuitAllow() bool {
 		lastFailure := sinkHttp.circuitLastFailure.Load()
 		if time.Now().UnixNano()-lastFailure > sinkHttp.circuitTimeout.Nanoseconds() {
 			sinkHttp.circuitMutex.Lock()
-			if atomic.LoadInt32(&sinkHttp.circuitState) == circuitStateOpen {
-				atomic.StoreInt32(&sinkHttp.circuitState, circuitStateHalfOpen)
+			if sinkHttp.circuitState.Load() == circuitStateOpen {
+				sinkHttp.circuitState.Store(circuitStateHalfOpen)
 			}
 			sinkHttp.circuitMutex.Unlock()
 			return true
@@ -421,24 +445,24 @@ func (sinkHttp *SinkHttp) circuitRecord(success bool) {
 	if !sinkHttp.circuitEnabled {
 		return
 	}
-	state := atomic.LoadInt32(&sinkHttp.circuitState)
+	state := sinkHttp.circuitState.Load()
 	switch state {
 	case circuitStateClosed:
 		if !success {
-			failures := atomic.AddInt32(&sinkHttp.circuitFailures, 1)
+			failures := sinkHttp.circuitFailures.Add(1)
 			sinkHttp.circuitLastFailure.Store(time.Now().UnixNano())
 			if int(failures) >= sinkHttp.circuitMaxFailures {
 				sinkHttp.circuitMutex.Lock()
-				if atomic.LoadInt32(&sinkHttp.circuitState) == circuitStateClosed {
-					atomic.StoreInt32(&sinkHttp.circuitState, circuitStateOpen)
-					atomic.StoreInt32(&sinkHttp.circuitFailures, 0)
+				if sinkHttp.circuitState.Load() == circuitStateClosed {
+					sinkHttp.circuitState.Store(circuitStateOpen)
+					sinkHttp.circuitFailures.Store(0)
 				}
 				sinkHttp.circuitMutex.Unlock()
 			}
 		} else {
 			sinkHttp.circuitMutex.Lock()
-			if atomic.LoadInt32(&sinkHttp.circuitState) == circuitStateClosed {
-				atomic.StoreInt32(&sinkHttp.circuitFailures, 0)
+			if sinkHttp.circuitState.Load() == circuitStateClosed {
+				sinkHttp.circuitFailures.Store(0)
 			}
 			sinkHttp.circuitMutex.Unlock()
 		}
@@ -446,10 +470,10 @@ func (sinkHttp *SinkHttp) circuitRecord(success bool) {
 		sinkHttp.circuitMutex.Lock()
 		defer sinkHttp.circuitMutex.Unlock()
 		if success {
-			atomic.StoreInt32(&sinkHttp.circuitState, circuitStateClosed)
-			atomic.StoreInt32(&sinkHttp.circuitFailures, 0)
+			sinkHttp.circuitState.Store(circuitStateClosed)
+			sinkHttp.circuitFailures.Store(0)
 		} else {
-			atomic.StoreInt32(&sinkHttp.circuitState, circuitStateOpen)
+			sinkHttp.circuitState.Store(circuitStateOpen)
 			sinkHttp.circuitLastFailure.Store(time.Now().UnixNano())
 		}
 	case circuitStateOpen:

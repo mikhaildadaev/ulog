@@ -38,6 +38,7 @@ type SinkFile struct {
 	maxBackups  int
 	maxSize     int64
 	mutex       sync.Mutex
+	once        sync.Once
 	rotating    atomic.Bool
 	wg          sync.WaitGroup
 }
@@ -89,21 +90,25 @@ func WithFileMaxSize(sizeMB int) fileParams {
 
 // Публичные методы
 func (sinkFile *SinkFile) Close() error {
-	sinkFile.wg.Wait()
-	sinkFile.mutex.Lock()
-	defer sinkFile.mutex.Unlock()
-	if sinkFile.file != nil {
-		return sinkFile.file.Close()
-	}
-	return nil
-}
-func (sinkFile *SinkFile) Sync() error {
-	sinkFile.mutex.Lock()
-	defer sinkFile.mutex.Unlock()
-	if sinkFile.file != nil {
-		return sinkFile.file.Sync()
-	}
-	return nil
+	var err error
+	sinkFile.once.Do(func() {
+		done := make(chan struct{})
+		go func() {
+			sinkFile.wg.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(maxWaitFile):
+			fmt.Fprintf(DefaultWriterErr, "ulog: SinkFile.Close() timeout waiting for background tasks\n")
+		}
+		sinkFile.mutex.Lock()
+		defer sinkFile.mutex.Unlock()
+		if sinkFile.file != nil {
+			err = sinkFile.file.Close()
+		}
+	})
+	return err
 }
 func (sinkFile *SinkFile) Write(p []byte) (n int, err error) {
 	sinkFile.mutex.Lock()
@@ -255,9 +260,6 @@ func (fileSink *SinkFile) getCompressFile(filename string) error {
 		return err
 	}
 	if err = gz.Close(); err != nil {
-		return err
-	}
-	if err = dst.Sync(); err != nil {
 		return err
 	}
 	gzName := filename + ".gz"

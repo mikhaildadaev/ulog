@@ -84,22 +84,6 @@ func (teeSink *TeeSink) Replace(index int, sink Sink) error {
 	teeSink.writers[index] = sink
 	return nil
 }
-func (teeSink *TeeSink) Sync() error {
-	teeSink.mutex.RLock()
-	defer teeSink.mutex.RUnlock()
-	var errors []error
-	for i, w := range teeSink.writers {
-		if syncer, ok := w.(interface{ Sync() error }); ok {
-			if err := syncer.Sync(); err != nil {
-				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
-			}
-		}
-	}
-	if len(errors) > 0 {
-		return fmt.Errorf("sync errors: %v", errors)
-	}
-	return nil
-}
 func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 	teeSink.mutex.RLock()
 	defer teeSink.mutex.RUnlock()
