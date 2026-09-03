@@ -49,6 +49,9 @@ const (
 	colorLightBlue   = "\033[34m"
 	colorLightPurple = "\033[35m"
 	colorLightCyan   = "\033[36m"
+	// Ограничения
+	maxWaitFile = 30 * time.Second
+	maxWaitHttp = 5 * time.Second
 )
 
 // Приватные переменные
@@ -72,7 +75,7 @@ var ignoredErrors = [][]byte{
 // Приватные структуры
 type asyncWriter struct {
 	ch     chan []byte
-	limit  int
+	once   sync.Once
 	wg     sync.WaitGroup
 	writer io.Writer
 }
@@ -154,7 +157,6 @@ var (
 func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
 	asyncWriter := &asyncWriter{
 		ch:     make(chan []byte, bufferSize),
-		limit:  bufferSize,
 		writer: writer,
 	}
 	go asyncWriter.run()
@@ -548,12 +550,31 @@ func getDefaultTheme() colorTheme {
 
 // Приватные методы
 func (asyncWriter *asyncWriter) run() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(DefaultWriterErr, "ulog: panic in asyncWriter.run(): %v\n", r)
+		}
+	}()
 	for buf := range asyncWriter.ch {
-		if _, err := asyncWriter.writer.Write(buf); err != nil {
-			fmt.Fprintf(DefaultWriterErr, "ulog: async write failed: %v\n", err)
+		if asyncWriter.writer == nil {
+			fmt.Fprintf(DefaultWriterErr, "ulog: asyncWriter.writer is nil, dropping log message\n")
+			asyncWriter.wg.Done()
+			continue
+		}
+		if len(buf) == 0 {
+			asyncWriter.wg.Done()
+			continue
+		}
+		_, err := asyncWriter.writer.Write(buf)
+		if err != nil {
+			fmt.Fprintf(DefaultWriterErr, "ulog: asyncWriter.write error: %v\n", err)
 		}
 		asyncWriter.wg.Done()
 	}
+}
+func (asyncWriter *asyncWriter) sync() error {
+	asyncWriter.wg.Wait()
+	return nil
 }
 func (standardTelemetry *standardTelemetry) isIgnored(data []byte) bool {
 	for _, err := range ignoredErrors {
