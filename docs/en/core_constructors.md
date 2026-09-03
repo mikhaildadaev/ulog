@@ -34,7 +34,6 @@ telemetry.InfoWithContext(ctx, ulog.DataTrace,
     ulog.Int64("duration", 150),
     ulog.String("span_id", "span-456"),
 )
-telemetry.Sync()
 telemetry.SetExtractor()
 telemetry.SetFormat(ulog.FormatText)
 telemetry.SetLevel(ulog.LevelDebug)
@@ -52,7 +51,6 @@ telemetry.Info(ulog.DataTrace,
 	ulog.Int64("duration", 150),
 	ulog.String("span_id", "span-456"),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -86,6 +84,7 @@ telemetry := ulog.NewTelemetry(
     ulog.WithFormat(ulog.FormatText),
     ulog.WithMode(ulog.ModeSync, ulog.DefaultWriterOut),
 )
+defer telemetry.Close()
 stdLogger := ulog.NewTelemetryLog(ulog.LevelError, telemetry)
 stdLogger.Print("this will be logged as ERROR")
 stdLogger.Printf("user %s failed to login", "john")

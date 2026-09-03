@@ -48,14 +48,14 @@ Benchmark data writes structured JSON logs to a **real file** with **atomic rota
 ### MultiThread
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
-| Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
-| Sync  | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
+| Async | **AllSupportLevels** |     212.2K |        7,784 |          1963 |      6 |
+| Sync  | **AllSupportLevels** |     140.6K |        8,360 |          1800 |      5 |
 
 ### SingleThread
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
-| Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
-| Sync  | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
+| Async | **AllSupportLevels** |     244.5K |        6,471 |          1965 |      6 |
+| Sync  | **AllSupportLevels** |     200.8K |        6,390 |          1802 |      5 |
 
 ::: tip **Note**
 Uses `WithExtractor("node_id", "trace_id")` to automatically extract from context. Writes structured JSON logs to a **real file** with **atomic rotation** enabled (`WithFileMaxSize(15)`). Includes full overhead: JSON formatting, context extraction, file I/O, and non-blocking rotation checks. 
@@ -69,14 +69,14 @@ Benchmark data that measures the internal costs of the `ulog` HTTP receiver usin
 ### MultiThread
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
-| Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
-| Sync  | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
+| Async | **AllSupportLevels** |      18.1K |       55,427 |         8,828 |     82 |
+| Sync  | **AllSupportLevels** |      19.5K |       64,989 |        31,419 |     91 |
 
 ### SingleThread
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
-| Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
-| Sync  | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
+| Async | **AllSupportLevels** |      13.1K |       76,392 |         9,179 |     82 |
+| Sync  | **AllSupportLevels** |      14.4K |       81,589 |         8,940 |     85 |
 
 ::: tip **Note**
 Uses `httptest.Server` to simulate HTTP endpoint. Measures full overhead: JSON formatting, context extraction, HTTP request/response. In a real environment, the delay is mainly determined by network I/O (usually 10-100 times higher). These numbers only reflect the internal costs of `ulog`. *Multi* benchmarks use `b.RunParallel` to simulate real-world concurrent load. 

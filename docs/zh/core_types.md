@@ -19,7 +19,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog, 
     ulog.String("message", "user login"),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -38,7 +37,6 @@ telemetry.Info(ulog.DataMetric,
     ulog.String("name", "logins"),
     ulog.Float64("value", 1.0),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -59,7 +57,6 @@ telemetry.Info(ulog.DataTrace,
     ulog.String("name", "login"),
     ulog.Int64("duration", 150),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -82,7 +79,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Bool("bool", true),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -101,7 +97,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Bools("bools", []bool{true, false}),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -120,7 +115,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Duration("duration", 5*time.Second),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -139,7 +133,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Durations("durations", []time.Duration{5*time.Second, 10*time.Second}),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -158,7 +151,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Error(fmt.Errorf("err")),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -177,7 +169,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Errors([]error{fmt.Errorf("err1"), fmt.Errorf("err2")}),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -196,7 +187,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Float64("float64", 3.14159),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -215,7 +205,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Floats64("floats64", []float64{1.5, 2.5}),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -234,7 +223,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Int("int", 42),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -253,7 +241,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Ints("ints", []int{10, 20, 30}),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -272,7 +259,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Int64("int64", 1234567890),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -291,7 +277,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Ints64("ints64", []int64{1234567890, 9876543210}),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -310,7 +295,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.String("string", "str"),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -329,7 +313,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Strings("strings", []string{"str1", "str2", "str3"})
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -348,7 +331,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Time("time", time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC)),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -367,7 +349,6 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.Times("times", []time.Time{time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC),time.Date(2025, 4, 22, 12, 0, 0, 0, time.UTC)}),
 )
-telemetry.Sync()
 ```
 Output:
 ```json

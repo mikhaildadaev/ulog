@@ -32,7 +32,6 @@ telemetry.Error(ulog.DataLog,
     ulog.String("message", "critical error"),
     ulog.String("service", "billing"),
 )
-telemetry.Sync()
 ```
 
 | Name                                                                      | Description                             | Default | 

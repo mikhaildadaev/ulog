@@ -49,14 +49,14 @@ outline: deep
 ### MultiThread
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
-| Async | **AllSupportLevels** |     999.9K |        6,900 |          1962 |      6 |
-| Sync  | **AllSupportLevels** |     152.7K |        7,800 |          1801 |      5 |
+| Async | **AllSupportLevels** |     212.2K |        7,784 |          1963 |      6 |
+| Sync  | **AllSupportLevels** |     140.6K |        8,360 |          1800 |      5 |
 
 ### SingleThread
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
-| Async | **AllSupportLevels** |     969.7K |        6,000 |          1962 |      6 |
-| Sync  | **AllSupportLevels** |     234.4K |        5,500 |          1798 |      5 |
+| Async | **AllSupportLevels** |     244.5K |        6,471 |          1965 |      6 |
+| Sync  | **AllSupportLevels** |     200.8K |        6,390 |          1802 |      5 |
 
 ::: tip **Примечание**
 Используется `WithExtractor("node_id", "trace_id")` для автоматического извлечения из контекста. Пишет структурированные JSON-логи в **реальный файл** с включённой **атомарной ротацией** (`WithFileMaxSize(15)`). Включает полные накладные расходы: форматирование JSON, извлечение контекста, файловый ввод-вывод и неблокирующие проверки ротации.
@@ -70,14 +70,14 @@ outline: deep
 ### MultiThread
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
-| Async | **AllSupportLevels** |     999.9K |       27,000 |         8,400 |     82 |
-| Sync  | **AllSupportLevels** |      45.4K |       26,400 |         9,100 |     89 |
+| Async | **AllSupportLevels** |      18.1K |       55,427 |         8,828 |     82 |
+| Sync  | **AllSupportLevels** |      19.5K |       64,989 |        31,419 |     91 |
 
 ### SingleThread
 | Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
 |-------|----------------------|------------|--------------|---------------|--------|
-| Async | **AllSupportLevels** |     555.2K |       42,100 |         9,100 |     82 |
-| Sync  | **AllSupportLevels** |      13.6K |       82,500 |         9,400 |     85 |
+| Async | **AllSupportLevels** |      13.1K |       76,392 |         9,179 |     82 |
+| Sync  | **AllSupportLevels** |      14.4K |       81,589 |         8,940 |     85 |
 
 ::: tip **Примечание**
 Используется `httptest.Server` для симуляции HTTP-эндпоинта. Измеряются полные накладные расходы: форматирование JSON, извлечение контекста, HTTP-запрос/ответ. В реальной среде задержка в основном определяется сетевым вводом-выводом (обычно в 10–100 раз выше). Эти цифры отражают только внутренние затраты `ulog`. *Multi*-бенчмарки используют `b.RunParallel` для имитации реальной конкурентной нагрузки.

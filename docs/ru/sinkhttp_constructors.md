@@ -30,7 +30,6 @@ telemetry.Error(ulog.DataLog,
     ulog.String("message", "payment failed"),
     ulog.String("service", "billing"),
 )
-telemetry.Sync()
 ```
 
 | Name                                                                                 | Description                                                                            | Default      |

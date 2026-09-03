@@ -30,7 +30,6 @@ telemetry.InfoWithContext(ctx, ulog.DataTrace,
     ulog.String("name", "login"),
     ulog.Int64("duration", 150),
 )
-telemetry.Sync()
 telemetry.SetExtractor("trace_id")
 telemetry.InfoWithContext(ctx, ulog.DataLog, 
     ulog.String("message", "user login"),
@@ -44,7 +43,6 @@ telemetry.InfoWithContext(ctx, ulog.DataTrace,
     ulog.String("name", "login"),
     ulog.Int64("duration", 150),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -102,12 +100,10 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.String("message", "json message"),
 )
-telemetry.Sync()
 telemetry.SetFormat(ulog.FormatText)
 telemetry.Info(ulog.DataLog,
     ulog.String("message", "text message"),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -130,7 +126,6 @@ telemetry.Debug(ulog.DataLog,
 telemetry.Error(ulog.DataLog,
     ulog.String("message", "error message"),
 )
-telemetry.Sync()
 telemetry.SetLevel(ulog.LevelInfo)
 telemetry.Info(ulog.DataLog,
     ulog.String("message", "info message"),
@@ -138,7 +133,6 @@ telemetry.Info(ulog.DataLog,
 telemetry.Warn(ulog.DataLog,
     ulog.String("message", "warn message"),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -158,12 +152,10 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.String("message", "async message"),
 )
-telemetry.Sync()
 telemetry.SetMode(ulog.ModeSync, ulog.DefaultWriterOut)
 telemetry.Info(ulog.DataLog,
     ulog.String("message", "sync message"),
 )
-telemetry.Sync()
 ```
 Output:
 ```json
@@ -182,12 +174,10 @@ defer telemetry.Close()
 telemetry.Info(ulog.DataLog,
     ulog.String("message", "dark message"),
 )
-telemetry.Sync()
 telemetry.SetTheme(ulog.ThemeLight)
 telemetry.Info(ulog.DataLog,
     ulog.String("message", "light message"),
 )
-telemetry.Sync()
 ```
 Output:
 ```text
