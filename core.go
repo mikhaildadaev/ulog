@@ -94,7 +94,6 @@ type Telemetry interface {
 	SetLevel(level TypeLevel)
 	SetMode(mode TypeMode, writer io.Writer, bufferSize ...int)
 	SetTheme(theme TypeTheme)
-	Sync() error
 	Debug(typeData TypeData, fields ...Field)
 	DebugWithContext(ctx context.Context, typeData TypeData, fields ...Field)
 	Error(typeData TypeData, fields ...Field)
@@ -368,16 +367,22 @@ func WithTheme(theme TypeTheme) telemetryOptions {
 
 // Публичные методы
 func (asyncWriter *asyncWriter) Close() error {
-	close(asyncWriter.ch)
-	asyncWriter.wg.Wait()
-	if closer, ok := asyncWriter.writer.(io.Closer); ok {
-		return closer.Close()
-	}
-	return nil
-}
-func (asyncWriter *asyncWriter) Sync() error {
-	asyncWriter.wg.Wait()
-	return nil
+	var err error
+	asyncWriter.once.Do(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("ulog: panic during asyncWriter.Close(): %v", r)
+			}
+		}()
+		close(asyncWriter.ch)
+		asyncWriter.wg.Wait()
+		if asyncWriter.writer != nil {
+			if closer, ok := asyncWriter.writer.(io.Closer); ok {
+				err = closer.Close()
+			}
+		}
+	})
+	return err
 }
 func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 	buf := make([]byte, len(p))
@@ -387,7 +392,8 @@ func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 	case asyncWriter.ch <- buf:
 		return len(p), nil
 	default:
-		return asyncWriter.writer.Write(p)
+		asyncWriter.wg.Done()
+		return asyncWriter.writer.Write(buf)
 	}
 }
 func (standardTelemetry *standardTelemetry) Write(p []byte) (n int, err error) {
@@ -489,7 +495,9 @@ func (universalTelemetry *universalTelemetry) Fatal(typeData TypeData, fields ..
 	}
 	universalTelemetry.route(context.Background(), attributes, fields)
 	if universalTelemetry.mode == ModeAsync {
-		universalTelemetry.Sync()
+		if asyncWriter, ok := universalTelemetry.writer.(*asyncWriter); ok {
+			asyncWriter.sync()
+		}
 	}
 	osExit(1)
 }
@@ -503,7 +511,9 @@ func (universalTelemetry *universalTelemetry) FatalWithContext(context context.C
 	}
 	universalTelemetry.route(context, attributes, fields)
 	if universalTelemetry.mode == ModeAsync {
-		universalTelemetry.Sync()
+		if asyncWriter, ok := universalTelemetry.writer.(*asyncWriter); ok {
+			asyncWriter.sync()
+		}
 	}
 	osExit(1)
 }
@@ -573,7 +583,7 @@ func (universalTelemetry *universalTelemetry) SetMode(mode TypeMode, writer io.W
 	defer universalTelemetry.mutex.Unlock()
 	if universalTelemetry.mode == ModeAsync {
 		if asyncWriter, ok := universalTelemetry.writer.(*asyncWriter); ok {
-			asyncWriter.Close()
+			asyncWriter.sync()
 		}
 	}
 	switch mode {
@@ -598,23 +608,6 @@ func (universalTelemetry *universalTelemetry) SetTheme(theme TypeTheme) {
 	case ThemeLight:
 		universalTelemetry.theme = themeLight
 	}
-}
-func (universalTelemetry *universalTelemetry) Sync() error {
-	universalTelemetry.mutex.RLock()
-	currentWriter := universalTelemetry.writer
-	universalTelemetry.mutex.RUnlock()
-	if universalTelemetry.mode == ModeAsync {
-		if asyncWriter, ok := currentWriter.(*asyncWriter); ok {
-			if err := asyncWriter.Sync(); err != nil {
-				return err
-			}
-			currentWriter = asyncWriter.writer
-		}
-	}
-	if syncer, ok := currentWriter.(interface{ Sync() error }); ok {
-		return syncer.Sync()
-	}
-	return nil
 }
 func (universalTelemetry *universalTelemetry) Warn(typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
