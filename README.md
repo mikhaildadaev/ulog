@@ -90,16 +90,16 @@ These benchmarks measure the cost of formatting and extracting context by writin
 Benchmark data writes structured JSON logs to a **real file** with **atomic rotation** enabled.
 
 #### MultiThread
-| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|------------|--------------|---------------|--------|
-| Async |     999.9K |        6,900 |          1962 |      6 |
-| Sync  |     152,7K |        7,800 |          1801 |      5 |
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |     212.2K |        7,784 |          1963 |      6 |
+| Sync  | **AllSupportLevels** |     140.6K |        8,360 |          1800 |      5 |
 
 #### SingleThread
-| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|------------|--------------|---------------|--------|
-| Async |     969,7K |        6,000 |          1962 |      6 |
-| Sync  |     234,4K |        5,500 |          1798 |      5 |
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |     244.5K |        6,471 |          1965 |      6 |
+| Sync  | **AllSupportLevels** |     200.8K |        6,390 |          1802 |      5 |
 
 > **Note**
 >
@@ -111,16 +111,16 @@ Benchmark data writes structured JSON logs to a **real file** with **atomic rota
 Benchmark data that measures the internal costs of the `ulog` HTTP receiver using `httptest.Server` without network latency.
 
 #### MultiThread
-| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|------------|--------------|---------------|--------|
-| Async |     999,9M |       27,000 |         8,400 |     82 |
-| Sync  |      45,4K |       26,400 |         9,100 |     89 |
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |      18.1K |       55,427 |         8,828 |     82 |
+| Sync  | **AllSupportLevels** |      19.5K |       64,989 |        31,419 |     91 |
 
 #### SingleThread
-| Mode  | Operations | Time (ns/op) | Memory (B/op) | Allocs |
-|-------|------------|--------------|---------------|--------|
-| Async |     555,2K |       42,100 |         9,100 |     82 |
-| Sync  |      13,6K |       82,500 |         9,400 |     85 |
+| Mode  | Level                | Operations | Time (ns/op) | Memory (B/op) | Allocs |
+|-------|----------------------|------------|--------------|---------------|--------|
+| Async | **AllSupportLevels** |      13.1K |       76,392 |         9,179 |     82 |
+| Sync  | **AllSupportLevels** |      14.4K |       81,589 |         8,940 |     85 |
 
 > **Note**
 >
@@ -152,12 +152,12 @@ func main() {
     telemetryAsync.WarnWithContext(ctx, DataLog, "high latency", ulog.Duration("latency", 150*time.Millisecond))
     telemetryAsync.Error(DataLog, "database error", ulog.Error(nil))
     telemetryAsync.ErrorWithContext(ctx, DataLog, "database error", ulog.Error(nil))
-    telemetryAsync.Sync()
     telemetrySync := ulog.NewTelemetry(
         ulog.WithFormat(ulog.FormatText),
         ulog.WithMode(ulog.ModeSync, os.Stdout),
         ulog.WithTheme(ulog.ThemeDark),
     )
+    defer telemetrySync.Close()
     telemetrySync.Debug(DataLog, "debugging request", ulog.String("path", "/api/user"))
     telemetrySync.DebugWithContext(ctx, DataLog, "debugging request", ulog.String("path", "/api/user"))
     telemetrySync.Info(DataLog, "server started", ulog.Int("port", 8080))
@@ -170,6 +170,7 @@ func main() {
         ulog.WithFormat(ulog.FormatJson),
         ulog.WithMode(ulog.ModeSync, os.Stdout),
     )
+    defer telemetry.Close()
     telemetryLog := ulog.NewTelemetryLog(ulog.LevelError, telemetry)
     telemetryLog.Print("error from standard logger")
 }
