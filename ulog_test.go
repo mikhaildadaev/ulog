@@ -41,13 +41,26 @@ func Test_Telemetry(t *testing.T) {
 		WithFormat(FormatText),
 		WithMode(ModeSync, buf),
 	)
+	defer telemetry.Close()
 	if telemetry == nil {
 		t.Fatal("NewTelemetry returned nil")
 	}
 	telemetry.Info(DataLog, String("message", "test info text"))
-	telemetry.Sync()
 	if !strings.Contains(buf.String(), "test info text") {
 		t.Errorf("Expected 'test info text', got %q", buf.String())
+	}
+}
+func Test_Telemetry_AsyncWriter(t *testing.T) {
+	var buf bytes.Buffer
+	asyncWriter := newAsyncWriter(&buf, 10)
+	for i := 0; i < 100; i++ {
+		asyncWriter.Write([]byte("test"))
+	}
+	if err := asyncWriter.Close(); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Error("no data written")
 	}
 }
 func Test_Telemetry_Close(t *testing.T) {
@@ -175,19 +188,19 @@ func Test_Telemetry_Extractor(t *testing.T) {
 				WithFormat(FormatJson),
 				WithMode(ModeSync, buf),
 			)
+			defer telemetry.Close()
 			telemetry.InfoWithContext(elem.context, DataLog, String("message", "test info text"))
-			telemetry.Sync()
 			output := buf.String()
 			checkExtractor(t, elem, output)
 		})
 		t.Run("SetExtractor/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
 			telemetry := NewTelemetry()
+			defer telemetry.Close()
 			telemetry.SetExtractor(elem.keys...)
 			telemetry.SetFormat(FormatJson)
 			telemetry.SetMode(ModeSync, buf)
 			telemetry.InfoWithContext(elem.context, DataLog, String("message", "test info text"))
-			telemetry.Sync()
 			output := buf.String()
 			checkExtractor(t, elem, output)
 		})
@@ -291,8 +304,8 @@ func Test_Telemetry_Format(t *testing.T) {
 				WithFormat(elem.format),
 				WithMode(ModeSync, buf, 0),
 			)
+			defer telemetry.Close()
 			telemetry.Info(DataLog, String("message", "test info text"))
-			telemetry.Sync()
 			output := buf.String()
 			if !strings.Contains(output, elem.expect) {
 				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
@@ -301,10 +314,10 @@ func Test_Telemetry_Format(t *testing.T) {
 		t.Run("SetFormat/"+elem.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
 			telemetry := NewTelemetry()
+			defer telemetry.Close()
 			telemetry.SetFormat(elem.format)
 			telemetry.SetMode(ModeSync, buf, 0)
 			telemetry.Info(DataLog, String("message", "test info text"))
-			telemetry.Sync()
 			output := buf.String()
 			if !strings.Contains(output, elem.expect) {
 				t.Errorf("Expected output to contain %q, got %q", elem.expect, output)
@@ -352,8 +365,8 @@ func Test_Telemetry_Level(t *testing.T) {
 				WithLevel(elem.level),
 				WithMode(ModeSync, buf, 0),
 			)
+			defer telemetry.Close()
 			elem.functionTest(telemetry)
-			telemetry.Sync()
 			if elem.responseBool && buf.Len() == 0 {
 				t.Error("Expected log to be written, but got nothing")
 			}
@@ -367,7 +380,6 @@ func Test_Telemetry_Level(t *testing.T) {
 			telemetry.SetLevel(elem.level)
 			telemetry.SetMode(ModeSync, buf, 0)
 			elem.functionTest(telemetry)
-			telemetry.Sync()
 			if elem.responseBool && buf.Len() == 0 {
 				t.Error("Expected log to be written, but got nothing")
 			}
@@ -402,8 +414,8 @@ func Test_Telemetry_Method(t *testing.T) {
 				WithMode(ModeSync, buf),
 				WithLevel(elem.level),
 			)
+			defer telemetry.Close()
 			elem.functionTest(telemetry)
-			telemetry.Sync()
 			output := buf.String()
 			if elem.responseBool && !strings.Contains(output, "message") {
 				t.Errorf("Expected message not found in output: %q", output)
@@ -418,7 +430,7 @@ func Test_Telemetry_Mode(t *testing.T) {
 			WithMode(ModeAsync, writerBuf, 1000),
 		)
 		telemetry.Info(DataLog, String("message", "test info text"))
-		telemetry.Sync()
+		telemetry.Close()
 		if writerBuf.Len() == 0 {
 			t.Error("Async mode: expected output, got nothing")
 		}
@@ -431,7 +443,7 @@ func Test_Telemetry_Mode(t *testing.T) {
 		telemetry := NewTelemetry()
 		telemetry.SetMode(ModeAsync, writerBuf, 1000)
 		telemetry.Info(DataLog, String("message", "test info text"))
-		telemetry.Sync()
+		telemetry.Close()
 		if writerBuf.Len() == 0 {
 			t.Error("Async mode: expected output, got nothing")
 		}
@@ -445,7 +457,7 @@ func Test_Telemetry_Mode(t *testing.T) {
 			WithMode(ModeSync, writerBuf),
 		)
 		telemetry.Info(DataLog, String("message", "test info text"))
-		telemetry.Sync()
+		telemetry.Close()
 		if writerBuf.Len() == 0 {
 			t.Error("Sync mode: expected output, got nothing")
 		}
@@ -458,42 +470,12 @@ func Test_Telemetry_Mode(t *testing.T) {
 		telemetry := NewTelemetry()
 		telemetry.SetMode(ModeSync, writerBuf)
 		telemetry.Info(DataLog, String("message", "test info text"))
-		telemetry.Sync()
+		telemetry.Close()
 		if writerBuf.Len() == 0 {
 			t.Error("Sync mode: expected output, got nothing")
 		}
 		if !strings.Contains(writerBuf.String(), "test info text") {
 			t.Error("Sync mode: expected message not found")
-		}
-	})
-}
-func Test_Telemetry_Sync(t *testing.T) {
-	t.Run("Async", func(t *testing.T) {
-		buf := &bytes.Buffer{}
-		telemetry := NewTelemetry(WithMode(ModeAsync, buf, 1000))
-		defer telemetry.Close()
-		telemetry.Info(DataLog, String("message", "test info text"))
-		err := telemetry.Sync()
-		if err != nil {
-			t.Errorf("Sync() returned error: %v", err)
-		}
-		output := buf.String()
-		if !strings.Contains(output, "test info text") {
-			t.Error("Message not written after Sync")
-		}
-	})
-	t.Run("Sync", func(t *testing.T) {
-		buf := &bytes.Buffer{}
-		telemetry := NewTelemetry(WithMode(ModeSync, buf))
-		defer telemetry.Close()
-		telemetry.Info(DataLog, String("message", "test info text"))
-		err := telemetry.Sync()
-		if err != nil {
-			t.Errorf("Sync() returned error: %v", err)
-		}
-		output := buf.String()
-		if !strings.Contains(output, "test info text") {
-			t.Error("Message not written after Sync")
 		}
 	})
 }
@@ -545,8 +527,8 @@ func Test_Telemetry_Theme(t *testing.T) {
 					WithMode(ModeSync, buf),
 					WithTheme(elem.theme),
 				)
+				defer telemetry.Close()
 				functionTest(telemetry)
-				telemetry.Sync()
 				output := buf.String()
 				checkTheme(t, level, expectedPrefix, elem, output)
 			}
@@ -560,12 +542,12 @@ func Test_Telemetry_Theme(t *testing.T) {
 			testLevel := func(level string, functionTest func(Telemetry), expectedPrefix string) {
 				buf := &bytes.Buffer{}
 				telemetry := NewTelemetry()
+				defer telemetry.Close()
 				telemetry.SetFormat(FormatText)
 				telemetry.SetLevel(LevelDebug)
 				telemetry.SetMode(ModeSync, buf)
 				telemetry.SetTheme(elem.theme)
 				functionTest(telemetry)
-				telemetry.Sync()
 				output := buf.String()
 				checkTheme(t, level, expectedPrefix, elem, output)
 			}
@@ -583,6 +565,7 @@ func Test_TelemetryLog(t *testing.T) {
 		WithFormat(FormatText),
 		WithMode(ModeSync, buf),
 	)
+	defer telemetry.Close()
 	telemetryLog := NewTelemetryLog(LevelInfo, telemetry)
 	telemetryLog.Print("test text")
 	if !strings.Contains(buf.String(), "test text") {
@@ -610,6 +593,7 @@ func Test_TelemetryLog_Ignore(t *testing.T) {
 				WithFormat(FormatText),
 				WithMode(ModeSync, buf),
 			)
+			defer telemetry.Close()
 			telemetryLog := NewTelemetryLog(LevelError, telemetry)
 			telemetryLog.Print(elem.message)
 			output := buf.String()
@@ -708,7 +692,7 @@ func Test_SinkFactory_Discord(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkDiscord.Sync()
+	sinkDiscord.Close()
 }
 func Test_SinkFactory_Kafka(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -771,7 +755,7 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkKafka.Sync()
+	sinkKafka.Close()
 }
 func Test_SinkFactory_Loki(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -836,7 +820,7 @@ func Test_SinkFactory_Loki(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkLoki.Sync()
+	sinkLoki.Close()
 }
 func Test_SinkFactory_Prometheus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -869,7 +853,7 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkPrometheus.Sync()
+	sinkPrometheus.Close()
 }
 func Test_SinkFactory_Slack(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -900,7 +884,7 @@ func Test_SinkFactory_Slack(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkSlack.Sync()
+	sinkSlack.Close()
 }
 func Test_SinkFactory_Telegram(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -938,7 +922,7 @@ func Test_SinkFactory_Telegram(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkTelegram.Sync()
+	sinkTelegram.Close()
 }
 func Test_SinkFactory_Tempo(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -967,7 +951,7 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		Int64("duration", 100),
 	}
 	sinkTempo.WriteWithAttributes(writeAttributes{typeData: DataTrace}, fields)
-	sinkTempo.Sync()
+	sinkTempo.Close()
 }
 func Test_SinkFactory_Wechat(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1001,7 +985,7 @@ func Test_SinkFactory_Wechat(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	sinkWechat.Sync()
+	sinkWechat.Close()
 }
 func Test_SinkFile(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -1105,7 +1089,7 @@ func Test_SinkFile_Rotate(t *testing.T) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if err := sinkFile.Sync(); err != nil {
+	if err := sinkFile.Close(); err != nil {
 		t.Errorf("Sync error: %v", err)
 	}
 	time.Sleep(500 * time.Millisecond)
@@ -1210,10 +1194,10 @@ func Test_SinkHttp_Batch(t *testing.T) {
 	}
 }
 func Test_SinkHttp_Circuit(t *testing.T) {
-	newServer := func(behavior func(count int) int) (*httptest.Server, *int32) {
-		var count int32
+	newServer := func(behavior func(count int) int) (*httptest.Server, *atomic.Int32) {
+		var count atomic.Int32
 		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			c := int(atomic.AddInt32(&count, 1))
+			c := int(count.Add(1))
 			if behavior(c) >= 400 {
 				w.WriteHeader(behavior(c))
 			} else {
@@ -1230,8 +1214,8 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			sinkHttp.WriteWithAttributes(attrs, fields)
 		}
-		if atomic.LoadInt32(cnt) != 10 {
-			t.Errorf("requests = %d, want 10", *cnt)
+		if cnt.Load() != 10 {
+			t.Errorf("requests = %d, want 10", cnt.Load())
 		}
 	})
 	t.Run("Close", func(t *testing.T) {
@@ -1249,7 +1233,7 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 		sinkHttp.WriteWithAttributes(attrs, fields)
 		time.Sleep(60 * time.Millisecond)
 		sinkHttp.WriteWithAttributes(attrs, fields)
-		if atomic.LoadInt32(&sinkHttp.circuitState) != circuitStateClosed {
+		if sinkHttp.circuitState.Load() != circuitStateClosed {
 			t.Error("should be Closed")
 		}
 	})
@@ -1265,7 +1249,7 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 		sinkHttp.WriteWithAttributes(attrs, fields)
 		time.Sleep(60 * time.Millisecond)
 		sinkHttp.WriteWithAttributes(attrs, fields)
-		if atomic.LoadInt32(&sinkHttp.circuitState) != circuitStateOpen {
+		if sinkHttp.circuitState.Load() != circuitStateOpen {
 			t.Error("should stay Open after HalfOpen failure")
 		}
 	})
@@ -1277,15 +1261,15 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 		fields := []Field{String("msg", "test")}
 		sinkHttp.WriteWithAttributes(attrs, fields)
 		sinkHttp.WriteWithAttributes(attrs, fields)
-		if atomic.LoadInt32(&sinkHttp.circuitState) != circuitStateOpen {
+		if sinkHttp.circuitState.Load() != circuitStateOpen {
 			t.Error("should be Open")
 		}
 		_, err := sinkHttp.WriteWithAttributes(attrs, fields)
 		if err == nil || err.Error() != "circuit breaker is open" {
 			t.Error("should be blocked")
 		}
-		if atomic.LoadInt32(cnt) != 2 {
-			t.Errorf("requests = %d, want 2", *cnt)
+		if cnt.Load() != 2 {
+			t.Errorf("requests = %d, want 2", cnt.Load())
 		}
 	})
 	t.Run("Reset", func(t *testing.T) {
@@ -1300,11 +1284,11 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
 		fields := []Field{String("msg", "test")}
 		sinkHttp.WriteWithAttributes(attrs, fields)
-		if atomic.LoadInt32(&sinkHttp.circuitFailures) != 1 {
+		if sinkHttp.circuitFailures.Load() != 1 {
 			t.Error("failures should be 1")
 		}
 		sinkHttp.WriteWithAttributes(attrs, fields)
-		if atomic.LoadInt32(&sinkHttp.circuitFailures) != 0 {
+		if sinkHttp.circuitFailures.Load() != 0 {
 			t.Error("failures should be 0")
 		}
 	})
