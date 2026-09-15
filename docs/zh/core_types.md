@@ -21,7 +21,7 @@ telemetry.Info(ulog.DataLog,
     ulog.String("message", "user login"),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -40,7 +40,7 @@ telemetry.Info(ulog.DataMetric,
     ulog.Float64("value", 1.0),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -61,7 +61,7 @@ telemetry.Info(ulog.DataTrace,
     ulog.Int64("duration", 150),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -84,7 +84,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Bool("bool", true),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -102,7 +102,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Bools("bools", []bool{true, false}),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -120,7 +120,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Duration("duration", 5*time.Second),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -138,7 +138,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Durations("durations", []time.Duration{5*time.Second, 10*time.Second}),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -156,7 +156,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Error(fmt.Errorf("err")),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -174,7 +174,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Errors([]error{fmt.Errorf("err1"), fmt.Errorf("err2")}),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -192,7 +192,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Float64("float64", 3.14159),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -210,7 +210,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Floats64("floats64", []float64{1.5, 2.5}),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -228,7 +228,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Int("int", 42),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -246,7 +246,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Ints("ints", []int{10, 20, 30}),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -264,7 +264,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Int64("int64", 1234567890),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -282,7 +282,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Ints64("ints64", []int64{1234567890, 9876543210}),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -300,7 +300,7 @@ telemetry.Info(ulog.DataLog,
     ulog.String("string", "str"),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -318,7 +318,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Strings("strings", []string{"str1", "str2", "str3"})
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -336,7 +336,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Time("time", time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC)),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",
@@ -354,7 +354,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Times("times", []time.Time{time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC),time.Date(2025, 4, 22, 12, 0, 0, 0, time.UTC)}),
 )
 ```
-
+**Output JSON:**
 ```json
 {
     "level":"info",

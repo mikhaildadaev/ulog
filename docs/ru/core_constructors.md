@@ -52,13 +52,13 @@ telemetry.Info(ulog.DataTrace,
 	ulog.String("span_id", "span-456"),
 )
 ```
-
+**Output JSON:**
 ```json
 {"level":"info","type":"log","message":"text","node_id":"123-abc","trace_id":"abc-123"}
 {"level":"info","type":"metric","name":"payments","value":99.99,"node_id":"123-abc","trace_id":"abc-123"}
 {"level":"info","type":"trace","name":"payment_processing","duration":150,"span_id":"span-456","node_id":"123-abc","trace_id":"abc-123"}
 ```
-
+**Output TEXT:**
 ```text
 [INFO] type="log" message="text"
 [INFO] type="metric" name="payments" value=99.99
@@ -91,7 +91,7 @@ stdLogger.Print("this will be logged as ERROR")
 stdLogger.Printf("user %s failed to login", "john")
 stdLogger.Println("another error message")
 ```
-
+**Output TEXT:**
 ```text
 [ERROR] type="log" message="this will be logged as ERROR"
 [ERROR] type="log" message="user john failed to login"
