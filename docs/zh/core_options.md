@@ -44,7 +44,7 @@ telemetry.InfoWithContext(ctx, ulog.DataTrace,
     ulog.Int64("duration", 150),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -105,10 +105,11 @@ telemetry.Info(ulog.DataLog,
     ulog.String("message", "text message"),
 )
 ```
-Output:
+
 ```json
 {"level":"info","type":"log","message":"json message"}
 ```
+
 ```text
 [INFO] type="log" message="text message"
 ```
@@ -134,7 +135,7 @@ telemetry.Warn(ulog.DataLog,
     ulog.String("message", "warn message"),
 )
 ```
-Output:
+
 ```json
 {"level":"debug","type":"log","message":"debug message"}
 {"level":"error","type":"log","message":"error message"}
@@ -157,7 +158,7 @@ telemetry.Info(ulog.DataLog,
     ulog.String("message", "sync message"),
 )
 ```
-Output:
+
 ```json
 {"level":"info","type":"log","message":"async message"}
 {"level":"info","type":"log","message":"sync message"}
@@ -179,7 +180,7 @@ telemetry.Info(ulog.DataLog,
     ulog.String("message", "light message"),
 )
 ```
-Output:
+
 ```text
 [INFO] type="log" message="dark message"
 [INFO] type="log" message="light message"

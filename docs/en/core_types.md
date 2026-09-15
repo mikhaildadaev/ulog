@@ -10,6 +10,7 @@ This page documents all data types `DataLog`, `DataMetric`, `DataTrace` and all 
 
 ## Data
 One API for three signal types: logs, metrics, and traces
+
 ### Log
 Human-readable log messages
 ```go
@@ -19,7 +20,7 @@ telemetry.Info(ulog.DataLog,
     ulog.String("message", "user login"),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -27,6 +28,7 @@ Output:
     "message":"user login"
 }
 ```
+
 ### Metric
 Machine metrics
 ```go
@@ -37,7 +39,7 @@ telemetry.Info(ulog.DataMetric,
     ulog.Float64("value", 1.0),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -46,6 +48,7 @@ Output:
     "value":1.0
 }
 ```
+
 ### Trace
 Distributed traces
 ```go
@@ -57,7 +60,7 @@ telemetry.Info(ulog.DataTrace,
     ulog.Int64("duration", 150),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -70,6 +73,7 @@ Output:
 
 ## Field
 16 type-safe field constructors.
+
 ### Bool
 Boolean field
 ```go
@@ -79,7 +83,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Bool("bool", true),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -97,7 +101,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Bools("bools", []bool{true, false}),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -115,7 +119,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Duration("duration", 5*time.Second),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -133,7 +137,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Durations("durations", []time.Duration{5*time.Second, 10*time.Second}),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -151,7 +155,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Error(fmt.Errorf("err")),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -169,7 +173,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Errors([]error{fmt.Errorf("err1"), fmt.Errorf("err2")}),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -187,7 +191,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Float64("float64", 3.14159),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -205,7 +209,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Floats64("floats64", []float64{1.5, 2.5}),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -223,7 +227,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Int("int", 42),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -241,7 +245,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Ints("ints", []int{10, 20, 30}),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -259,7 +263,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Int64("int64", 1234567890),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -277,7 +281,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Ints64("ints64", []int64{1234567890, 9876543210}),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -295,7 +299,7 @@ telemetry.Info(ulog.DataLog,
     ulog.String("string", "str"),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -313,7 +317,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Strings("strings", []string{"str1", "str2", "str3"})
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -331,7 +335,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Time("time", time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC)),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",
@@ -349,7 +353,7 @@ telemetry.Info(ulog.DataLog,
     ulog.Times("times", []time.Time{time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC),time.Date(2025, 4, 22, 12, 0, 0, 0, time.UTC)}),
 )
 ```
-Output:
+
 ```json
 {
     "level":"info",

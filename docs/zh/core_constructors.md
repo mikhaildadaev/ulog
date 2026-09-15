@@ -52,12 +52,13 @@ telemetry.Info(ulog.DataTrace,
 	ulog.String("span_id", "span-456"),
 )
 ```
-Output:
+
 ```json
 {"level":"info","type":"log","message":"text","node_id":"123-abc","trace_id":"abc-123"}
 {"level":"info","type":"metric","name":"payments","value":99.99,"node_id":"123-abc","trace_id":"abc-123"}
 {"level":"info","type":"trace","name":"payment_processing","duration":150,"span_id":"span-456","node_id":"123-abc","trace_id":"abc-123"}
 ```
+
 ```text
 [INFO] type="log" message="text"
 [INFO] type="metric" name="payments" value=99.99
@@ -70,7 +71,7 @@ Output:
 | [`WithFormat()`](/en/core_options#withformat-setformat)         | Output format: structured JSON or human-readable TEXT with optional ANSI colors | `FormatJson`, `FormatText`                                         | `FormatJson` |
 | [`WithLevel()`](/en/core_options#withlevel-setlevel)            | Minimum log severity. Only messages at or above this level are written          | `LevelDebug`, `LevelError`, `LevelFatal`, `LevelInfo`, `LevelWarn` | `LevelInfo`  |
 | [`WithMode()`](/en/core_options#withmode-setmode)               | Write mode: non-blocking `ModeAsync` with buffer or blocking `ModeSync`         | `ModeAsync`, `ModeSync`                                            | `ModeSync`   |
-| [`WithTheme()`](/en/core_options#withtheme-settheme)            | ANSI color theme for TEXT output: optimized for dark or light terminals         | `ThemeDark`, `ThemeLight`                                          | `ThemeDark`  |
+| [`WithTheme()`](/en/core_options#withtheme-settheme)            | ANSI color theme for TEXT  optimized for dark or light terminals         | `ThemeDark`, `ThemeLight`                                          | `ThemeDark`  |
 
 | Name                                | Description                                    | Values                                                                                                                                                     |
 |-------------------------------------|------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -90,7 +91,7 @@ stdLogger.Print("this will be logged as ERROR")
 stdLogger.Printf("user %s failed to login", "john")
 stdLogger.Println("another error message")
 ```
-Output:
+
 ```text
 [ERROR] type="log" message="this will be logged as ERROR"
 [ERROR] type="log" message="user john failed to login"
