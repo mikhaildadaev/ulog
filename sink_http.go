@@ -782,6 +782,9 @@ func (sinkHttp *SinkHttp) circuitRecord(success bool) {
 	}
 }
 func (sinkHttp *SinkHttp) cleanupDedupCache() {
+	sinkHttp.mutex.Lock()
+	dedupStopChan := sinkHttp.dedupStopChan
+	sinkHttp.mutex.Unlock()
 	interval := sinkHttp.dedupWindow / 10
 	if interval < 100*time.Millisecond {
 		interval = 100 * time.Millisecond
@@ -792,7 +795,7 @@ func (sinkHttp *SinkHttp) cleanupDedupCache() {
 		select {
 		case <-ticker.C:
 			sinkHttp.evictDedupCache()
-		case <-sinkHttp.dedupStopChan:
+		case <-dedupStopChan:
 			return
 		}
 	}

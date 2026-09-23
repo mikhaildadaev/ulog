@@ -19,7 +19,6 @@ package ulog
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -174,8 +173,7 @@ func NewSinkDiscord(endPoint, userName, avatarURL string, params ...httpParams) 
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
-func NewSinkKafka(restProxyURL, topic string, params ...httpParams) *SinkKafka {
-	endPoint := strings.TrimRight(restProxyURL, "/") + "/topics/" + topic
+func NewSinkKafka(endPoint string, params ...httpParams) *SinkKafka {
 	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpBatch(100, 5*time.Second),
 		WithHttpFilterData(DataLog),
@@ -377,7 +375,7 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 										TraceID:           traceID,
 										SpanID:            spanID,
 										Name:              name,
-										Kind:              3,
+										Kind:              1,
 										StartTimeUnixNano: fmt.Sprintf("%d", startNano),
 										EndTimeUnixNano:   fmt.Sprintf("%d", endNano),
 										Attributes:        attrs,
