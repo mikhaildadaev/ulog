@@ -157,7 +157,7 @@ func NewSinkDiscord(endPoint, userName, avatarURL string, params ...httpParams) 
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message := getLogData(fields)
+			message := getDataLog(fields)
 			if message == "" {
 				message = "empty message"
 			}
@@ -211,7 +211,7 @@ func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelInfo),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message := getLogData(fields)
+			message := getDataLog(fields)
 			if message == "" {
 				message = "empty message"
 			}
@@ -256,7 +256,7 @@ func NewSinkPrometheus(endPoint string, params ...httpParams) *SinkPrometheus {
 	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataMetric),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			name, value := getMetricData(fields)
+			name, value := getDataMetric(fields)
 			attrs := getOpenTelemetryAttributes(fields, "name", "value")
 			prometheusData := PrometheusData{
 				ResourceMetrics: []PrometheusResourceMetrics{
@@ -304,7 +304,7 @@ func NewSinkSlack(endPoint, userName, iconEmoji, iconURL, channel string, params
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message := getLogData(fields)
+			message := getDataLog(fields)
 			if message == "" {
 				message = "empty message"
 			}
@@ -326,7 +326,7 @@ func NewSinkTelegram(endPoint, chatID string, params ...httpParams) *SinkTelegra
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message := getLogData(fields)
+			message := getDataLog(fields)
 			if message == "" {
 				message = "empty message"
 			}
@@ -345,7 +345,7 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataTrace),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			name, traceID, spanID, duration, err := getTraceData(fields)
+			name, traceID, spanID, duration, err := getDataTrace(fields)
 			if err != nil {
 				return nil, fmt.Errorf("invalid trace data: %w", err)
 			}
@@ -396,7 +396,7 @@ func NewSinkWechat(endPoint string, params ...httpParams) *SinkWechat {
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message := getLogData(fields)
+			message := getDataLog(fields)
 			if message == "" {
 				message = "empty message"
 			}

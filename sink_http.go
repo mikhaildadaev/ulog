@@ -379,13 +379,7 @@ func defaultformatter(attributes writeAttributes, fields []Field) ([]byte, error
 	formatJson(buf, attributes, fields)
 	return buf.Bytes(), nil
 }
-func getField(field Field) any {
-	if extractor, ok := fieldExtractor[field.typeValue]; ok {
-		return extractor(field)
-	}
-	return nil
-}
-func getLogData(fields []Field) string {
+func getDataLog(fields []Field) string {
 	for _, field := range fields {
 		if field.nameKey == "message" {
 			return field.valueString
@@ -393,7 +387,7 @@ func getLogData(fields []Field) string {
 	}
 	return ""
 }
-func getMetricData(fields []Field) (name string, value float64) {
+func getDataMetric(fields []Field) (name string, value float64) {
 	for _, field := range fields {
 		switch field.nameKey {
 		case "name":
@@ -413,6 +407,80 @@ func getMetricData(fields []Field) (name string, value float64) {
 		name = "unnamed-metric"
 	}
 	return name, value
+}
+func getDataTrace(fields []Field) (name, traceID, spanID string, duration int64, err error) {
+	var (
+		rawTraceID string
+		rawSpanID  string
+		rawName    string
+		rawDur     int64
+		hasDur     bool
+	)
+	for _, f := range fields {
+		switch f.nameKey {
+		case "trace_id":
+			if f.typeValue == FieldString {
+				rawTraceID = f.valueString
+			}
+		case "span_id":
+			if f.typeValue == FieldString {
+				rawSpanID = f.valueString
+			}
+		case "name":
+			if f.typeValue == FieldString {
+				rawName = f.valueString
+			}
+		case "duration":
+			var ms int64
+			switch f.typeValue {
+			case FieldInt:
+				ms = int64(f.valueInt)
+			case FieldInt64:
+				ms = f.valueInt64
+			case FieldDuration:
+				ms = f.valueDuration.Milliseconds()
+			case FieldString:
+				d, parseErr := time.ParseDuration(f.valueString)
+				if parseErr != nil {
+					return "", "", "", 0, fmt.Errorf("invalid duration string: %w", parseErr)
+				}
+				ms = d.Milliseconds()
+			}
+			rawDur = ms
+			hasDur = true
+		}
+	}
+	if rawTraceID == "" {
+		return "", "", "", 0, fmt.Errorf("trace_id is required")
+	}
+	if traceID, err = normalizeTraceID(rawTraceID); err != nil {
+		return "", "", "", 0, err
+	}
+	if rawSpanID == "" {
+		return "", "", "", 0, fmt.Errorf("span_id is required")
+	}
+	if spanID, err = normalizeSpanID(rawSpanID); err != nil {
+		return "", "", "", 0, err
+	}
+	name = rawName
+	if name == "" {
+		name = "unnamed-trace"
+	}
+	switch {
+	case hasDur && rawDur > 0:
+		duration = rawDur
+	case hasDur && rawDur <= 0:
+		return "", "", "", 0, fmt.Errorf("duration must be positive, got %d", rawDur)
+	default:
+		duration = 1
+	}
+	return name, traceID, spanID, duration, nil
+}
+func getField(field Field) any {
+	if extractor, ok := fieldExtractor[field.typeValue]; ok {
+		return extractor(field)
+	}
+	return nil
 }
 func getKafkaAttributes(fields []Field) map[string]any {
 	valueData := make(map[string]any, len(fields))
@@ -584,74 +652,6 @@ func getOpenTelemetryAttributes(fields []Field, skipKeys ...string) []OTLPAttrib
 		}
 	}
 	return attrs
-}
-func getTraceData(fields []Field) (name, traceID, spanID string, duration int64, err error) {
-	var (
-		rawTraceID string
-		rawSpanID  string
-		rawName    string
-		rawDur     int64
-		hasDur     bool
-	)
-	for _, f := range fields {
-		switch f.nameKey {
-		case "trace_id":
-			if f.typeValue == FieldString {
-				rawTraceID = f.valueString
-			}
-		case "span_id":
-			if f.typeValue == FieldString {
-				rawSpanID = f.valueString
-			}
-		case "name":
-			if f.typeValue == FieldString {
-				rawName = f.valueString
-			}
-		case "duration":
-			var ms int64
-			switch f.typeValue {
-			case FieldInt:
-				ms = int64(f.valueInt)
-			case FieldInt64:
-				ms = f.valueInt64
-			case FieldDuration:
-				ms = f.valueDuration.Milliseconds()
-			case FieldString:
-				d, parseErr := time.ParseDuration(f.valueString)
-				if parseErr != nil {
-					return "", "", "", 0, fmt.Errorf("invalid duration string: %w", parseErr)
-				}
-				ms = d.Milliseconds()
-			}
-			rawDur = ms
-			hasDur = true
-		}
-	}
-	if rawTraceID == "" {
-		return "", "", "", 0, fmt.Errorf("trace_id is required")
-	}
-	if traceID, err = normalizeTraceID(rawTraceID); err != nil {
-		return "", "", "", 0, err
-	}
-	if rawSpanID == "" {
-		return "", "", "", 0, fmt.Errorf("span_id is required")
-	}
-	if spanID, err = normalizeSpanID(rawSpanID); err != nil {
-		return "", "", "", 0, err
-	}
-	name = rawName
-	if name == "" {
-		name = "unnamed-trace"
-	}
-	switch {
-	case hasDur && rawDur > 0:
-		duration = rawDur
-	case hasDur && rawDur <= 0:
-		return "", "", "", 0, fmt.Errorf("duration must be positive, got %d", rawDur)
-	default:
-		duration = 1
-	}
-	return name, traceID, spanID, duration, nil
 }
 func normalizeTraceID(value string) (string, error) {
 	v := strings.ToLower(strings.ReplaceAll(value, "-", ""))
