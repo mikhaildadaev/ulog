@@ -19,7 +19,6 @@ package ulog
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -42,16 +41,45 @@ type KafkaData struct {
 }
 type SinkKafka = SinkHttp
 type LokiData struct {
-	Streams []struct {
-		Stream map[string]string `json:"stream"`
-		Values [][]string        `json:"values"`
-	} `json:"streams"`
+	ResourceLogs []LokiResourceLogs `json:"resourceLogs"`
+}
+type LokiResourceLogs struct {
+	Resource  OTLPResource    `json:"resource"`
+	ScopeLogs []LokiScopeLogs `json:"scopeLogs"`
+}
+type LokiScopeLogs struct {
+	Scope      OTLPScope       `json:"scope"`
+	LogRecords []LokiLogRecord `json:"logRecords"`
+}
+type LokiLogRecord struct {
+	TimeUnixNano string          `json:"timeUnixNano"`
+	SeverityText string          `json:"severityText,omitempty"`
+	Body         OTLPBody        `json:"body"`
+	Attributes   []OTLPAttribute `json:"attributes,omitempty"`
 }
 type SinkLoki = SinkHttp
 type PrometheusData struct {
-	Labels map[string]string `json:"labels,omitempty"`
-	Name   string            `json:"name"`
-	Value  float64           `json:"value"`
+	ResourceMetrics []PrometheusResourceMetrics `json:"resourceMetrics"`
+}
+type PrometheusResourceMetrics struct {
+	Resource     OTLPResource             `json:"resource"`
+	ScopeMetrics []PrometheusScopeMetrics `json:"scopeMetrics"`
+}
+type PrometheusScopeMetrics struct {
+	Scope   OTLPScope          `json:"scope"`
+	Metrics []PrometheusMetric `json:"metrics"`
+}
+type PrometheusMetric struct {
+	Name  string          `json:"name"`
+	Gauge PrometheusGauge `json:"gauge"`
+}
+type PrometheusGauge struct {
+	DataPoints []PrometheusDataPoint `json:"dataPoints"`
+}
+type PrometheusDataPoint struct {
+	TimeUnixNano string          `json:"timeUnixNano"`
+	AsDouble     float64         `json:"asDouble"`
+	Attributes   []OTLPAttribute `json:"attributes,omitempty"`
 }
 type SinkPrometheus = SinkHttp
 type SlackData struct {
@@ -70,12 +98,24 @@ type TelegramData struct {
 }
 type SinkTelegram = SinkHttp
 type TempoData struct {
-	Attributes map[string]any `json:"attributes,omitempty"`
-	Duration   int64          `json:"duration_ms"`
-	Name       string         `json:"name"`
-	SpanID     string         `json:"span_id"`
-	Timestamp  time.Time      `json:"timestamp"`
-	TraceID    string         `json:"trace_id"`
+	ResourceSpans []TempoResourceSpans `json:"resourceSpans"`
+}
+type TempoResourceSpans struct {
+	Resource   OTLPResource     `json:"resource"`
+	ScopeSpans []TempoScopeSpan `json:"scopeSpans"`
+}
+type TempoScopeSpan struct {
+	Scope OTLPScope   `json:"scope"`
+	Spans []TempoSpan `json:"spans"`
+}
+type TempoSpan struct {
+	TraceID           string          `json:"traceId"`
+	SpanID            string          `json:"spanId"`
+	Name              string          `json:"name"`
+	Kind              int             `json:"kind"`
+	StartTimeUnixNano string          `json:"startTimeUnixNano"`
+	EndTimeUnixNano   string          `json:"endTimeUnixNano"`
+	Attributes        []OTLPAttribute `json:"attributes,omitempty"`
 }
 type SinkTempo = SinkHttp
 type WechatData struct {
@@ -86,15 +126,45 @@ type WechatData struct {
 }
 type SinkWechat = SinkHttp
 
+// OpenTelemetry
+type OTLPAttribute struct {
+	Key   string        `json:"key"`
+	Value OTLPAttrValue `json:"value"`
+}
+type OTLPAttrValue struct {
+	ArrayValue  []OTLPAttrValue `json:"arrayValue,omitempty"`
+	BoolValue   bool            `json:"boolValue,omitempty"`
+	DoubleValue float64         `json:"doubleValue,omitempty"`
+	IntValue    string          `json:"intValue,omitempty"`
+	StringValue string          `json:"stringValue,omitempty"`
+}
+type OTLPBody struct {
+	BoolValue   *bool    `json:"boolValue,omitempty"`
+	DoubleValue *float64 `json:"doubleValue,omitempty"`
+	IntValue    *string  `json:"intValue,omitempty"`
+	StringValue *string  `json:"stringValue,omitempty"`
+}
+type OTLPResource struct {
+	Attributes []OTLPAttribute `json:"attributes"`
+}
+type OTLPScope struct {
+	Name    string `json:"name"`
+	Version string `json:"version,omitempty"`
+}
+
 // Публичные конструкторы
 func NewSinkDiscord(endPoint, userName, avatarURL string, params ...httpParams) *SinkDiscord {
 	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
+			message := getLogData(fields)
+			if message == "" {
+				message = "empty message"
+			}
 			discordData := DiscordData{
 				AvatarURL: avatarURL,
-				Content:   getLogMessage(fields),
+				Content:   message,
 				TTS:       false,
 				UserName:  userName,
 			}
@@ -111,10 +181,7 @@ func NewSinkKafka(restProxyURL, topic string, params ...httpParams) *SinkKafka {
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelInfo),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			valueData := make(map[string]any)
-			for _, field := range fields {
-				valueData[field.nameKey] = getLogField(field)
-			}
+			valueData := getKafkaAttributes(fields)
 			valueData["_level"] = getLevel(attributes.typeLevel)
 			valueData["_type"] = getData(attributes.typeData)
 			valueData["_timestamp"] = time.Now().Format(time.RFC3339Nano)
@@ -122,19 +189,7 @@ func NewSinkKafka(restProxyURL, topic string, params ...httpParams) *SinkKafka {
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal value: %w", err)
 			}
-			key := ""
-			priorities := []string{"trace_id", "node_id", "user_id", "request_id"}
-			for _, k := range priorities {
-				for _, field := range fields {
-					if field.nameKey == k && field.typeValue == FieldString {
-						key = field.valueString
-						break
-					}
-				}
-				if key != "" {
-					break
-				}
-			}
+			key := getKafkaKey(fields)
 			records := struct {
 				Records []KafkaData `json:"records"`
 			}{
@@ -153,74 +208,97 @@ func NewSinkKafka(restProxyURL, topic string, params ...httpParams) *SinkKafka {
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
-func NewSinkLoki(endPoint string, labels map[string]string, params ...httpParams) *SinkLoki {
-	lokiFormatter := func(attributes writeAttributes, fields []Field) ([]byte, error) {
-		message := getLogMessage(fields)
-		level := getLevel(attributes.typeLevel)
-		streamLabels := make(map[string]string)
-		for k, v := range labels {
-			streamLabels[k] = v
-		}
-		streamLabels["level"] = level
-		if traceID := getTraceID(fields); traceID != "" {
-			streamLabels["trace_id"] = traceID
-		}
-		extraFields := make(map[string]interface{})
-		for _, f := range fields {
-			if f.nameKey == "message" {
-				continue
-			}
-			extraFields[f.nameKey] = getLogField(f)
-		}
-		var logLine string
-		if len(extraFields) > 0 {
-			extraJSON, _ := json.Marshal(extraFields)
-			logLine = fmt.Sprintf("%s %s", message, string(extraJSON))
-		} else {
-			logLine = message
-		}
-		timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
-		lokiData := LokiData{
-			Streams: []struct {
-				Stream map[string]string `json:"stream"`
-				Values [][]string        `json:"values"`
-			}{
-				{
-					Stream: streamLabels,
-					Values: [][]string{{timestamp, logLine}},
-				},
-			},
-		}
-		return json.Marshal(lokiData)
-	}
-	fullURL := strings.TrimSuffix(endPoint, "/") + "/loki/api/v1/push"
-	return NewSinkHttp(fullURL, append([]httpParams{
+func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
+	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataLog),
-		WithHttpFormatter(lokiFormatter),
+		WithHttpFilterLevel(LevelInfo),
+		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
+			message := getLogData(fields)
+			if message == "" {
+				message = "empty message"
+			}
+			attrs := getOpenTelemetryAttributes(fields, "message")
+			now := time.Now().UnixNano()
+			lokiData := LokiData{
+				ResourceLogs: []LokiResourceLogs{
+					{
+						Resource: OTLPResource{
+							Attributes: []OTLPAttribute{
+								{
+									Key:   "service.name",
+									Value: OTLPAttrValue{StringValue: "ulog"},
+								},
+							},
+						},
+						ScopeLogs: []LokiScopeLogs{
+							{
+								Scope: OTLPScope{
+									Name:    "ulog",
+									Version: Version,
+								},
+								LogRecords: []LokiLogRecord{
+									{
+										TimeUnixNano: fmt.Sprintf("%d", now),
+										SeverityText: getLevel(attributes.typeLevel),
+										Body:         OTLPBody{StringValue: &message},
+										Attributes:   attrs,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			return json.Marshal(lokiData)
+		}),
 		WithHttpHeader("Content-Type", "application/json"),
-		WithHttpMethod("POST"),
 	}, params...)...)
 }
 func NewSinkPrometheus(endPoint string, params ...httpParams) *SinkPrometheus {
 	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataMetric),
-		WithHttpFormatter(func(attrs writeAttributes, fields []Field) ([]byte, error) {
-			var builder strings.Builder
-			name, value, labels := getMetricData(fields)
-			builder.WriteString(name)
-			for k, v := range labels {
-				builder.WriteByte(',')
-				builder.WriteString(k)
-				builder.WriteString("=\"")
-				builder.WriteString(v)
-				builder.WriteByte('"')
+		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
+			name, value := getMetricData(fields)
+			attrs := getOpenTelemetryAttributes(fields, "name", "value")
+			prometheusData := PrometheusData{
+				ResourceMetrics: []PrometheusResourceMetrics{
+					{
+						Resource: OTLPResource{
+							Attributes: []OTLPAttribute{
+								{
+									Key:   "service.name",
+									Value: OTLPAttrValue{StringValue: "ulog"},
+								},
+							},
+						},
+						ScopeMetrics: []PrometheusScopeMetrics{
+							{
+								Scope: OTLPScope{
+									Name:    "ulog",
+									Version: Version,
+								},
+								Metrics: []PrometheusMetric{
+									{
+										Name: name,
+										Gauge: PrometheusGauge{
+											DataPoints: []PrometheusDataPoint{
+												{
+													TimeUnixNano: fmt.Sprintf("%d", time.Now().UnixNano()),
+													AsDouble:     value,
+													Attributes:   attrs,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
 			}
-			builder.WriteByte(' ')
-			builder.WriteString(strconv.FormatFloat(value, 'f', -1, 64))
-			builder.WriteByte('\n')
-			return []byte(builder.String()), nil
+			return json.Marshal(prometheusData)
 		}),
-		WithHttpHeader("Content-Type", "text/plain"),
+		WithHttpHeader("Content-Type", "application/json"),
 	}, params...)...)
 }
 func NewSinkSlack(endPoint, userName, iconEmoji, iconURL, channel string, params ...httpParams) *SinkSlack {
@@ -228,11 +306,15 @@ func NewSinkSlack(endPoint, userName, iconEmoji, iconURL, channel string, params
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
+			message := getLogData(fields)
+			if message == "" {
+				message = "empty message"
+			}
 			slackData := SlackData{
 				Channel:   channel,
 				IconEmoji: iconEmoji,
 				IconURL:   iconURL,
-				Text:      getLogMessage(fields),
+				Text:      message,
 				UserName:  userName,
 			}
 			return json.Marshal(slackData)
@@ -241,15 +323,18 @@ func NewSinkSlack(endPoint, userName, iconEmoji, iconURL, channel string, params
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
-func NewSinkTelegram(botToken, chatID string, params ...httpParams) *SinkTelegram {
-	endPoint := "https://api.telegram.org/bot" + botToken + "/sendMessage"
+func NewSinkTelegram(endPoint, chatID string, params ...httpParams) *SinkTelegram {
 	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
+			message := getLogData(fields)
+			if message == "" {
+				message = "empty message"
+			}
 			telegramData := TelegramData{
 				ChatID:    chatID,
-				Text:      getLogMessage(fields),
+				Text:      message,
 				ParseMode: "HTML",
 			}
 			return json.Marshal(telegramData)
@@ -262,12 +347,46 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataTrace),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
+			name, traceID, spanID, duration, err := getTraceData(fields)
+			if err != nil {
+				return nil, fmt.Errorf("invalid trace data: %w", err)
+			}
+			attrs := getOpenTelemetryAttributes(fields, "name", "trace_id", "span_id", "duration")
+			now := time.Now()
+			startNano := now.UnixNano()
+			endNano := startNano + duration*1_000_000
 			tempoData := TempoData{
-				Duration:  getTraceDuration(fields),
-				Name:      getTraceName(fields),
-				SpanID:    getTraceSpanID(fields),
-				Timestamp: time.Now(),
-				TraceID:   getTraceID(fields),
+				ResourceSpans: []TempoResourceSpans{
+					{
+						Resource: OTLPResource{
+							Attributes: []OTLPAttribute{
+								{
+									Key:   "service.name",
+									Value: OTLPAttrValue{StringValue: "ulog"},
+								},
+							},
+						},
+						ScopeSpans: []TempoScopeSpan{
+							{
+								Scope: OTLPScope{
+									Name:    "ulog",
+									Version: Version,
+								},
+								Spans: []TempoSpan{
+									{
+										TraceID:           traceID,
+										SpanID:            spanID,
+										Name:              name,
+										Kind:              3,
+										StartTimeUnixNano: fmt.Sprintf("%d", startNano),
+										EndTimeUnixNano:   fmt.Sprintf("%d", endNano),
+										Attributes:        attrs,
+									},
+								},
+							},
+						},
+					},
+				},
 			}
 			return json.Marshal(tempoData)
 		}),
@@ -279,8 +398,12 @@ func NewSinkWechat(endPoint string, params ...httpParams) *SinkWechat {
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
+			message := getLogData(fields)
+			if message == "" {
+				message = "empty message"
+			}
 			wechatData := WechatData{
-				Content: getLogMessage(fields),
+				Content: message,
 				MsgType: "markdown",
 			}
 			return json.Marshal(wechatData)

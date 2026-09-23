@@ -17,6 +17,7 @@
 package ulog
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"sync"
@@ -86,12 +87,14 @@ func (teeSink *TeeSink) Replace(index int, sink Sink) error {
 }
 func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 	teeSink.mutex.RLock()
-	defer teeSink.mutex.RUnlock()
-	if len(teeSink.writers) == 0 {
+	writers := make([]io.Writer, len(teeSink.writers))
+	copy(writers, teeSink.writers)
+	teeSink.mutex.RUnlock()
+	if len(writers) == 0 {
 		return 0, nil
 	}
 	var errors []error
-	for i, w := range teeSink.writers {
+	for i, w := range writers {
 		if _, err := w.Write(p); err != nil {
 			errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
 		}
@@ -103,21 +106,43 @@ func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 }
 func (teeSink *TeeSink) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
 	teeSink.mutex.RLock()
-	defer teeSink.mutex.RUnlock()
-	if len(teeSink.writers) == 0 {
+	writers := make([]io.Writer, len(teeSink.writers))
+	copy(writers, teeSink.writers)
+	teeSink.mutex.RUnlock()
+	if len(writers) == 0 {
 		return 0, nil
 	}
+	var formatted []byte
+	for _, writer := range writers {
+		if _, ok := writer.(SinkWriter); !ok {
+			buf := &bytes.Buffer{}
+			formatJson(buf, attributes, fields)
+			formatted = buf.Bytes()
+			break
+		}
+	}
 	var errors []error
-	for i, writer := range teeSink.writers {
+	total := 0
+	for i, writer := range writers {
 		if sink, ok := writer.(SinkWriter); ok {
-			_, err := sink.WriteWithAttributes(attributes, fields)
+			w, err := sink.WriteWithAttributes(attributes, fields)
+			total += w
 			if err != nil {
 				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
 			}
+			continue
+		}
+		if formatted == nil {
+			continue
+		}
+		w, err := writer.Write(formatted)
+		total += w
+		if err != nil {
+			errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
 		}
 	}
 	if len(errors) > 0 {
-		return 0, fmt.Errorf("write errors: %v", errors)
+		return total, fmt.Errorf("write errors: %v", errors)
 	}
-	return 0, nil
+	return total, nil
 }

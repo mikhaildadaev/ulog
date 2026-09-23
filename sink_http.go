@@ -18,10 +18,12 @@ package ulog
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"hash/fnv"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,47 +31,55 @@ import (
 
 // Публичные структуры
 type SinkHttp struct {
-	batchBuffer        [][]byte
-	batchChan          chan struct{}
-	batchMutex         sync.Mutex
-	batchSize          int
-	batchTicker        *time.Ticker
-	circuitEnabled     bool
-	circuitFailures    atomic.Int32
-	circuitMaxFailures int
-	circuitLastFailure atomic.Int64
-	circuitMutex       sync.Mutex
-	circuitState       atomic.Int32
-	circuitTimeout     time.Duration
-	client             *http.Client
-	closed             bool
-	dedupCache         sync.Map
-	dedupStopChan      chan struct{}
-	dedupWindow        time.Duration
-	endPoint           string
-	filterData         TypeData
-	filterLevel        TypeLevel
-	formatter          func(attributes writeAttributes, fields []Field) ([]byte, error)
-	headers            map[string]string
-	method             string
-	mutex              sync.Mutex
-	once               sync.Once
-	retryBackoff       time.Duration
-	retryMax           int
-	sampleCounter      int32
-	sampleLastReset    time.Time
-	sampleMutex        sync.Mutex
-	sampleRate         int32
-	sampleWindow       time.Duration
-	wg                 sync.WaitGroup
+	batchBuffer                  [][]byte
+	batchChan                    chan struct{}
+	batchFlushChan               chan struct{}
+	batchMutex                   sync.Mutex
+	batchSize                    int
+	batchTicker                  *time.Ticker
+	batchTickerUpdate            chan *time.Ticker
+	circuitEnabled               bool
+	circuitFailures              atomic.Int32
+	circuitHalfOpenProbeInFlight atomic.Bool
+	circuitMaxFailures           int
+	circuitLastFailure           atomic.Int64
+	circuitMutex                 sync.Mutex
+	circuitState                 atomic.Int32
+	circuitTimeout               time.Duration
+	client                       *http.Client
+	closed                       bool
+	dedupCache                   sync.Map
+	dedupCacheCount              atomic.Int64
+	dedupCacheMaxSize            int64
+	dedupEvictMutex              sync.Mutex
+	dedupStopChan                chan struct{}
+	dedupWindow                  time.Duration
+	endPoint                     string
+	filterData                   TypeData
+	filterLevel                  TypeLevel
+	formatter                    func(attributes writeAttributes, fields []Field) ([]byte, error)
+	headers                      map[string]string
+	method                       string
+	mutex                        sync.Mutex
+	once                         sync.Once
+	retryBackoff                 time.Duration
+	retryMax                     int
+	sampleCounter                int32
+	sampleLastReset              time.Time
+	sampleMutex                  sync.Mutex
+	sampleRate                   int32
+	sampleWindow                 time.Duration
+	wg                           sync.WaitGroup
 }
 
 // Публичные конструкторы
 func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 	sinkHttp := &SinkHttp{
 		batchChan:          make(chan struct{}),
+		batchFlushChan:     make(chan struct{}, 1),
 		batchSize:          100,
 		batchTicker:        time.NewTicker(5 * time.Second),
+		batchTickerUpdate:  make(chan *time.Ticker, 8),
 		circuitEnabled:     true,
 		circuitMaxFailures: 10,
 		circuitTimeout:     10 * time.Second,
@@ -82,15 +92,16 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 				DisableKeepAlives:   false,
 			},
 		},
-		dedupStopChan: make(chan struct{}),
-		endPoint:      endPoint,
-		filterData:    TypeData(defaultType),
-		filterLevel:   LevelError,
-		formatter:     defaultformatter,
-		headers:       make(map[string]string),
-		method:        "POST",
-		retryBackoff:  time.Second,
-		retryMax:      0,
+		dedupCacheMaxSize: 100000,
+		dedupStopChan:     make(chan struct{}),
+		endPoint:          endPoint,
+		filterData:        TypeData(defaultType),
+		filterLevel:       LevelError,
+		formatter:         defaultformatter,
+		headers:           make(map[string]string),
+		method:            "POST",
+		retryBackoff:      time.Second,
+		retryMax:          0,
 	}
 	sinkHttp.circuitState.Store(circuitStateClosed)
 	sinkHttp.circuitFailures.Store(0)
@@ -98,17 +109,36 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 		param(sinkHttp)
 	}
 	if sinkHttp.dedupWindow > 0 {
-		go sinkHttp.cleanupDedupCache()
+		sinkHttp.wg.Add(1)
+		go func() {
+			defer sinkHttp.wg.Done()
+			sinkHttp.cleanupDedupCache()
+		}()
 	}
+	sinkHttp.wg.Add(1)
+	go func() {
+		defer sinkHttp.wg.Done()
+		sinkHttp.batchLoop()
+	}()
 	return sinkHttp
 }
 
 // Публичные функции
 func WithHttpBatch(size int, flushInterval time.Duration) httpParams {
 	return func(sinkHttp *SinkHttp) {
+		sinkHttp.batchMutex.Lock()
+		oldTicker := sinkHttp.batchTicker
+		newTicker := time.NewTicker(flushInterval)
 		sinkHttp.batchSize = size
-		sinkHttp.batchTicker = time.NewTicker(flushInterval)
-		go sinkHttp.batchLoop()
+		sinkHttp.batchTicker = newTicker
+		sinkHttp.batchMutex.Unlock()
+		if oldTicker != nil {
+			oldTicker.Stop()
+		}
+		select {
+		case sinkHttp.batchTickerUpdate <- newTicker:
+		default:
+		}
 	}
 }
 func WithHttpCircuitBreaker(maxFailures int, timeout time.Duration) httpParams {
@@ -124,15 +154,35 @@ func WithHttpDedupWindow(window time.Duration) httpParams {
 		sinkHttp.dedupWindow = window
 	}
 }
+func WithHttpDedupMaxSize(size int64) httpParams {
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.dedupCacheMaxSize = size
+	}
+}
 func WithHttpDisabledBatch() httpParams {
 	return func(sinkHttp *SinkHttp) {
-		sinkHttp.batchSize = 0
+		sinkHttp.batchMutex.Lock()
+		oldTicker := sinkHttp.batchTicker
 		sinkHttp.batchTicker = nil
+		sinkHttp.batchSize = 0
+		sinkHttp.batchMutex.Unlock()
+		if oldTicker != nil {
+			oldTicker.Stop()
+		}
+		select {
+		case sinkHttp.batchTickerUpdate <- nil:
+		default:
+		}
 	}
 }
 func WithHttpDisabledCircuit() httpParams {
 	return func(sinkHttp *SinkHttp) {
+		sinkHttp.circuitMutex.Lock()
+		defer sinkHttp.circuitMutex.Unlock()
 		sinkHttp.circuitEnabled = false
+		sinkHttp.circuitState.Store(circuitStateClosed)
+		sinkHttp.circuitFailures.Store(0)
+		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
 	}
 }
 func WithHttpDisableKeepAlive() httpParams {
@@ -204,45 +254,30 @@ func (sinkHttp *SinkHttp) Close() error {
 			return
 		}
 		sinkHttp.closed = true
+		dedupStopChan := sinkHttp.dedupStopChan
+		sinkHttp.dedupStopChan = nil
 		sinkHttp.mutex.Unlock()
-		if sinkHttp.batchSize > 0 {
-			sinkHttp.wg.Add(1)
-			go func() {
-				defer sinkHttp.wg.Done()
-				done := make(chan struct{})
-				go func() {
-					sinkHttp.flush()
-					close(done)
-				}()
-				select {
-				case <-done:
-				case <-time.After(5 * time.Second):
-					fmt.Fprintf(DefaultWriterErr, "ulog: SinkHttp.flush() timeout\n")
-				}
-			}()
-		}
-		if sinkHttp.dedupStopChan != nil {
+		if dedupStopChan != nil {
 			defer func() {
 				if r := recover(); r != nil {
 					fmt.Fprintf(DefaultWriterErr, "ulog: panic closing dedupStopChan: %v\n", r)
 				}
 			}()
-			close(sinkHttp.dedupStopChan)
+			close(dedupStopChan)
 		}
 		sinkHttp.batchMutex.Lock()
 		ticker := sinkHttp.batchTicker
+		sinkHttp.batchTicker = nil
 		sinkHttp.batchMutex.Unlock()
-		if sinkHttp.batchSize > 0 {
-			defer func() {
-				if r := recover(); r != nil {
-					fmt.Fprintf(DefaultWriterErr, "ulog: panic closing batchChan: %v\n", r)
-				}
-			}()
-			close(sinkHttp.batchChan)
-			if ticker != nil {
-				ticker.Stop()
-			}
+		if ticker != nil {
+			ticker.Stop()
 		}
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(DefaultWriterErr, "ulog: panic closing batchChan: %v\n", r)
+			}
+		}()
+		close(sinkHttp.batchChan)
 		done := make(chan struct{})
 		go func() {
 			sinkHttp.wg.Wait()
@@ -285,7 +320,10 @@ func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields
 		needFlush := len(sinkHttp.batchBuffer) >= sinkHttp.batchSize
 		sinkHttp.batchMutex.Unlock()
 		if needFlush {
-			go sinkHttp.flush()
+			select {
+			case sinkHttp.batchFlushChan <- struct{}{}:
+			default:
+			}
 		}
 		return len(body), nil
 	}
@@ -341,13 +379,13 @@ func defaultformatter(attributes writeAttributes, fields []Field) ([]byte, error
 	formatJson(buf, attributes, fields)
 	return buf.Bytes(), nil
 }
-func getLogField(field Field) any {
+func getField(field Field) any {
 	if extractor, ok := fieldExtractor[field.typeValue]; ok {
 		return extractor(field)
 	}
 	return nil
 }
-func getLogMessage(fields []Field) string {
+func getLogData(fields []Field) string {
 	for _, field := range fields {
 		if field.nameKey == "message" {
 			return field.valueString
@@ -355,61 +393,310 @@ func getLogMessage(fields []Field) string {
 	}
 	return ""
 }
-func getMetricData(fields []Field) (name string, value float64, labels map[string]string) {
-	name = ""
-	value = 0
-	labels = make(map[string]string)
+func getMetricData(fields []Field) (name string, value float64) {
 	for _, field := range fields {
 		switch field.nameKey {
 		case "name":
 			name = field.valueString
 		case "value":
-			value = field.valueFloat64
-		default:
-			labels[field.nameKey] = field.valueString
+			switch field.typeValue {
+			case FieldFloat64:
+				value = field.valueFloat64
+			case FieldInt64:
+				value = float64(field.valueInt64)
+			case FieldInt:
+				value = float64(field.valueInt)
+			}
 		}
 	}
-	return name, value, labels
+	if name == "" {
+		name = "unnamed-metric"
+	}
+	return name, value
 }
-func getTraceID(fields []Field) string {
-	for _, f := range fields {
-		if f.nameKey == "trace_id" {
-			return f.valueString
+func getKafkaAttributes(fields []Field) map[string]any {
+	valueData := make(map[string]any, len(fields))
+	for _, field := range fields {
+		v := getField(field)
+		if field.typeValue == FieldString {
+			switch field.nameKey {
+			case "trace_id":
+				if normalized, err := normalizeTraceID(field.valueString); err == nil {
+					v = normalized
+				}
+			case "span_id":
+				if normalized, err := normalizeSpanID(field.valueString); err == nil {
+					v = normalized
+				}
+			}
+		}
+		valueData[field.nameKey] = v
+	}
+	return valueData
+}
+func getKafkaKey(fields []Field) string {
+	priorities := []string{"trace_id", "node_id", "user_id", "request_id"}
+	for _, k := range priorities {
+		for _, field := range fields {
+			if field.nameKey != k || field.typeValue != FieldString {
+				continue
+			}
+			if k == "trace_id" {
+				if normalized, err := normalizeTraceID(field.valueString); err == nil {
+					return normalized
+				}
+				continue
+			}
+			return field.valueString
 		}
 	}
 	return ""
 }
-func getTraceDuration(fields []Field) int64 {
+func getOpenTelemetryAttributes(fields []Field, skipKeys ...string) []OTLPAttribute {
+	attrs := make([]OTLPAttribute, 0, len(fields))
 	for _, f := range fields {
-		if f.nameKey == "duration" {
-			return f.valueInt64
+		skip := false
+		for _, k := range skipKeys {
+			if f.nameKey == k {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		}
+		switch f.typeValue {
+		case FieldString:
+			v := f.valueString
+			switch f.nameKey {
+			case "trace_id":
+				normalized, err := normalizeTraceID(v)
+				if err != nil {
+					fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid trace_id: %v\n", err)
+					continue
+				}
+				v = normalized
+			case "span_id":
+				normalized, err := normalizeSpanID(v)
+				if err != nil {
+					fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid span_id: %v\n", err)
+					continue
+				}
+				v = normalized
+			}
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{StringValue: v},
+			})
+		case FieldInt:
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{IntValue: fmt.Sprintf("%d", f.valueInt)},
+			})
+		case FieldInt64:
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{IntValue: fmt.Sprintf("%d", f.valueInt64)},
+			})
+		case FieldFloat64:
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{DoubleValue: f.valueFloat64},
+			})
+		case FieldBool:
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{BoolValue: f.valueBool},
+			})
+		case FieldDuration:
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{StringValue: f.valueDuration.String()},
+			})
+		case FieldTime:
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{StringValue: f.valueTime.Format(time.RFC3339Nano)},
+			})
+		case FieldStrings:
+			arr := make([]OTLPAttrValue, len(f.valueStrings))
+			for i, v := range f.valueStrings {
+				arr[i] = OTLPAttrValue{StringValue: v}
+			}
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{ArrayValue: arr},
+			})
+		case FieldInts:
+			arr := make([]OTLPAttrValue, len(f.valueInts))
+			for i, v := range f.valueInts {
+				arr[i] = OTLPAttrValue{IntValue: fmt.Sprintf("%d", v)}
+			}
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{ArrayValue: arr},
+			})
+		case FieldInts64:
+			arr := make([]OTLPAttrValue, len(f.valueInts64))
+			for i, v := range f.valueInts64 {
+				arr[i] = OTLPAttrValue{IntValue: fmt.Sprintf("%d", v)}
+			}
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{ArrayValue: arr},
+			})
+		case FieldFloats64:
+			arr := make([]OTLPAttrValue, len(f.valueFloats64))
+			for i, v := range f.valueFloats64 {
+				arr[i] = OTLPAttrValue{DoubleValue: v}
+			}
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{ArrayValue: arr},
+			})
+		case FieldBools:
+			arr := make([]OTLPAttrValue, len(f.valueBools))
+			for i, v := range f.valueBools {
+				arr[i] = OTLPAttrValue{BoolValue: v}
+			}
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{ArrayValue: arr},
+			})
+		case FieldDurations:
+			arr := make([]OTLPAttrValue, len(f.valueDurations))
+			for i, v := range f.valueDurations {
+				arr[i] = OTLPAttrValue{StringValue: v.String()}
+			}
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{ArrayValue: arr},
+			})
+		case FieldTimes:
+			arr := make([]OTLPAttrValue, len(f.valueTimes))
+			for i, v := range f.valueTimes {
+				arr[i] = OTLPAttrValue{StringValue: v.Format(time.RFC3339Nano)}
+			}
+			attrs = append(attrs, OTLPAttribute{
+				Key:   f.nameKey,
+				Value: OTLPAttrValue{ArrayValue: arr},
+			})
 		}
 	}
-	return 0
+	return attrs
 }
-func getTraceName(fields []Field) string {
+func getTraceData(fields []Field) (name, traceID, spanID string, duration int64, err error) {
+	var (
+		rawTraceID string
+		rawSpanID  string
+		rawName    string
+		rawDur     int64
+		hasDur     bool
+	)
 	for _, f := range fields {
-		if f.nameKey == "name" {
-			return f.valueString
+		switch f.nameKey {
+		case "trace_id":
+			if f.typeValue == FieldString {
+				rawTraceID = f.valueString
+			}
+		case "span_id":
+			if f.typeValue == FieldString {
+				rawSpanID = f.valueString
+			}
+		case "name":
+			if f.typeValue == FieldString {
+				rawName = f.valueString
+			}
+		case "duration":
+			var ms int64
+			switch f.typeValue {
+			case FieldInt:
+				ms = int64(f.valueInt)
+			case FieldInt64:
+				ms = f.valueInt64
+			case FieldDuration:
+				ms = f.valueDuration.Milliseconds()
+			case FieldString:
+				d, parseErr := time.ParseDuration(f.valueString)
+				if parseErr != nil {
+					return "", "", "", 0, fmt.Errorf("invalid duration string: %w", parseErr)
+				}
+				ms = d.Milliseconds()
+			}
+			rawDur = ms
+			hasDur = true
 		}
 	}
-	return ""
+	if rawTraceID == "" {
+		return "", "", "", 0, fmt.Errorf("trace_id is required")
+	}
+	if traceID, err = normalizeTraceID(rawTraceID); err != nil {
+		return "", "", "", 0, err
+	}
+	if rawSpanID == "" {
+		return "", "", "", 0, fmt.Errorf("span_id is required")
+	}
+	if spanID, err = normalizeSpanID(rawSpanID); err != nil {
+		return "", "", "", 0, err
+	}
+	name = rawName
+	if name == "" {
+		name = "unnamed-trace"
+	}
+	switch {
+	case hasDur && rawDur > 0:
+		duration = rawDur
+	case hasDur && rawDur <= 0:
+		return "", "", "", 0, fmt.Errorf("duration must be positive, got %d", rawDur)
+	default:
+		duration = 1
+	}
+	return name, traceID, spanID, duration, nil
 }
-func getTraceSpanID(fields []Field) string {
-	for _, f := range fields {
-		if f.nameKey == "span_id" {
-			return f.valueString
-		}
+func normalizeTraceID(value string) (string, error) {
+	v := strings.ToLower(strings.ReplaceAll(value, "-", ""))
+	if len(v) != 32 {
+		return "", fmt.Errorf("invalid trace_id length: got %d, want 32 (input: %q)", len(v), value)
 	}
-	return ""
+	if _, err := hex.DecodeString(v); err != nil {
+		return "", fmt.Errorf("invalid trace_id hex: %w (input: %q)", err, value)
+	}
+	return v, nil
+}
+func normalizeSpanID(value string) (string, error) {
+	v := strings.ToLower(strings.ReplaceAll(value, "-", ""))
+	if len(v) != 16 {
+		return "", fmt.Errorf("invalid span_id length: got %d, want 16 (input: %q)", len(v), value)
+	}
+	if _, err := hex.DecodeString(v); err != nil {
+		return "", fmt.Errorf("invalid span_id hex: %w (input: %q)", err, value)
+	}
+	return v, nil
 }
 
 // Приватные методы
 func (sinkHttp *SinkHttp) batchLoop() {
+	sinkHttp.batchMutex.Lock()
+	ticker := sinkHttp.batchTicker
+	sinkHttp.batchMutex.Unlock()
 	for {
 		select {
-		case <-sinkHttp.batchTicker.C:
+		case <-sinkHttp.batchChan:
 			sinkHttp.flush()
+			return
+		default:
+		}
+		var tickerC <-chan time.Time
+		if ticker != nil {
+			tickerC = ticker.C
+		}
+		select {
+		case <-tickerC:
+			sinkHttp.flush()
+		case <-sinkHttp.batchFlushChan:
+			sinkHttp.flush()
+		case newTicker := <-sinkHttp.batchTickerUpdate:
+			ticker = newTicker
 		case <-sinkHttp.batchChan:
 			sinkHttp.flush()
 			return
@@ -426,17 +713,28 @@ func (sinkHttp *SinkHttp) circuitAllow() bool {
 		return true
 	case circuitStateOpen:
 		lastFailure := sinkHttp.circuitLastFailure.Load()
-		if time.Now().UnixNano()-lastFailure > sinkHttp.circuitTimeout.Nanoseconds() {
-			sinkHttp.circuitMutex.Lock()
-			if sinkHttp.circuitState.Load() == circuitStateOpen {
-				sinkHttp.circuitState.Store(circuitStateHalfOpen)
-			}
-			sinkHttp.circuitMutex.Unlock()
-			return true
+		if time.Now().UnixNano()-lastFailure <= sinkHttp.circuitTimeout.Nanoseconds() {
+			return false
 		}
-		return false
+		sinkHttp.circuitMutex.Lock()
+		if sinkHttp.circuitState.Load() != circuitStateOpen {
+			sinkHttp.circuitMutex.Unlock()
+			return false
+		}
+		sinkHttp.circuitState.Store(circuitStateHalfOpen)
+		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
+		allowed := sinkHttp.circuitHalfOpenProbeInFlight.CompareAndSwap(false, true)
+		sinkHttp.circuitMutex.Unlock()
+		return allowed
 	case circuitStateHalfOpen:
-		return false
+		sinkHttp.circuitMutex.Lock()
+		if sinkHttp.circuitState.Load() != circuitStateHalfOpen {
+			sinkHttp.circuitMutex.Unlock()
+			return false
+		}
+		allowed := sinkHttp.circuitHalfOpenProbeInFlight.CompareAndSwap(false, true)
+		sinkHttp.circuitMutex.Unlock()
+		return allowed
 	default:
 		return true
 	}
@@ -469,6 +767,10 @@ func (sinkHttp *SinkHttp) circuitRecord(success bool) {
 	case circuitStateHalfOpen:
 		sinkHttp.circuitMutex.Lock()
 		defer sinkHttp.circuitMutex.Unlock()
+		if sinkHttp.circuitState.Load() != circuitStateHalfOpen {
+			return
+		}
+		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
 		if success {
 			sinkHttp.circuitState.Store(circuitStateClosed)
 			sinkHttp.circuitFailures.Store(0)
@@ -480,22 +782,33 @@ func (sinkHttp *SinkHttp) circuitRecord(success bool) {
 	}
 }
 func (sinkHttp *SinkHttp) cleanupDedupCache() {
-	ticker := time.NewTicker(sinkHttp.dedupWindow)
+	interval := sinkHttp.dedupWindow / 10
+	if interval < 100*time.Millisecond {
+		interval = 100 * time.Millisecond
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			now := time.Now()
-			sinkHttp.dedupCache.Range(func(key, value any) bool {
-				if now.Sub(value.(time.Time)) > sinkHttp.dedupWindow {
-					sinkHttp.dedupCache.Delete(key)
-				}
-				return true
-			})
+			sinkHttp.evictDedupCache()
 		case <-sinkHttp.dedupStopChan:
 			return
 		}
 	}
+}
+func (sinkHttp *SinkHttp) evictDedupCache() {
+	sinkHttp.dedupEvictMutex.Lock()
+	defer sinkHttp.dedupEvictMutex.Unlock()
+	now := time.Now()
+	sinkHttp.dedupCache.Range(func(key, value any) bool {
+		if now.Sub(value.(time.Time)) > sinkHttp.dedupWindow {
+			if _, loaded := sinkHttp.dedupCache.LoadAndDelete(key); loaded {
+				sinkHttp.dedupCacheCount.Add(-1)
+			}
+		}
+		return true
+	})
 }
 func (sinkHttp *SinkHttp) flush() error {
 	sinkHttp.batchMutex.Lock()
@@ -509,11 +822,11 @@ func (sinkHttp *SinkHttp) flush() error {
 	sinkHttp.batchMutex.Unlock()
 	var body []byte
 	if len(batch) == 1 {
-		body = batch[0]
+		body = bytes.TrimRight(batch[0], "\n")
 	} else {
-		var parts [][]byte
-		for _, b := range batch {
-			parts = append(parts, b)
+		parts := make([][]byte, len(batch))
+		for i, b := range batch {
+			parts[i] = bytes.TrimRight(b, "\n")
 		}
 		body = bytes.Join(parts, []byte{'\n'})
 	}
@@ -530,7 +843,12 @@ func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
 			return true
 		}
 	}
-	sinkHttp.dedupCache.Store(hash, time.Now())
+	if sinkHttp.dedupCacheMaxSize > 0 && sinkHttp.dedupCacheCount.Load() >= sinkHttp.dedupCacheMaxSize {
+		sinkHttp.evictDedupCache()
+	}
+	if _, loaded := sinkHttp.dedupCache.LoadOrStore(hash, time.Now()); !loaded {
+		sinkHttp.dedupCacheCount.Add(1)
+	}
 	return false
 }
 func (sinkHttp *SinkHttp) hashFields(fields []Field) uint64 {
@@ -538,7 +856,7 @@ func (sinkHttp *SinkHttp) hashFields(fields []Field) uint64 {
 	for _, f := range fields {
 		hash.Write([]byte(f.nameKey))
 		hash.Write([]byte{0})
-		hash.Write([]byte(fmt.Sprintf("%v", f.valueString)))
+		fmt.Fprintf(hash, "%v", getField(f))
 		hash.Write([]byte{0})
 	}
 	return hash.Sum64()
@@ -575,26 +893,38 @@ func (sinkHttp *SinkHttp) send(body []byte) error {
 	}
 	return nil
 }
-func (sinkHttp *SinkHttp) sendWithRetry(body []byte) (int, error) {
+func (sinkHttp *SinkHttp) sendWithRetry(body []byte) (n int, err error) {
 	var lastErr error
 	for i := 0; i <= sinkHttp.retryMax; i++ {
 		if !sinkHttp.circuitAllow() {
 			return 0, fmt.Errorf("circuit breaker is open")
 		}
-		err := sinkHttp.send(body)
-		sinkHttp.circuitRecord(err == nil)
-		if err == nil {
+		var sendErr error
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					sendErr = fmt.Errorf("panic in send: %v", r)
+				}
+			}()
+			sendErr = sinkHttp.send(body)
+		}()
+		sinkHttp.circuitRecord(sendErr == nil)
+		if sendErr == nil {
 			return len(body), nil
 		}
-		lastErr = err
+		lastErr = sendErr
 		if i == sinkHttp.retryMax {
 			break
 		}
 		var sleepDuration time.Duration
-		if rateErr, ok := err.(*rateLimitError); ok {
+		if rateErr, ok := sendErr.(*rateLimitError); ok {
 			sleepDuration = rateErr.retryAfter
 		} else {
-			sleepDuration = sinkHttp.retryBackoff * time.Duration(1<<i)
+			shift := i
+			if shift > 30 {
+				shift = 30
+			}
+			sleepDuration = sinkHttp.retryBackoff * time.Duration(1<<shift)
 		}
 		time.Sleep(sleepDuration)
 	}
@@ -611,6 +941,9 @@ func (sinkHttp *SinkHttp) shouldSample() bool {
 		sinkHttp.sampleLastReset = time.Now()
 	}
 	sinkHttp.sampleCounter++
+	if sinkHttp.sampleCounter <= 0 {
+		sinkHttp.sampleCounter = 1
+	}
 	return sinkHttp.sampleCounter%sinkHttp.sampleRate == 0
 }
 func (rateLimitError *rateLimitError) Error() string {
