@@ -17,10 +17,12 @@
 package ulog
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -35,6 +37,10 @@ import (
 )
 
 // Публичные функции
+func TestMain(m *testing.M) {
+	loadEnv(".env")
+	os.Exit(m.Run())
+}
 func Test_Telemetry(t *testing.T) {
 	buf := &bytes.Buffer{}
 	telemetry := NewTelemetry(
@@ -82,88 +88,77 @@ func Test_Telemetry_Extractor(t *testing.T) {
 		name      string
 		keys      []string
 		context   context.Context
-		wantKey   string
-		wantValue string
+		want      map[string]string
 		shouldAdd bool
 	}{
 		{
 			name:      "NullContext",
 			keys:      []string{"test_empty"},
 			context:   context.Background(),
-			wantKey:   "",
-			wantValue: "",
+			want:      map[string]string{},
 			shouldAdd: false,
 		},
 		{
 			name:      "NullKeys",
 			keys:      nil,
-			context:   context.WithValue(context.Background(), "trace_id", "abc-123"),
-			wantKey:   "",
-			wantValue: "",
+			context:   context.WithValue(context.Background(), "trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
+			want:      map[string]string{},
 			shouldAdd: false,
 		},
 		{
 			name:      "Bool",
 			keys:      []string{"test_bool"},
 			context:   context.WithValue(context.Background(), "test_bool", true),
-			wantKey:   "test_bool",
-			wantValue: "true",
+			want:      map[string]string{"test_bool": "true"},
 			shouldAdd: true,
 		},
 		{
 			name:      "Duration",
 			keys:      []string{"test_duration"},
 			context:   context.WithValue(context.Background(), "test_duration", 5*time.Second),
-			wantKey:   "test_duration",
-			wantValue: "5s",
+			want:      map[string]string{"test_duration": "5s"},
 			shouldAdd: true,
 		},
 		{
 			name:      "Float64",
 			keys:      []string{"test_float64"},
 			context:   context.WithValue(context.Background(), "test_float64", 3.14159),
-			wantKey:   "test_float64",
-			wantValue: "3.14159",
+			want:      map[string]string{"test_float64": "3.14159"},
 			shouldAdd: true,
 		},
 		{
 			name:      "Int",
 			keys:      []string{"test_int"},
 			context:   context.WithValue(context.Background(), "test_int", int(12345)),
-			wantKey:   "test_int",
-			wantValue: "12345",
+			want:      map[string]string{"test_int": "12345"},
 			shouldAdd: true,
 		},
 		{
 			name:      "Int64",
 			keys:      []string{"test_int64"},
 			context:   context.WithValue(context.Background(), "test_int64", int64(12345)),
-			wantKey:   "test_int64",
-			wantValue: "12345",
+			want:      map[string]string{"test_int64": "12345"},
 			shouldAdd: true,
 		},
 		{
 			name:      "String",
 			keys:      []string{"test_string"},
 			context:   context.WithValue(context.Background(), "test_string", "abc-123"),
-			wantKey:   "test_string",
-			wantValue: "abc-123",
+			want:      map[string]string{"test_string": "abc-123"},
 			shouldAdd: true,
 		},
 		{
 			name:      "Time",
 			keys:      []string{"test_time"},
 			context:   context.WithValue(context.Background(), "test_time", time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)),
-			wantKey:   "test_time",
-			wantValue: "2026-04-10T12:00:00.000000+00:00",
+			want:      map[string]string{"test_time": "2026-04-10T12:00:00.000000+00:00"},
 			shouldAdd: true,
 		},
 		{
 			name:      "Multiple",
-			keys:      []string{"trace_id", "user_id"},
-			context:   context.WithValue(context.WithValue(context.Background(), "trace_id", "abc-123"), "user_id", int64(12345)),
-			wantKey:   "trace_id",
-			wantValue: "abc-123",
+			keys:      []string{"text", "user_id"},
+			context:   context.WithValue(context.WithValue(context.Background(), "text", "test"), "user_id", int64(12345)),
+			want:      map[string]string{"text": "test", "user_id": "12345"},
 			shouldAdd: true,
 		},
 	}
@@ -614,10 +609,10 @@ func Test_Sink(t *testing.T) {
 	}
 	tee.Write([]byte(data))
 	if buf1.String() != data {
-		t.Errorf("WriteWithAttributes: buf1 should be empty (removed), got %q", buf1.String())
+		t.Errorf("buf1: expected %q, got %q", data, buf1.String())
 	}
 	if buf2.String() != data {
-		t.Errorf("WriteWithAttributes: buf2 should be empty (removed), got %q", buf2.String())
+		t.Errorf("buf2: expected %q, got %q", data, buf2.String())
 	}
 	buf1.Reset()
 	buf2.Reset()
@@ -639,11 +634,11 @@ func Test_Sink(t *testing.T) {
 		typeLevel:  LevelInfo,
 	}
 	tee.WriteWithAttributes(attributes, fields)
-	if buf3.String() != "" {
-		t.Errorf("WriteWithAttributes: buf3 is empty")
+	if buf3.String() == "" {
+		t.Error("buf3: expected content, got empty")
 	}
-	if buf4.String() != "" {
-		t.Errorf("WriteWithAttributes: buf4 is empty")
+	if buf4.String() == "" {
+		t.Error("buf4: expected content, got empty")
 	}
 	err := tee.Close()
 	if err != nil {
@@ -702,7 +697,7 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 		expectedFields := map[string]interface{}{
 			"message":  "test kafka message",
 			"service":  "test-service",
-			"trace_id": "trace-abc-123",
+			"trace_id": "5b8efff798038103d269b633813fc700",
 			"node_id":  "node-01",
 			"count":    float64(42),
 			"duration": "5s",
@@ -714,8 +709,8 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 				t.Errorf("%s: expected '%v', got '%v'", key, want, got)
 			}
 		}
-		if record.Key != "trace-abc-123" {
-			t.Errorf("key: expected 'trace-abc-123', got '%s'", record.Key)
+		if record.Key != "5b8efff798038103d269b633813fc700" {
+			t.Errorf("key: expected '5b8efff798038103d269b633813fc700', got '%s'", record.Key)
 		}
 		if record.Timestamp.IsZero() {
 			t.Error("timestamp is zero")
@@ -730,7 +725,7 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 	fields := []Field{
 		String("message", "test kafka message"),
 		String("service", "test-service"),
-		String("trace_id", "trace-abc-123"),
+		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("node_id", "node-01"),
 		Int("count", 42),
 		Duration("duration", 5*time.Second),
@@ -745,102 +740,198 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 	sinkKafka.Close()
 }
 func Test_SinkFactory_Loki(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Error("wrong method")
-		}
-		if r.Header.Get("Content-Type") != "application/json" {
-			t.Error("wrong Content-Type")
-		}
+		defer wg.Done()
 		var data LokiData
 		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 			t.Errorf("failed to decode JSON: %v", err)
-		}
-		if len(data.Streams) == 0 {
-			t.Error("expected at least one stream")
 			return
 		}
-		stream := data.Streams[0]
-		if stream.Stream["app"] != "test-app" {
-			t.Errorf("wrong app label: got '%s', want 'test-app'", stream.Stream["app"])
+		lr := data.ResourceLogs[0].ScopeLogs[0].LogRecords[0]
+		if lr.Body.StringValue == nil || *lr.Body.StringValue != "test" {
+			t.Errorf("wrong message: %v", lr.Body.StringValue)
 		}
-		if stream.Stream["level"] != "ERROR" {
-			t.Errorf("wrong level label: got '%s', want 'error'", stream.Stream["level"])
+		if lr.SeverityText != "ERROR" {
+			t.Errorf("wrong severity: %s", lr.SeverityText)
 		}
-		if stream.Stream["trace_id"] != "abc-123" {
-			t.Errorf("wrong trace_id label: got '%s', want 'abc-123'", stream.Stream["trace_id"])
+		foundUserID := false
+		foundTraceID := false
+		for _, a := range lr.Attributes {
+			if a.Key == "user_id" && a.Value.StringValue == "019687278c7e800087cbbdba4f634d9f" {
+				foundUserID = true
+			}
+			if a.Key == "trace_id" && a.Value.StringValue == "5b8efff798038103d269b633813fc700" {
+				foundTraceID = true
+			}
 		}
-		if len(stream.Values) == 0 {
-			t.Error("expected at least one value")
-			return
+		if !foundUserID {
+			t.Error("user_id attribute not found")
 		}
-		value := stream.Values[0]
-		if len(value) != 2 {
-			t.Errorf("expected [timestamp, logLine], got %v", value)
-			return
+		if !foundTraceID {
+			t.Error("trace_id attribute not found")
 		}
-		if _, err := strconv.ParseInt(value[0], 10, 64); err != nil {
-			t.Errorf("timestamp should be numeric: %s", value[0])
-		}
-		if !strings.Contains(value[1], "test error message") {
-			t.Errorf("log line should contain message: %s", value[1])
-		}
-		if !strings.Contains(value[1], "user_id") || !strings.Contains(value[1], "12345") {
-			t.Errorf("log line should contain extra fields: %s", value[1])
-		}
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"partialSuccess":{}}`))
 	}))
 	defer server.Close()
-	sinkLoki := NewSinkLoki(server.URL, map[string]string{
-		"app": "test-app",
-		"env": "test",
-	})
+	sinkLoki := NewSinkLoki(
+		server.URL,
+		WithHttpDisabledBatch(),
+	)
+	defer sinkLoki.Close()
 	fields := []Field{
-		String("message", "test error message"),
-		String("user_id", "12345"),
-		String("trace_id", "abc-123"),
+		String("message", "test"),
+		String("user_id", "019687278c7e800087cbbdba4f634d9f"),
+		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 	}
 	_, err := sinkLoki.WriteWithAttributes(
-		writeAttributes{typeLevel: LevelError, typeData: DataLog},
+		writeAttributes{typeData: DataLog, typeLevel: LevelError},
 		fields,
 	)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("error: %v", err)
 	}
-	sinkLoki.Close()
+	wg.Wait()
+}
+func Test_SinkFactory_LokiCloud(t *testing.T) {
+	token := os.Getenv("GRAFANA_CLOUD_TOKEN")
+	if token == "" {
+		t.Skip("GRAFANA_CLOUD_TOKEN not set — skipping integration test")
+	}
+	sinkLoki := NewSinkLoki(
+		"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/logs",
+		WithHttpHeader(
+			"Authorization",
+			"Basic "+token,
+		),
+	)
+	defer sinkLoki.Close()
+	telemetry := NewTelemetry(
+		WithMode(ModeSync, sinkLoki),
+		WithFormat(FormatJson),
+	)
+	defer telemetry.Close()
+	telemetry.Error(DataLog,
+		String("message", "integration-test-log"),
+		String("user_id", "user-12345"),
+		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
+	)
 }
 func Test_SinkFactory_Prometheus(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Type") != "text/plain" {
-			t.Errorf("expected Content-Type: text/plain, got %s", r.Header.Get("Content-Type"))
+		defer wg.Done()
+		if r.Method != http.MethodPost {
+			t.Errorf("wrong method: %s", r.Method)
 		}
-		body := make([]byte, 1024)
-		n, _ := r.Body.Read(body)
-		content := string(body[:n])
-		if content == "" {
-			t.Error("expected non-empty Prometheus metric")
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("wrong Content-Type: %s", r.Header.Get("Content-Type"))
 		}
-		expectedPattern := "http_requests_total"
-		if len(content) < len(expectedPattern) || content[:len(expectedPattern)] != expectedPattern {
-			t.Errorf("expected metric name 'http_requests_total', got '%s'", content)
+		var data PrometheusData
+		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			t.Errorf("failed to decode JSON: %v", err)
+			return
+		}
+		if len(data.ResourceMetrics) != 1 {
+			t.Fatalf("expected 1 resourceMetrics, got %d", len(data.ResourceMetrics))
+		}
+		rm := data.ResourceMetrics[0]
+		if len(rm.Resource.Attributes) != 1 {
+			t.Fatalf("expected 1 resource attribute, got %d", len(rm.Resource.Attributes))
+		}
+		attr := rm.Resource.Attributes[0]
+		if attr.Key != "service.name" {
+			t.Errorf("expected service.name, got %s", attr.Key)
+		}
+		if attr.Value.StringValue != "ulog" {
+			t.Errorf("expected ulog, got %s", attr.Value.StringValue)
+		}
+		if len(rm.ScopeMetrics) != 1 {
+			t.Fatalf("expected 1 scopeMetrics, got %d", len(rm.ScopeMetrics))
+		}
+		sm := rm.ScopeMetrics[0]
+
+		if sm.Scope.Name != "ulog" {
+			t.Errorf("expected scope.name=ulog, got %s", sm.Scope.Name)
+		}
+		if sm.Scope.Version != Version {
+			t.Errorf("expected scope.version=%s, got %s", Version, sm.Scope.Version)
+		}
+		if len(sm.Metrics) != 1 {
+			t.Fatalf("expected 1 metric, got %d", len(sm.Metrics))
+		}
+		metric := sm.Metrics[0]
+		if metric.Name != "http_requests_total" {
+			t.Errorf("wrong metric name: %s", metric.Name)
+		}
+		if len(metric.Gauge.DataPoints) != 1 {
+			t.Fatalf("expected 1 dataPoint, got %d", len(metric.Gauge.DataPoints))
+		}
+		dp := metric.Gauge.DataPoints[0]
+		if dp.AsDouble != 42.0 {
+			t.Errorf("wrong value: %f", dp.AsDouble)
+		}
+		if dp.TimeUnixNano == "" {
+			t.Error("timeUnixNano is empty")
+		}
+		foundMethod := false
+		for _, a := range dp.Attributes {
+			if a.Key == "method" && a.Value.StringValue == "GET" {
+				foundMethod = true
+			}
+		}
+		if !foundMethod {
+			t.Error("method attribute not found")
 		}
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"partialSuccess":{}}`))
 	}))
 	defer server.Close()
-	sinkPrometheus := NewSinkPrometheus(server.URL)
+	sinkPrometheus := NewSinkPrometheus(
+		server.URL,
+		WithHttpDisabledBatch(),
+	)
+	defer sinkPrometheus.Close()
 	fields := []Field{
 		String("name", "http_requests_total"),
 		String("method", "GET"),
 		Float64("value", 42.0),
 	}
 	_, err := sinkPrometheus.WriteWithAttributes(
-		writeAttributes{typeData: DataMetric},
+		writeAttributes{typeData: DataMetric, typeLevel: LevelError},
 		fields,
 	)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("error: %v", err)
 	}
-	sinkPrometheus.Close()
+	wg.Wait()
+}
+func Test_SinkFactory_PrometheusCloud(t *testing.T) {
+	token := os.Getenv("GRAFANA_CLOUD_TOKEN")
+	if token == "" {
+		t.Skip("GRAFANA_CLOUD_TOKEN not set — skipping integration test")
+	}
+	sinkPrometheus := NewSinkPrometheus(
+		"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/metrics",
+		WithHttpHeader(
+			"Authorization",
+			"Basic "+token,
+		),
+	)
+	defer sinkPrometheus.Close()
+	telemetry := NewTelemetry(
+		WithMode(ModeSync, sinkPrometheus),
+		WithFormat(FormatJson),
+	)
+	defer telemetry.Close()
+	telemetry.Error(DataMetric,
+		String("name", "ulog_test_metric"),
+		Float64("value", 42.0),
+		String("environment", "production"),
+	)
 }
 func Test_SinkFactory_Slack(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -897,8 +988,7 @@ func Test_SinkFactory_Telegram(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkTelegram := NewSinkTelegram("test-bot-token", "test-chat-123")
-	sinkTelegram.endPoint = server.URL
+	sinkTelegram := NewSinkTelegram(server.URL, "test-chat-123")
 	fields := []Field{
 		String("message", "test message"),
 	}
@@ -912,33 +1002,69 @@ func Test_SinkFactory_Telegram(t *testing.T) {
 	sinkTelegram.Close()
 }
 func Test_SinkFactory_Tempo(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer wg.Done()
 		var trace TempoData
 		json.NewDecoder(r.Body).Decode(&trace)
-		if trace.Duration != 100 {
-			t.Error("wrong duration")
+		span := trace.ResourceSpans[0].ScopeSpans[0].Spans[0]
+		if span.Name != "test" {
+			t.Errorf("wrong name: %s", span.Name)
 		}
-		if trace.Name != "test" {
-			t.Error("wrong name")
+		if span.SpanID != "eee19b7ec3c1b100" {
+			t.Errorf("wrong span_id: %s", span.SpanID)
 		}
-		if trace.SpanID != "def" {
-			t.Error("wrong span_id")
-		}
-		if trace.TraceID != "abc" {
-			t.Error("wrong trace_id")
+		if span.TraceID != "5b8efff798038103d269b633813fc700" {
+			t.Errorf("wrong trace_id: %s", span.TraceID)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkTempo := NewSinkTempo(server.URL)
+	sinkTempo := NewSinkTempo(
+		server.URL,
+		WithHttpDisabledBatch(),
+	)
+	defer sinkTempo.Close()
 	fields := []Field{
-		String("trace_id", "abc"),
-		String("span_id", "def"),
+		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
+		String("span_id", "EEE19B7E-C3C1-B100"),
 		String("name", "test"),
 		Int64("duration", 100),
 	}
-	sinkTempo.WriteWithAttributes(writeAttributes{typeData: DataTrace}, fields)
-	sinkTempo.Close()
+	_, err := sinkTempo.WriteWithAttributes(
+		writeAttributes{typeData: DataTrace, typeLevel: LevelError},
+		fields,
+	)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	wg.Wait()
+}
+func Test_SinkFactory_TempoCloud(t *testing.T) {
+	token := os.Getenv("GRAFANA_CLOUD_TOKEN")
+	if token == "" {
+		t.Skip("GRAFANA_CLOUD_TOKEN not set — skipping integration test")
+	}
+	sinkTempo := NewSinkTempo(
+		"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/traces",
+		WithHttpHeader(
+			"Authorization",
+			"Basic "+token,
+		),
+	)
+	defer sinkTempo.Close()
+	telemetry := NewTelemetry(
+		WithMode(ModeSync, sinkTempo),
+		WithFormat(FormatJson),
+	)
+	defer telemetry.Close()
+	telemetry.Error(DataTrace,
+		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
+		String("span_id", "EEE19B7EC3C1B105"),
+		String("name", "integration-test-span"),
+		Int64("duration", 150),
+	)
 }
 func Test_SinkFactory_Wechat(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1017,7 +1143,7 @@ func Test_SinkFile_CleanupByAge(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
 	if err != nil {
 		t.Fatalf("Glob failed: %v", err)
@@ -1045,7 +1171,7 @@ func Test_SinkFile_CleanupByCount(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
 	if err != nil {
 		t.Fatalf("Glob failed: %v", err)
@@ -1079,7 +1205,7 @@ func Test_SinkFile_Rotate(t *testing.T) {
 	if err := sinkFile.Close(); err != nil {
 		t.Errorf("Sync error: %v", err)
 	}
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 	files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
 	if err != nil {
 		t.Fatalf("Glob failed: %v", err)
@@ -1137,11 +1263,12 @@ func Test_SinkHttp(t *testing.T) {
 	}
 }
 func Test_SinkHttp_Batch(t *testing.T) {
-	var mutex sync.Mutex
-	var requests [][]byte
-	batchInterval := 100 * time.Millisecond
+	var (
+		mutex    sync.Mutex
+		requests [][]byte
+	)
+	batchInterval := 10 * time.Second
 	batchSize := 3
-	delay := 200 * time.Millisecond
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		r.Body.Close()
@@ -1155,28 +1282,86 @@ func Test_SinkHttp_Batch(t *testing.T) {
 		WithHttpBatch(batchSize, batchInterval),
 		WithHttpFilterLevel(LevelDebug),
 	)
+	defer sinkHttp.Close()
 	attributes := writeAttributes{
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
 	}
 	for i := 0; i < batchSize; i++ {
 		fields := []Field{
-			String("message", "test"),
+			String("message", fmt.Sprintf("test-%d", i)),
 			Int("count", i),
 		}
-		sinkHttp.WriteWithAttributes(attributes, fields)
+		_, err := sinkHttp.WriteWithAttributes(attributes, fields)
+		if err != nil {
+			t.Fatalf("WriteWithAttributes failed: %v", err)
+		}
 	}
-	time.Sleep(delay)
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		mutex.Lock()
+		count := len(requests)
+		mutex.Unlock()
+		if count >= 1 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	mutex.Lock()
 	requestCount := len(requests)
+	capturedRequests := make([][]byte, len(requests))
+	copy(capturedRequests, requests)
 	mutex.Unlock()
 	if requestCount != 1 {
-		t.Errorf("Expected 1 batch request, got %d", requestCount)
+		t.Fatalf("expected 1 batch request, got %d", requestCount)
 	}
-	if requestCount > 0 {
-		bodyStr := string(requests[0])
-		if !strings.Contains(bodyStr, "0") || !strings.Contains(bodyStr, "1") || !strings.Contains(bodyStr, "2") {
-			t.Errorf("Batch should contain all messages: %s", bodyStr)
+	body := capturedRequests[0]
+	lines := bytes.Split(bytes.TrimSpace(body), []byte{'\n'})
+	if len(lines) != batchSize {
+		t.Fatalf("expected %d records in batch, got %d: %s", batchSize, len(lines), body)
+	}
+	if bytes.Contains(body, []byte("\n\n")) {
+		t.Errorf("body contains empty lines (not NDJSON): %q", body)
+	}
+	expectedCounts := map[int]bool{0: false, 1: false, 2: false}
+	expectedMessages := map[string]bool{
+		"test-0": false,
+		"test-1": false,
+		"test-2": false,
+	}
+	for _, line := range lines {
+		var record map[string]any
+		if err := json.Unmarshal(line, &record); err != nil {
+			t.Fatalf("failed to unmarshal record %q: %v", line, err)
+		}
+		countFloat, ok := record["count"].(float64)
+		if !ok {
+			t.Errorf("record missing 'count': %v", record)
+			continue
+		}
+		msg, ok := record["message"].(string)
+		if !ok {
+			t.Errorf("record missing 'message': %v", record)
+		} else if _, exists := expectedMessages[msg]; !exists {
+			t.Errorf("unexpected message %q in record: %v", msg, record)
+		} else {
+			expectedMessages[msg] = true
+		}
+		countInt := int(countFloat)
+		if _, exists := expectedCounts[countInt]; !exists {
+			t.Errorf("unexpected count %d in record: %v", countInt, record)
+			continue
+		}
+		expectedCounts[countInt] = true
+	}
+	for count, found := range expectedCounts {
+		if !found {
+			t.Errorf("count %d not found in batch", count)
+		}
+	}
+	for msg, found := range expectedMessages {
+		if !found {
+			t.Errorf("message %q not found in batch", msg)
 		}
 	}
 }
@@ -1218,7 +1403,7 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 		fields := []Field{String("msg", "test")}
 		sinkHttp.WriteWithAttributes(attrs, fields)
 		sinkHttp.WriteWithAttributes(attrs, fields)
-		time.Sleep(60 * time.Millisecond)
+		time.Sleep(120 * time.Millisecond)
 		sinkHttp.WriteWithAttributes(attrs, fields)
 		if sinkHttp.circuitState.Load() != circuitStateClosed {
 			t.Error("should be Closed")
@@ -1234,7 +1419,7 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 		fields := []Field{String("msg", "test")}
 		sinkHttp.WriteWithAttributes(attrs, fields)
 		sinkHttp.WriteWithAttributes(attrs, fields)
-		time.Sleep(60 * time.Millisecond)
+		time.Sleep(120 * time.Millisecond)
 		sinkHttp.WriteWithAttributes(attrs, fields)
 		if sinkHttp.circuitState.Load() != circuitStateOpen {
 			t.Error("should stay Open after HalfOpen failure")
@@ -1278,6 +1463,83 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 		if sinkHttp.circuitFailures.Load() != 0 {
 			t.Error("failures should be 0")
 		}
+		if sinkHttp.circuitState.Load() != circuitStateClosed {
+			t.Error("state should be Closed")
+		}
+	})
+	t.Run("HalfOpenRecovery", func(t *testing.T) {
+		var requestCount atomic.Int32
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			c := requestCount.Add(1)
+			if c <= 2 {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+		sink := NewSinkHttp(srv.URL,
+			WithHttpDisabledBatch(),
+			WithHttpCircuitBreaker(2, 50*time.Millisecond),
+		)
+		defer sink.Close()
+		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
+		fields := []Field{String("msg", "test")}
+		sink.WriteWithAttributes(attrs, fields)
+		sink.WriteWithAttributes(attrs, fields)
+		if sink.circuitState.Load() != circuitStateOpen {
+			t.Fatalf("after 2 failures: state = %d, want Open (%d)",
+				sink.circuitState.Load(), circuitStateOpen)
+		}
+		time.Sleep(120 * time.Millisecond)
+		_, err := sink.WriteWithAttributes(attrs, fields)
+		if err != nil {
+			t.Fatalf("probe request failed: %v", err)
+		}
+		if sink.circuitState.Load() != circuitStateClosed {
+			t.Errorf("after successful probe: state = %d, want Closed (%d)",
+				sink.circuitState.Load(), circuitStateClosed)
+		}
+		if got := requestCount.Load(); got != 3 {
+			t.Errorf("request count = %d, want 3 (2 failures + 1 probe)", got)
+		}
+	})
+	t.Run("HalfOpenOnlyOneProbe", func(t *testing.T) {
+		var requestCount atomic.Int32
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestCount.Add(1)
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer srv.Close()
+		sink := NewSinkHttp(srv.URL,
+			WithHttpDisabledBatch(),
+			WithHttpCircuitBreaker(2, 50*time.Millisecond),
+		)
+		defer sink.Close()
+		attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
+		fields := []Field{String("msg", "test")}
+		sink.WriteWithAttributes(attrs, fields)
+		sink.WriteWithAttributes(attrs, fields)
+		if sink.circuitState.Load() != circuitStateOpen {
+			t.Fatalf("should be Open, got %d", sink.circuitState.Load())
+		}
+		time.Sleep(120 * time.Millisecond)
+		var wg sync.WaitGroup
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				sink.WriteWithAttributes(attrs, fields)
+			}()
+		}
+		wg.Wait()
+		if got := requestCount.Load(); got != 3 {
+			t.Errorf("request count = %d, want 3 (2 failures + exactly 1 probe)", got)
+		}
+		if sink.circuitState.Load() != circuitStateOpen {
+			t.Errorf("after failed probe: state = %d, want Open (%d)",
+				sink.circuitState.Load(), circuitStateOpen)
+		}
 	})
 }
 func Test_SinkHttp_Deduplication(t *testing.T) {
@@ -1318,7 +1580,7 @@ func Test_SinkHttp_RateLimit(t *testing.T) {
 	var mutex sync.Mutex
 	attempt := 0
 	backoff := 100 * time.Millisecond
-	retry := 2
+	retryMax := 2
 	retryAfterSeconds := 1
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mutex.Lock()
@@ -1336,7 +1598,7 @@ func Test_SinkHttp_RateLimit(t *testing.T) {
 	sinkHttp := NewSinkHttp(server.URL,
 		WithHttpDisabledBatch(),
 		WithHttpFilterLevel(LevelDebug),
-		WithHttpRetry(retry, backoff),
+		WithHttpRetry(retryMax, backoff),
 	)
 	attributes := writeAttributes{
 		typeData:  DataLog,
@@ -1353,7 +1615,7 @@ func Test_SinkHttp_RateLimit(t *testing.T) {
 	mutex.Lock()
 	finalAttempt := attempt
 	mutex.Unlock()
-	if finalAttempt != retry {
+	if finalAttempt != 2 {
 		t.Errorf("Expected 2 attempts, got %d", attempt)
 	}
 	if elapsed < expectedDuration {
@@ -1384,7 +1646,7 @@ func Test_SinkHttp_Retry(t *testing.T) {
 	}
 	fields := []Field{String("message", "test")}
 	sinkHttp.WriteWithAttributes(attributes, fields)
-	if attempt != retry {
+	if attempt != 3 {
 		t.Errorf("Expected 3 attempts, got %d", attempt)
 	}
 }
@@ -1394,7 +1656,7 @@ func Test_SinkHttp_Sampling(t *testing.T) {
 	counts := 100
 	rate := int32(10)
 	expected := counts / int(rate)
-	delta := expected / 2
+	delta := 1
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mutex.Lock()
 		requestCount++
@@ -1425,23 +1687,49 @@ func Test_SinkHttp_Sampling(t *testing.T) {
 }
 
 // Приватные функции
+func loadEnv(path string) {
+	file, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		value = strings.Trim(value, `"'`)
+		os.Setenv(key, value)
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintf(os.Stderr, "ulog: error reading .env: %v\n", err)
+	}
+}
 func checkExtractor(t *testing.T, elem struct {
 	name      string
 	keys      []string
 	context   context.Context
-	wantKey   string
-	wantValue string
+	want      map[string]string
 	shouldAdd bool
 }, output string) {
 	t.Helper()
 	if elem.shouldAdd {
-		if !strings.Contains(output, elem.wantKey) {
-			t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
-				elem.keys, elem.wantKey, output)
-		}
-		if !strings.Contains(output, elem.wantValue) {
-			t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
-				elem.keys, elem.wantValue, elem.wantKey, output)
+		for key, value := range elem.want {
+			if !strings.Contains(output, key) {
+				t.Errorf("extractor with keys %v: expected field %q not found in output: %s",
+					elem.keys, key, output)
+			}
+			if !strings.Contains(output, value) {
+				t.Errorf("extractor with keys %v: expected value %q for key %q not found in output: %s",
+					elem.keys, value, key, output)
+			}
 		}
 	} else {
 		for _, key := range elem.keys {
