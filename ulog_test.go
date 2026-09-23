@@ -721,7 +721,7 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkKafka := NewSinkKafka(server.URL, "test-topic")
+	sinkKafka := NewSinkKafka(server.URL + "/topics/test-topic")
 	fields := []Field{
 		String("message", "test kafka message"),
 		String("service", "test-service"),
@@ -1543,38 +1543,74 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 	})
 }
 func Test_SinkHttp_Deduplication(t *testing.T) {
-	var mutex sync.Mutex
-	var requestCount int
-	deduplication := 1 * time.Second
-	shortDelay := 10 * time.Millisecond
-	mediumDelay := 100 * time.Millisecond
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	t.Run("Basic", func(t *testing.T) {
+		var mutex sync.Mutex
+		var requestCount int
+		deduplication := 1 * time.Second
+		shortDelay := 10 * time.Millisecond
+		mediumDelay := 100 * time.Millisecond
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			mutex.Lock()
+			requestCount++
+			mutex.Unlock()
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+		sinkHttp := NewSinkHttp(server.URL,
+			WithHttpDedupWindow(deduplication),
+			WithHttpDisabledBatch(),
+			WithHttpFilterLevel(LevelDebug),
+		)
+		defer sinkHttp.Close()
+		attributes := writeAttributes{
+			typeData:  DataLog,
+			typeLevel: LevelInfo,
+		}
+		fields := []Field{String("message", "test")}
+		sinkHttp.WriteWithAttributes(attributes, fields)
+		time.Sleep(shortDelay)
+		sinkHttp.WriteWithAttributes(attributes, fields)
+		time.Sleep(mediumDelay)
 		mutex.Lock()
-		requestCount++
+		count := requestCount
 		mutex.Unlock()
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-	sinkHttp := NewSinkHttp(server.URL,
-		WithHttpDedupWindow(deduplication),
-		WithHttpDisabledBatch(),
-		WithHttpFilterLevel(LevelDebug),
-	)
-	attributes := writeAttributes{
-		typeData:  DataLog,
-		typeLevel: LevelInfo,
-	}
-	fields := []Field{String("message", "test")}
-	sinkHttp.WriteWithAttributes(attributes, fields)
-	time.Sleep(shortDelay)
-	sinkHttp.WriteWithAttributes(attributes, fields)
-	time.Sleep(mediumDelay)
-	mutex.Lock()
-	count := requestCount
-	mutex.Unlock()
-	if count != 1 {
-		t.Errorf("Expected 1 request (deduplication), got %d", count)
-	}
+		if count != 1 {
+			t.Errorf("Expected 1 request (deduplication), got %d", count)
+		}
+	})
+	t.Run("MaxSize", func(t *testing.T) {
+		var mutex sync.Mutex
+		var requestCount int
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			mutex.Lock()
+			requestCount++
+			mutex.Unlock()
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+		sinkHttp := NewSinkHttp(server.URL,
+			WithHttpDedupWindow(1*time.Second),
+			WithHttpDedupMaxSize(2),
+			WithHttpDisabledBatch(),
+			WithHttpFilterLevel(LevelDebug),
+		)
+		defer sinkHttp.Close()
+		attributes := writeAttributes{
+			typeData:  DataLog,
+			typeLevel: LevelInfo,
+		}
+		for i := 0; i < 5; i++ {
+			fields := []Field{String("message", fmt.Sprintf("test-%d", i))}
+			sinkHttp.WriteWithAttributes(attributes, fields)
+		}
+		time.Sleep(50 * time.Millisecond)
+		mutex.Lock()
+		count := requestCount
+		mutex.Unlock()
+		if count != 5 {
+			t.Errorf("Expected 5 requests (all unique), got %d", count)
+		}
+	})
 }
 func Test_SinkHttp_RateLimit(t *testing.T) {
 	var mutex sync.Mutex
