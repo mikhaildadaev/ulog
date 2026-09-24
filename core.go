@@ -447,8 +447,6 @@ func (universalTelemetry *universalTelemetry) Close() error {
 }
 func (universalTelemetry *universalTelemetry) Debug(typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
-		caller:     universalTelemetry.getCaller(LevelDebug),
-		theme:      universalTelemetry.getTheme(),
 		typeData:   typeData,
 		typeFormat: TypeFormat(universalTelemetry.format.Load()),
 		typeLevel:  LevelDebug,
@@ -457,8 +455,6 @@ func (universalTelemetry *universalTelemetry) Debug(typeData TypeData, fields ..
 }
 func (universalTelemetry *universalTelemetry) DebugWithContext(context context.Context, typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
-		caller:     universalTelemetry.getCaller(LevelDebug),
-		theme:      universalTelemetry.getTheme(),
 		typeData:   typeData,
 		typeFormat: TypeFormat(universalTelemetry.format.Load()),
 		typeLevel:  LevelDebug,
@@ -467,8 +463,6 @@ func (universalTelemetry *universalTelemetry) DebugWithContext(context context.C
 }
 func (universalTelemetry *universalTelemetry) Error(typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
-		caller:     universalTelemetry.getCaller(LevelError),
-		theme:      universalTelemetry.getTheme(),
 		typeData:   typeData,
 		typeFormat: TypeFormat(universalTelemetry.format.Load()),
 		typeLevel:  LevelError,
@@ -477,8 +471,6 @@ func (universalTelemetry *universalTelemetry) Error(typeData TypeData, fields ..
 }
 func (universalTelemetry *universalTelemetry) ErrorWithContext(context context.Context, typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
-		caller:     universalTelemetry.getCaller(LevelError),
-		theme:      universalTelemetry.getTheme(),
 		typeData:   typeData,
 		typeFormat: TypeFormat(universalTelemetry.format.Load()),
 		typeLevel:  LevelError,
@@ -487,15 +479,17 @@ func (universalTelemetry *universalTelemetry) ErrorWithContext(context context.C
 }
 func (universalTelemetry *universalTelemetry) Fatal(typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
-		caller:     universalTelemetry.getCaller(LevelFatal),
-		theme:      universalTelemetry.getTheme(),
 		typeData:   typeData,
 		typeFormat: TypeFormat(universalTelemetry.format.Load()),
 		typeLevel:  LevelFatal,
 	}
 	universalTelemetry.route(context.Background(), attributes, fields)
-	if universalTelemetry.mode == ModeAsync {
-		if asyncWriter, ok := universalTelemetry.writer.(*asyncWriter); ok {
+	universalTelemetry.mutex.RLock()
+	mode := universalTelemetry.mode
+	writer := universalTelemetry.writer
+	universalTelemetry.mutex.RUnlock()
+	if mode == ModeAsync {
+		if asyncWriter, ok := writer.(*asyncWriter); ok {
 			asyncWriter.sync()
 		}
 	}
@@ -503,15 +497,17 @@ func (universalTelemetry *universalTelemetry) Fatal(typeData TypeData, fields ..
 }
 func (universalTelemetry *universalTelemetry) FatalWithContext(context context.Context, typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
-		caller:     universalTelemetry.getCaller(LevelFatal),
-		theme:      universalTelemetry.getTheme(),
 		typeData:   typeData,
 		typeFormat: TypeFormat(universalTelemetry.format.Load()),
 		typeLevel:  LevelFatal,
 	}
 	universalTelemetry.route(context, attributes, fields)
-	if universalTelemetry.mode == ModeAsync {
-		if asyncWriter, ok := universalTelemetry.writer.(*asyncWriter); ok {
+	universalTelemetry.mutex.RLock()
+	mode := universalTelemetry.mode
+	writer := universalTelemetry.writer
+	universalTelemetry.mutex.RUnlock()
+	if mode == ModeAsync {
+		if asyncWriter, ok := writer.(*asyncWriter); ok {
 			asyncWriter.sync()
 		}
 	}
@@ -519,8 +515,6 @@ func (universalTelemetry *universalTelemetry) FatalWithContext(context context.C
 }
 func (universalTelemetry *universalTelemetry) Info(typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
-		caller:     universalTelemetry.getCaller(LevelInfo),
-		theme:      universalTelemetry.getTheme(),
 		typeData:   typeData,
 		typeFormat: TypeFormat(universalTelemetry.format.Load()),
 		typeLevel:  LevelInfo,
@@ -529,8 +523,6 @@ func (universalTelemetry *universalTelemetry) Info(typeData TypeData, fields ...
 }
 func (universalTelemetry *universalTelemetry) InfoWithContext(context context.Context, typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
-		caller:     universalTelemetry.getCaller(LevelInfo),
-		theme:      universalTelemetry.getTheme(),
 		typeData:   typeData,
 		typeFormat: TypeFormat(universalTelemetry.format.Load()),
 		typeLevel:  LevelInfo,
@@ -611,8 +603,6 @@ func (universalTelemetry *universalTelemetry) SetTheme(theme TypeTheme) {
 }
 func (universalTelemetry *universalTelemetry) Warn(typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
-		caller:     universalTelemetry.getCaller(LevelWarn),
-		theme:      universalTelemetry.getTheme(),
 		typeData:   typeData,
 		typeFormat: TypeFormat(universalTelemetry.format.Load()),
 		typeLevel:  LevelWarn,
@@ -621,8 +611,6 @@ func (universalTelemetry *universalTelemetry) Warn(typeData TypeData, fields ...
 }
 func (universalTelemetry *universalTelemetry) WarnWithContext(context context.Context, typeData TypeData, fields ...Field) {
 	attributes := writeAttributes{
-		caller:     universalTelemetry.getCaller(LevelWarn),
-		theme:      universalTelemetry.getTheme(),
 		typeData:   typeData,
 		typeFormat: TypeFormat(universalTelemetry.format.Load()),
 		typeLevel:  LevelWarn,
