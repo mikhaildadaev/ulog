@@ -123,9 +123,8 @@ var (
 	osExit          = os.Exit
 	timeCacheMu     sync.RWMutex
 	timeCacheSec    int64
-	timeCachePrefix = make([]byte, 0, 32)
+	timeCachePrefix string
 	timeCacheTZ     string
-	timeOnce        sync.Once
 	themeDark       = colorTheme{
 		caller:      colorDarkBlue,
 		data:        colorDarkWhite,
@@ -145,11 +144,6 @@ var (
 		prefixInfo:  colorLightGreen + "[INFO]",
 		prefixWarn:  colorLightYellow + "[WARN]",
 		reset:       colorReset,
-	}
-	timePool = sync.Pool{
-		New: func() any {
-			return make([]byte, 0, 26)
-		},
 	}
 )
 
@@ -197,30 +191,26 @@ func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 	unixNano := timestamp.UnixNano()
 	timeCacheMu.RLock()
 	if timeCacheSec == unixSec {
-		dataBuf.Write(timeCachePrefix)
-		dataBuf.WriteString(timeCacheTZ)
+		prefix := timeCachePrefix
+		tz := timeCacheTZ
 		timeCacheMu.RUnlock()
+		dataBuf.WriteString(prefix)
+		dataBuf.WriteString(tz)
 	} else {
 		timeCacheMu.RUnlock()
 		timeCacheMu.Lock()
 		if timeCacheSec != unixSec {
-			timeBuf := timePool.Get().([]byte)
-			timeBuf = timestamp.AppendFormat(timeBuf[:0], "2006-01-02T15:04:05")
-			timeCachePrefix = timeCachePrefix[:0]
-			timeCachePrefix = append(timeCachePrefix, timeBuf...)
-			timePool.Put(timeBuf)
-			timeOnce.Do(func() {
-				tzBuf := timePool.Get().([]byte)
-				tzBuf = timestamp.AppendFormat(tzBuf[:0], "-07:00")
-				timeCacheTZ = string(tzBuf)
-				timePool.Put(tzBuf)
-			})
-
+			timeCachePrefix = timestamp.Format("2006-01-02T15:04:05")
+			if timeCacheTZ == "" {
+				timeCacheTZ = timestamp.Format("-07:00")
+			}
 			timeCacheSec = unixSec
 		}
-		dataBuf.Write(timeCachePrefix)
-		dataBuf.WriteString(timeCacheTZ)
+		prefix := timeCachePrefix
+		tz := timeCacheTZ
 		timeCacheMu.Unlock()
+		dataBuf.WriteString(prefix)
+		dataBuf.WriteString(tz)
 	}
 	millis := (unixNano / 1_000_000) % 1000
 	micros := (unixNano / 1_000) % 1000
@@ -234,11 +224,11 @@ func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 }
 func getTypeData(buf *bytes.Buffer, typeData TypeData) {
 	switch typeData {
-	case 0:
+	case DataLog:
 		buf.WriteString(`log`)
-	case 1:
+	case DataMetric:
 		buf.WriteString(`metric`)
-	case 2:
+	case DataTrace:
 		buf.WriteString(`trace`)
 	}
 }
@@ -483,7 +473,7 @@ func formatValueInts64(dataBuf *bytes.Buffer, v []int64) {
 }
 func formatValueString(dataBuf *bytes.Buffer, v string) {
 	dataBuf.WriteByte('"')
-	dataBuf.WriteString(v)
+	escapeJson(dataBuf, v)
 	dataBuf.WriteByte('"')
 }
 func formatValueStrings(dataBuf *bytes.Buffer, v []string) {
@@ -493,7 +483,7 @@ func formatValueStrings(dataBuf *bytes.Buffer, v []string) {
 			dataBuf.WriteByte(',')
 		}
 		dataBuf.WriteByte('"')
-		dataBuf.WriteString(s)
+		escapeJson(dataBuf, s)
 		dataBuf.WriteByte('"')
 	}
 	dataBuf.WriteByte(']')
