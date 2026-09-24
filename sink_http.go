@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -65,9 +66,7 @@ type SinkHttp struct {
 	once                         sync.Once
 	retryBackoff                 time.Duration
 	retryMax                     int
-	sampleCounter                int32
-	sampleLastReset              time.Time
-	sampleMutex                  sync.Mutex
+	sampleCounter                atomic.Int64
 	sampleRate                   int32
 	sampleWindow                 time.Duration
 	wg                           sync.WaitGroup
@@ -315,6 +314,12 @@ func (sinkHttp *SinkHttp) Write(p []byte) (n int, err error) {
 	return sinkHttp.sendWithRetry(p)
 }
 func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
+	sinkHttp.mutex.Lock()
+	if sinkHttp.closed {
+		sinkHttp.mutex.Unlock()
+		return 0, fmt.Errorf("ulog: sink is closed")
+	}
+	sinkHttp.mutex.Unlock()
 	if attributes.typeLevel < sinkHttp.filterLevel {
 		return 0, nil
 	}
@@ -335,6 +340,10 @@ func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields
 	}
 	if sinkHttp.batchSize > 0 {
 		sinkHttp.batchMutex.Lock()
+		const maxBatchBufferSize = 10000
+		if len(sinkHttp.batchBuffer) >= maxBatchBufferSize {
+			sinkHttp.batchBuffer = sinkHttp.batchBuffer[1:]
+		}
 		sinkHttp.batchBuffer = append(sinkHttp.batchBuffer, body)
 		needFlush := len(sinkHttp.batchBuffer) >= sinkHttp.batchSize
 		sinkHttp.batchMutex.Unlock()
@@ -919,9 +928,6 @@ func (sinkHttp *SinkHttp) cleanupDedupCache() {
 func (sinkHttp *SinkHttp) evictDedupCache() {
 	sinkHttp.dedupEvictMutex.Lock()
 	defer sinkHttp.dedupEvictMutex.Unlock()
-	sinkHttp.evictDedupCacheLocked()
-}
-func (sinkHttp *SinkHttp) evictDedupCacheLocked() {
 	now := time.Now()
 	sinkHttp.dedupCache.Range(func(key, value any) bool {
 		if now.Sub(value.(time.Time)) > sinkHttp.dedupWindow {
@@ -965,11 +971,6 @@ func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
 			return true
 		}
 	}
-	if sinkHttp.dedupCacheMaxSize > 0 && sinkHttp.dedupCacheCount.Load() >= sinkHttp.dedupCacheMaxSize {
-		sinkHttp.dedupEvictMutex.Lock()
-		sinkHttp.evictDedupCacheLocked()
-		sinkHttp.dedupEvictMutex.Unlock()
-	}
 	if _, loaded := sinkHttp.dedupCache.LoadOrStore(hash, time.Now()); !loaded {
 		sinkHttp.dedupCacheCount.Add(1)
 	}
@@ -977,10 +978,69 @@ func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
 }
 func (sinkHttp *SinkHttp) hashFields(fields []Field) uint64 {
 	hash := fnv.New64a()
+	var buf [32]byte
 	for _, f := range fields {
 		hash.Write([]byte(f.nameKey))
 		hash.Write([]byte{0})
-		fmt.Fprintf(hash, "%v", getField(f))
+		switch f.typeValue {
+		case FieldString:
+			hash.Write([]byte(f.valueString))
+		case FieldInt:
+			hash.Write(strconv.AppendInt(buf[:0], int64(f.valueInt), 10))
+		case FieldInt64:
+			hash.Write(strconv.AppendInt(buf[:0], f.valueInt64, 10))
+		case FieldFloat64:
+			hash.Write(strconv.AppendFloat(buf[:0], f.valueFloat64, 'f', -1, 64))
+		case FieldBool:
+			if f.valueBool {
+				hash.Write([]byte("1"))
+			} else {
+				hash.Write([]byte("0"))
+			}
+		case FieldDuration:
+			hash.Write(strconv.AppendInt(buf[:0], int64(f.valueDuration), 10))
+		case FieldTime:
+			hash.Write(strconv.AppendInt(buf[:0], f.valueTime.UnixNano(), 10))
+		case FieldStrings:
+			for _, s := range f.valueStrings {
+				hash.Write([]byte(s))
+				hash.Write([]byte{0})
+			}
+		case FieldInts:
+			for _, n := range f.valueInts {
+				hash.Write(strconv.AppendInt(buf[:0], int64(n), 10))
+				hash.Write([]byte{0})
+			}
+		case FieldInts64:
+			for _, n := range f.valueInts64 {
+				hash.Write(strconv.AppendInt(buf[:0], n, 10))
+				hash.Write([]byte{0})
+			}
+		case FieldFloats64:
+			for _, v := range f.valueFloats64 {
+				hash.Write(strconv.AppendFloat(buf[:0], v, 'f', -1, 64))
+				hash.Write([]byte{0})
+			}
+		case FieldBools:
+			for _, v := range f.valueBools {
+				if v {
+					hash.Write([]byte("1"))
+				} else {
+					hash.Write([]byte("0"))
+				}
+				hash.Write([]byte{0})
+			}
+		case FieldDurations:
+			for _, d := range f.valueDurations {
+				hash.Write(strconv.AppendInt(buf[:0], int64(d), 10))
+				hash.Write([]byte{0})
+			}
+		case FieldTimes:
+			for _, t := range f.valueTimes {
+				hash.Write(strconv.AppendInt(buf[:0], t.UnixNano(), 10))
+				hash.Write([]byte{0})
+			}
+		}
 		hash.Write([]byte{0})
 	}
 	return hash.Sum64()
@@ -997,7 +1057,10 @@ func (sinkHttp *SinkHttp) send(body []byte) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 	if resp.StatusCode == http.StatusTooManyRequests {
 		var retryAfter time.Duration
 		if retryAfterHeader := resp.Header.Get("Retry-After"); retryAfterHeader != "" {
@@ -1058,17 +1121,8 @@ func (sinkHttp *SinkHttp) shouldSample() bool {
 	if sinkHttp.sampleRate <= 1 {
 		return true
 	}
-	sinkHttp.sampleMutex.Lock()
-	defer sinkHttp.sampleMutex.Unlock()
-	if sinkHttp.sampleWindow > 0 && time.Since(sinkHttp.sampleLastReset) > sinkHttp.sampleWindow {
-		sinkHttp.sampleCounter = 0
-		sinkHttp.sampleLastReset = time.Now()
-	}
-	sinkHttp.sampleCounter++
-	if sinkHttp.sampleCounter <= 0 {
-		sinkHttp.sampleCounter = 1
-	}
-	return sinkHttp.sampleCounter%sinkHttp.sampleRate == 0
+	counter := sinkHttp.sampleCounter.Add(1)
+	return counter%int64(sinkHttp.sampleRate) == 0
 }
 func (rateLimitError *rateLimitError) Error() string {
 	return fmt.Sprintf("rate limited, retry after %v", rateLimitError.retryAfter)
