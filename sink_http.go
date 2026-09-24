@@ -676,6 +676,46 @@ func getOpenTelemetryAttributes(fields []Field, skipKeys ...string) []OTLPAttrib
 	}
 	return attrs
 }
+func getOpenTelemetryEnvironment(fields []Field) string {
+	for _, f := range fields {
+		if f.nameKey == "environment" && f.typeValue == FieldString {
+			return f.valueString
+		}
+	}
+	return "production"
+}
+func getOpenTelemetryNamespace(fields []Field) string {
+	for _, f := range fields {
+		if f.nameKey == "namespace" && f.typeValue == FieldString {
+			return f.valueString
+		}
+	}
+	return "default"
+}
+func getOpenTelemetryService(fields []Field) string {
+	for _, f := range fields {
+		if f.nameKey == "service" && f.typeValue == FieldString {
+			return f.valueString
+		}
+	}
+	return "ulog"
+}
+func getOpenTelemetryType(fields []Field, name string) string {
+	for _, f := range fields {
+		if f.nameKey == "type" && f.typeValue == FieldString {
+			switch f.valueString {
+			case "counter", "gauge", "histogram":
+				return f.valueString
+			}
+		}
+	}
+	if strings.HasSuffix(name, "_total") ||
+		strings.HasSuffix(name, "_count") ||
+		strings.HasSuffix(name, "_sum") {
+		return "counter"
+	}
+	return "gauge"
+}
 func normalizeTraceID(value string) (string, error) {
 	v := strings.ToLower(strings.ReplaceAll(value, "-", ""))
 	if len(v) != 32 {

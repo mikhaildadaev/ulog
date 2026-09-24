@@ -26,7 +26,7 @@ import (
 type DiscordData struct {
 	AvatarURL string `json:"avatar_url,omitempty"`
 	Content   string `json:"content,omitempty"`
-	TTS       bool   `json:"tts,omitempty"`
+	TTS       *bool  `json:"tts,omitempty"`
 	UserName  string `json:"username,omitempty"`
 }
 type SinkDiscord = SinkHttp
@@ -69,11 +69,17 @@ type PrometheusScopeMetrics struct {
 	Metrics []PrometheusMetric `json:"metrics"`
 }
 type PrometheusMetric struct {
-	Name  string          `json:"name"`
-	Gauge PrometheusGauge `json:"gauge"`
+	Name  string           `json:"name"`
+	Gauge *PrometheusGauge `json:"gauge,omitempty"`
+	Sum   *PrometheusSum   `json:"sum,omitempty"`
 }
 type PrometheusGauge struct {
 	DataPoints []PrometheusDataPoint `json:"dataPoints"`
+}
+type PrometheusSum struct {
+	AggregationTemporality int                   `json:"aggregationTemporality"`
+	DataPoints             []PrometheusDataPoint `json:"dataPoints"`
+	IsMonotonic            bool                  `json:"isMonotonic"`
 }
 type PrometheusDataPoint struct {
 	TimeUnixNano string          `json:"timeUnixNano"`
@@ -161,10 +167,11 @@ func NewSinkDiscord(endPoint, userName, avatarURL string, params ...httpParams) 
 			if message == "" {
 				message = "empty message"
 			}
+			tts := false
 			discordData := DiscordData{
 				AvatarURL: avatarURL,
 				Content:   message,
-				TTS:       false,
+				TTS:       &tts,
 				UserName:  userName,
 			}
 			return json.Marshal(discordData)
@@ -215,7 +222,7 @@ func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
 			if message == "" {
 				message = "empty message"
 			}
-			attrs := getOpenTelemetryAttributes(fields, "message")
+			attrs := getOpenTelemetryAttributes(fields, "message", "service", "namespace", "environment")
 			now := time.Now().UnixNano()
 			lokiData := LokiData{
 				ResourceLogs: []LokiResourceLogs{
@@ -224,7 +231,15 @@ func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
 							Attributes: []OTLPAttribute{
 								{
 									Key:   "service.name",
-									Value: OTLPAttrValue{StringValue: "ulog"},
+									Value: OTLPAttrValue{StringValue: getOpenTelemetryService(fields)},
+								},
+								{
+									Key:   "service.namespace",
+									Value: OTLPAttrValue{StringValue: getOpenTelemetryNamespace(fields)},
+								},
+								{
+									Key:   "deployment.environment.name",
+									Value: OTLPAttrValue{StringValue: getOpenTelemetryEnvironment(fields)},
 								},
 							},
 						},
@@ -257,38 +272,47 @@ func NewSinkPrometheus(endPoint string, params ...httpParams) *SinkPrometheus {
 		WithHttpFilterData(DataMetric),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			name, value := getDataMetric(fields)
-			attrs := getOpenTelemetryAttributes(fields, "name", "value")
+			attrs := getOpenTelemetryAttributes(fields, "name", "value", "service", "namespace", "environment", "type")
+			service := getOpenTelemetryService(fields)
+			metricType := getOpenTelemetryType(fields, name)
+			dataPoint := PrometheusDataPoint{
+				TimeUnixNano: fmt.Sprintf("%d", time.Now().UnixNano()),
+				AsDouble:     value,
+				Attributes:   attrs,
+			}
+			var metric PrometheusMetric
+			switch metricType {
+			case "counter":
+				metric = PrometheusMetric{
+					Name: name,
+					Sum: &PrometheusSum{
+						AggregationTemporality: 2,
+						DataPoints:             []PrometheusDataPoint{dataPoint},
+						IsMonotonic:            true,
+					},
+				}
+			default:
+				metric = PrometheusMetric{
+					Name: name,
+					Gauge: &PrometheusGauge{
+						DataPoints: []PrometheusDataPoint{dataPoint},
+					},
+				}
+			}
 			prometheusData := PrometheusData{
 				ResourceMetrics: []PrometheusResourceMetrics{
 					{
 						Resource: OTLPResource{
 							Attributes: []OTLPAttribute{
-								{
-									Key:   "service.name",
-									Value: OTLPAttrValue{StringValue: "ulog"},
-								},
+								{Key: "service.name", Value: OTLPAttrValue{StringValue: service}},
+								{Key: "service.namespace", Value: OTLPAttrValue{StringValue: getOpenTelemetryNamespace(fields)}},
+								{Key: "deployment.environment.name", Value: OTLPAttrValue{StringValue: getOpenTelemetryEnvironment(fields)}},
 							},
 						},
 						ScopeMetrics: []PrometheusScopeMetrics{
 							{
-								Scope: OTLPScope{
-									Name:    "ulog",
-									Version: Version,
-								},
-								Metrics: []PrometheusMetric{
-									{
-										Name: name,
-										Gauge: PrometheusGauge{
-											DataPoints: []PrometheusDataPoint{
-												{
-													TimeUnixNano: fmt.Sprintf("%d", time.Now().UnixNano()),
-													AsDouble:     value,
-													Attributes:   attrs,
-												},
-											},
-										},
-									},
-								},
+								Scope:   OTLPScope{Name: "ulog", Version: Version},
+								Metrics: []PrometheusMetric{metric},
 							},
 						},
 					},
@@ -349,7 +373,7 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 			if err != nil {
 				return nil, fmt.Errorf("invalid trace data: %w", err)
 			}
-			attrs := getOpenTelemetryAttributes(fields, "name", "trace_id", "span_id", "duration")
+			attrs := getOpenTelemetryAttributes(fields, "name", "trace_id", "span_id", "duration", "service", "namespace", "environment")
 			now := time.Now()
 			startNano := now.UnixNano()
 			endNano := startNano + duration*1_000_000
@@ -360,7 +384,15 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 							Attributes: []OTLPAttribute{
 								{
 									Key:   "service.name",
-									Value: OTLPAttrValue{StringValue: "ulog"},
+									Value: OTLPAttrValue{StringValue: getOpenTelemetryService(fields)},
+								},
+								{
+									Key:   "service.namespace",
+									Value: OTLPAttrValue{StringValue: getOpenTelemetryNamespace(fields)},
+								},
+								{
+									Key:   "deployment.environment.name",
+									Value: OTLPAttrValue{StringValue: getOpenTelemetryEnvironment(fields)},
 								},
 							},
 						},
