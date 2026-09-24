@@ -866,123 +866,178 @@ func Test_SinkFactory_LokiCloud(t *testing.T) {
 	)
 }
 func Test_SinkFactory_Prometheus(t *testing.T) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer wg.Done()
-		if r.Method != http.MethodPost {
-			t.Errorf("wrong method: %s", r.Method)
-		}
-		if r.Header.Get("Content-Type") != "application/json" {
-			t.Errorf("wrong Content-Type: %s", r.Header.Get("Content-Type"))
-		}
-		rawBody, err := io.ReadAll(r.Body)
-		if err != nil {
-			t.Errorf("failed to read body: %v", err)
-			return
-		}
-		t.Logf("Body (raw): %s", string(rawBody))
-		var prettyJSON bytes.Buffer
-		if err := json.Indent(&prettyJSON, rawBody, "", "  "); err == nil {
-			t.Logf("Body (pretty):\n%s", prettyJSON.String())
-		}
-		var data PrometheusData
-		if err := json.Unmarshal(rawBody, &data); err != nil {
-			t.Errorf("failed to decode JSON: %v", err)
-			return
-		}
-		if len(data.ResourceMetrics) != 1 {
-			t.Errorf("expected 1 resourceMetrics, got %d", len(data.ResourceMetrics))
-			return
-		}
-		rm := data.ResourceMetrics[0]
-		if len(rm.Resource.Attributes) != 3 {
-			t.Errorf("expected 3 resource attributes, got %d", len(rm.Resource.Attributes))
-			return
-		}
-		expectedResourceAttrs := map[string]string{
-			"service.name":                "test-service",
-			"service.namespace":           "payments",
-			"deployment.environment.name": "production",
-		}
-		foundAttrs := make(map[string]string)
-		for _, attr := range rm.Resource.Attributes {
-			foundAttrs[attr.Key] = attr.Value.StringValue
-		}
-		for key, want := range expectedResourceAttrs {
-			if got, ok := foundAttrs[key]; !ok {
-				t.Errorf("resource attribute %q not found", key)
-			} else if got != want {
-				t.Errorf("resource attribute %q: expected %q, got %q", key, want, got)
-			}
-		}
-		if len(rm.ScopeMetrics) != 1 {
-			t.Errorf("expected 1 scopeMetrics, got %d", len(rm.ScopeMetrics))
-			return
-		}
-		sm := rm.ScopeMetrics[0]
-		if sm.Scope.Name != "ulog" {
-			t.Errorf("expected scope.name=ulog, got %s", sm.Scope.Name)
-		}
-		if sm.Scope.Version != Version {
-			t.Errorf("expected scope.version=%s, got %s", Version, sm.Scope.Version)
-		}
-		if len(sm.Metrics) != 1 {
-			t.Errorf("expected 1 metric, got %d", len(sm.Metrics))
-			return
-		}
-		metric := sm.Metrics[0]
-		if metric.Name != "http_requests_total" {
-			t.Errorf("wrong metric name: %s", metric.Name)
-		}
-		if metric.Sum == nil {
-			t.Fatalf("expected Sum (Counter), got nil")
-		}
-		if metric.Sum.AggregationTemporality != 2 {
-			t.Errorf("expected CUMULATIVE temporality (2), got %d", metric.Sum.AggregationTemporality)
-		}
-		if !metric.Sum.IsMonotonic {
-			t.Error("expected monotonic counter")
-		}
-		if len(metric.Sum.DataPoints) != 1 {
-			t.Fatalf("expected 1 dataPoint, got %d", len(metric.Sum.DataPoints))
-		}
-		dp := metric.Sum.DataPoints[0]
-		if dp.AsDouble != 42.0 {
-			t.Errorf("wrong value: %f", dp.AsDouble)
-		}
-		if dp.TimeUnixNano == "" {
-			t.Error("timeUnixNano is empty")
-		}
-		for _, a := range dp.Attributes {
-			if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
-				t.Errorf("%s should NOT be duplicated in DataPoint.Attributes", a.Key)
-			}
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"partialSuccess":{}}`))
-	}))
-	defer server.Close()
-	sinkPrometheus := NewSinkPrometheus(
-		server.URL,
-		WithHttpDisabledBatch(),
-	)
-	defer sinkPrometheus.Close()
-	fields := []Field{
-		String("service", "test-service"),
-		String("namespace", "payments"),
-		String("environment", "production"),
-		String("name", "http_requests_total"),
-		Float64("value", 42.0),
+	tests := []struct {
+		name         string
+		metricName   string
+		isCounter    bool
+		expectedTemp int
+		expectedMono bool
+	}{
+		{
+			name:         "Counter",
+			metricName:   "http_requests_total",
+			isCounter:    true,
+			expectedTemp: 2,
+			expectedMono: true,
+		},
+		{
+			name:         "Gauge",
+			metricName:   "cpu_usage",
+			isCounter:    false,
+			expectedTemp: 0,
+			expectedMono: false,
+		},
 	}
-	_, err := sinkPrometheus.WriteWithAttributes(
-		writeAttributes{typeData: DataMetric, typeLevel: LevelError},
-		fields,
-	)
-	if err != nil {
-		t.Fatalf("error: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			wg.Add(1)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				defer wg.Done()
+				if r.Method != http.MethodPost {
+					t.Errorf("wrong method: %s", r.Method)
+				}
+				if r.Header.Get("Content-Type") != "application/json" {
+					t.Errorf("wrong Content-Type: %s", r.Header.Get("Content-Type"))
+				}
+				rawBody, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Errorf("failed to read body: %v", err)
+					return
+				}
+				t.Logf("Body (raw): %s", string(rawBody))
+				var prettyJSON bytes.Buffer
+				if err := json.Indent(&prettyJSON, rawBody, "", "  "); err == nil {
+					t.Logf("Body (pretty):\n%s", prettyJSON.String())
+				}
+				var data PrometheusData
+				if err := json.Unmarshal(rawBody, &data); err != nil {
+					t.Errorf("failed to decode JSON: %v", err)
+					return
+				}
+				if len(data.ResourceMetrics) != 1 {
+					t.Errorf("expected 1 resourceMetrics, got %d", len(data.ResourceMetrics))
+					return
+				}
+				rm := data.ResourceMetrics[0]
+				if len(rm.Resource.Attributes) != 3 {
+					t.Errorf("expected 3 resource attributes, got %d", len(rm.Resource.Attributes))
+					return
+				}
+				expectedResourceAttrs := map[string]string{
+					"service.name":                "test-service",
+					"service.namespace":           "payments",
+					"deployment.environment.name": "production",
+				}
+				foundAttrs := make(map[string]string)
+				for _, attr := range rm.Resource.Attributes {
+					foundAttrs[attr.Key] = attr.Value.StringValue
+				}
+				for key, want := range expectedResourceAttrs {
+					if got, ok := foundAttrs[key]; !ok {
+						t.Errorf("resource attribute %q not found", key)
+					} else if got != want {
+						t.Errorf("resource attribute %q: expected %q, got %q", key, want, got)
+					}
+				}
+				if len(rm.ScopeMetrics) != 1 {
+					t.Errorf("expected 1 scopeMetrics, got %d", len(rm.ScopeMetrics))
+					return
+				}
+				sm := rm.ScopeMetrics[0]
+				if sm.Scope.Name != "ulog" {
+					t.Errorf("expected scope.name=ulog, got %s", sm.Scope.Name)
+				}
+				if sm.Scope.Version != Version {
+					t.Errorf("expected scope.version=%s, got %s", Version, sm.Scope.Version)
+				}
+				if len(sm.Metrics) != 1 {
+					t.Errorf("expected 1 metric, got %d", len(sm.Metrics))
+					return
+				}
+				metric := sm.Metrics[0]
+				if metric.Name != tt.metricName {
+					t.Errorf("wrong metric name: expected %q, got %q", tt.metricName, metric.Name)
+				}
+				if tt.isCounter {
+					if metric.Sum == nil {
+						t.Fatalf("expected Sum (Counter), got nil")
+					}
+					if metric.Gauge != nil {
+						t.Errorf("Counter should not have Gauge")
+					}
+					if metric.Sum.AggregationTemporality != tt.expectedTemp {
+						t.Errorf("expected temporality %d, got %d",
+							tt.expectedTemp, metric.Sum.AggregationTemporality)
+					}
+					if metric.Sum.IsMonotonic != tt.expectedMono {
+						t.Errorf("expected monotonic %v, got %v",
+							tt.expectedMono, metric.Sum.IsMonotonic)
+					}
+					if len(metric.Sum.DataPoints) != 1 {
+						t.Fatalf("expected 1 dataPoint, got %d", len(metric.Sum.DataPoints))
+					}
+					dp := metric.Sum.DataPoints[0]
+					if dp.AsDouble != 42.0 {
+						t.Errorf("wrong value: %f", dp.AsDouble)
+					}
+					if dp.TimeUnixNano == "" {
+						t.Error("timeUnixNano is empty")
+					}
+					for _, a := range dp.Attributes {
+						if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
+							t.Errorf("%s should NOT be duplicated in DataPoint.Attributes", a.Key)
+						}
+					}
+				} else {
+					if metric.Gauge == nil {
+						t.Fatalf("expected Gauge, got nil")
+					}
+					if metric.Sum != nil {
+						t.Errorf("Gauge should not have Sum")
+					}
+					if len(metric.Gauge.DataPoints) != 1 {
+						t.Fatalf("expected 1 dataPoint, got %d", len(metric.Gauge.DataPoints))
+					}
+					dp := metric.Gauge.DataPoints[0]
+					if dp.AsDouble != 42.0 {
+						t.Errorf("wrong value: %f", dp.AsDouble)
+					}
+					if dp.TimeUnixNano == "" {
+						t.Error("timeUnixNano is empty")
+					}
+					for _, a := range dp.Attributes {
+						if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
+							t.Errorf("%s should NOT be duplicated in DataPoint.Attributes", a.Key)
+						}
+					}
+				}
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"partialSuccess":{}}`))
+			}))
+			defer server.Close()
+			sinkPrometheus := NewSinkPrometheus(
+				server.URL,
+				WithHttpDisabledBatch(),
+			)
+			defer sinkPrometheus.Close()
+			fields := []Field{
+				String("service", "test-service"),
+				String("namespace", "payments"),
+				String("environment", "production"),
+				String("name", tt.metricName),
+				Float64("value", 42.0),
+			}
+			_, err := sinkPrometheus.WriteWithAttributes(
+				writeAttributes{typeData: DataMetric, typeLevel: LevelError},
+				fields,
+			)
+			if err != nil {
+				t.Fatalf("error: %v", err)
+			}
+			wg.Wait()
+		})
 	}
-	wg.Wait()
 }
 func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 	token := os.Getenv("GRAFANA_CLOUD_TOKEN")
@@ -1186,8 +1241,10 @@ func Test_SinkFactory_TempoCloud(t *testing.T) {
 	defer telemetry.Close()
 	telemetry.Error(DataTrace,
 		String("service", "test-service"),
+		String("namespace", "payments"),
+		String("environment", "production"),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
-		String("span_id", "EEE19B7EC3C1B105"),
+		String("span_id", "EEE19B7EC3C1B100"),
 		String("name", "test"),
 		Int64("duration", 150),
 	)
