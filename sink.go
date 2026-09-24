@@ -114,14 +114,21 @@ func (teeSink *TeeSink) WriteWithAttributes(attributes writeAttributes, fields [
 		return 0, nil
 	}
 	var formatted []byte
+	var buf *bytes.Buffer
 	for _, writer := range writers {
 		if _, ok := writer.(SinkWriter); !ok {
-			buf := &bytes.Buffer{}
+			buf = dataPool.Get().(*bytes.Buffer)
+			buf.Reset()
 			formatJson(buf, attributes, fields)
 			formatted = buf.Bytes()
 			break
 		}
 	}
+	defer func() {
+		if buf != nil {
+			dataPool.Put(buf)
+		}
+	}()
 	var errors []error
 	total := 0
 	for i, writer := range writers {

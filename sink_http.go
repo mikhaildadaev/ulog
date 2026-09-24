@@ -23,6 +23,7 @@ import (
 	"hash/fnv"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,6 +55,7 @@ type SinkHttp struct {
 	dedupCacheCount              atomic.Int64
 	dedupCacheMaxSize            int64
 	dedupEvictMutex              sync.Mutex
+	dedupEvictRequested          atomic.Bool
 	dedupStopChan                chan struct{}
 	dedupWindow                  time.Duration
 	endPoint                     string
@@ -69,6 +71,7 @@ type SinkHttp struct {
 	sampleCounter                atomic.Int64
 	sampleRate                   int32
 	sampleWindow                 time.Duration
+	sampleWindowStart            atomic.Int64
 	wg                           sync.WaitGroup
 }
 
@@ -244,11 +247,19 @@ func WithHttpRetry(maxRetries int, backoff time.Duration) httpParams {
 func WithHttpSampleRate(rate int32) httpParams {
 	return func(sinkHttp *SinkHttp) {
 		sinkHttp.sampleRate = rate
+		sinkHttp.sampleCounter.Store(0)
+		if sinkHttp.sampleWindow > 0 {
+			sinkHttp.sampleWindowStart.Store(time.Now().UnixNano())
+		}
 	}
 }
 func WithHttpSampleWindow(window time.Duration) httpParams {
 	return func(sinkHttp *SinkHttp) {
 		sinkHttp.sampleWindow = window
+		if window > 0 {
+			sinkHttp.sampleWindowStart.Store(time.Now().UnixNano())
+			sinkHttp.sampleCounter.Store(0)
+		}
 	}
 }
 func WithHttpTimeout(timeout time.Duration) httpParams {
@@ -937,6 +948,55 @@ func (sinkHttp *SinkHttp) evictDedupCache() {
 		}
 		return true
 	})
+	if !sinkHttp.dedupEvictRequested.Load() {
+		return
+	}
+	threshold := sinkHttp.evictDedupThreshold()
+	if threshold <= 0 {
+		sinkHttp.dedupEvictRequested.Store(false)
+		return
+	}
+	over := sinkHttp.dedupCacheCount.Load() - threshold
+	if over <= 0 {
+		sinkHttp.dedupEvictRequested.Store(false)
+		return
+	}
+	type entry struct {
+		key      any
+		lastSeen time.Time
+	}
+	entries := make([]entry, 0, sinkHttp.dedupCacheCount.Load())
+	sinkHttp.dedupCache.Range(func(key, value any) bool {
+		entries = append(entries, entry{key: key, lastSeen: value.(time.Time)})
+		return true
+	})
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].lastSeen.Before(entries[j].lastSeen)
+	})
+	remove := sinkHttp.dedupCacheCount.Load() - sinkHttp.dedupCacheMaxSize
+	if remove <= 0 {
+		sinkHttp.dedupEvictRequested.Store(false)
+		return
+	}
+	if remove > int64(len(entries)) {
+		remove = int64(len(entries))
+	}
+	for i := int64(0); i < remove; i++ {
+		if _, loaded := sinkHttp.dedupCache.LoadAndDelete(entries[i].key); loaded {
+			sinkHttp.dedupCacheCount.Add(-1)
+		}
+	}
+	sinkHttp.dedupEvictRequested.Store(false)
+}
+func (sinkHttp *SinkHttp) evictDedupThreshold() int64 {
+	if sinkHttp.dedupCacheMaxSize <= 0 {
+		return 0
+	}
+	h := sinkHttp.dedupCacheMaxSize / 10
+	if h < 1000 {
+		h = 1000
+	}
+	return sinkHttp.dedupCacheMaxSize + h
 }
 func (sinkHttp *SinkHttp) flush() error {
 	sinkHttp.batchMutex.Lock()
@@ -972,7 +1032,10 @@ func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
 		}
 	}
 	if _, loaded := sinkHttp.dedupCache.LoadOrStore(hash, time.Now()); !loaded {
-		sinkHttp.dedupCacheCount.Add(1)
+		count := sinkHttp.dedupCacheCount.Add(1)
+		if threshold := sinkHttp.evictDedupThreshold(); threshold > 0 && count > threshold {
+			sinkHttp.dedupEvictRequested.Store(true)
+		}
 	}
 	return false
 }
@@ -1120,6 +1183,15 @@ func (sinkHttp *SinkHttp) sendWithRetry(body []byte) (n int, err error) {
 func (sinkHttp *SinkHttp) shouldSample() bool {
 	if sinkHttp.sampleRate <= 1 {
 		return true
+	}
+	if sinkHttp.sampleWindow > 0 {
+		now := time.Now().UnixNano()
+		start := sinkHttp.sampleWindowStart.Load()
+		if start == 0 || now-start >= sinkHttp.sampleWindow.Nanoseconds() {
+			if sinkHttp.sampleWindowStart.CompareAndSwap(start, now) {
+				sinkHttp.sampleCounter.Store(0)
+			}
+		}
 	}
 	counter := sinkHttp.sampleCounter.Add(1)
 	return counter%int64(sinkHttp.sampleRate) == 0
