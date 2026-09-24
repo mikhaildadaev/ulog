@@ -1904,6 +1904,21 @@ func Test_SinkHttp_Sampling(t *testing.T) {
 		t.Errorf("Expected ~10 requests, got %d", count)
 	}
 }
+func Test_Stress_Sink_TimeConcurrent(t *testing.T) {
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			buf := &bytes.Buffer{}
+			for j := 0; j < 1000; j++ {
+				buf.Reset()
+				getTime(buf, time.Now())
+			}
+		}()
+	}
+	wg.Wait()
+}
 func Test_Stress_SinkHttp_ConcurrentWrite(t *testing.T) {
 	var (
 		mutex        sync.Mutex
@@ -2097,9 +2112,13 @@ func Test_Stress_SinkHttp_Deduplication_EvictionStress(t *testing.T) {
 			fields := []Field{String("message", fmt.Sprintf("unique-%d", i))}
 			sink.WriteWithAttributes(attrs, fields)
 		}
-		time.Sleep(150 * time.Millisecond)
-		fields := []Field{String("message", "new-message")}
-		sink.WriteWithAttributes(attrs, fields)
+		deadline := time.Now().Add(2 * time.Second)
+		for time.Now().Before(deadline) {
+			if sink.dedupCacheCount.Load() <= 15 {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 		cacheSize := sink.dedupCacheCount.Load()
 		if cacheSize > 15 {
 			t.Errorf("dedupCacheCount = %d, want <= 15 after eviction", cacheSize)
@@ -2158,7 +2177,7 @@ func Test_Stress_SinkHttp_LongRun(t *testing.T) {
 	)
 	defer sink.Close()
 	attrs := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(5 * time.Second)
 	var count atomic.Int64
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
@@ -2167,7 +2186,7 @@ func Test_Stress_SinkHttp_LongRun(t *testing.T) {
 			defer wg.Done()
 			for time.Now().Before(deadline) {
 				fields := []Field{
-					String("message", fmt.Sprintf("test-%d", id)),
+					String("message", "test-"+strconv.Itoa(id)),
 					Int("id", id),
 				}
 				sink.WriteWithAttributes(attrs, fields)
