@@ -41,6 +41,7 @@ type SinkHttp struct {
 	circuitEnabled               bool
 	circuitFailures              atomic.Int32
 	circuitHalfOpenProbeInFlight atomic.Bool
+	circuitHalfOpenProbeStart    atomic.Int64
 	circuitMaxFailures           int
 	circuitLastFailure           atomic.Int64
 	circuitMutex                 sync.Mutex
@@ -79,7 +80,7 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 		batchFlushChan:     make(chan struct{}, 1),
 		batchSize:          100,
 		batchTicker:        time.NewTicker(5 * time.Second),
-		batchTickerUpdate:  make(chan *time.Ticker, 8),
+		batchTickerUpdate:  make(chan *time.Ticker),
 		circuitEnabled:     true,
 		circuitMaxFailures: 10,
 		circuitTimeout:     10 * time.Second,
@@ -105,6 +106,11 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 	}
 	sinkHttp.circuitState.Store(circuitStateClosed)
 	sinkHttp.circuitFailures.Store(0)
+	sinkHttp.wg.Add(1)
+	go func() {
+		defer sinkHttp.wg.Done()
+		sinkHttp.batchLoop()
+	}()
 	for _, param := range params {
 		param(sinkHttp)
 	}
@@ -115,11 +121,6 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 			sinkHttp.cleanupDedupCache()
 		}()
 	}
-	sinkHttp.wg.Add(1)
-	go func() {
-		defer sinkHttp.wg.Done()
-		sinkHttp.batchLoop()
-	}()
 	return sinkHttp
 }
 
@@ -131,13 +132,21 @@ func WithHttpBatch(size int, flushInterval time.Duration) httpParams {
 		newTicker := time.NewTicker(flushInterval)
 		sinkHttp.batchSize = size
 		sinkHttp.batchTicker = newTicker
+		hasBuffered := len(sinkHttp.batchBuffer) > 0
 		sinkHttp.batchMutex.Unlock()
 		if oldTicker != nil {
 			oldTicker.Stop()
 		}
+		if hasBuffered {
+			select {
+			case sinkHttp.batchFlushChan <- struct{}{}:
+			default:
+			}
+		}
 		select {
 		case sinkHttp.batchTickerUpdate <- newTicker:
-		default:
+		case <-sinkHttp.batchChan:
+			newTicker.Stop()
 		}
 	}
 }
@@ -147,6 +156,8 @@ func WithHttpCircuitBreaker(maxFailures int, timeout time.Duration) httpParams {
 		sinkHttp.circuitMaxFailures = maxFailures
 		sinkHttp.circuitState.Store(circuitStateClosed)
 		sinkHttp.circuitTimeout = timeout
+		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
+		sinkHttp.circuitHalfOpenProbeStart.Store(0)
 	}
 }
 func WithHttpDedupWindow(window time.Duration) httpParams {
@@ -171,7 +182,7 @@ func WithHttpDisabledBatch() httpParams {
 		}
 		select {
 		case sinkHttp.batchTickerUpdate <- nil:
-		default:
+		case <-sinkHttp.batchChan:
 		}
 	}
 }
@@ -183,6 +194,7 @@ func WithHttpDisabledCircuit() httpParams {
 		sinkHttp.circuitState.Store(circuitStateClosed)
 		sinkHttp.circuitFailures.Store(0)
 		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
+		sinkHttp.circuitHalfOpenProbeStart.Store(0)
 	}
 }
 func WithHttpDisableKeepAlive() httpParams {
@@ -400,6 +412,10 @@ func getDataMetric(fields []Field) (name string, value float64) {
 				value = float64(field.valueInt64)
 			case FieldInt:
 				value = float64(field.valueInt)
+			case FieldDuration:
+				value = float64(field.valueDuration.Milliseconds())
+			default:
+				fmt.Fprintf(DefaultWriterErr, "ulog: unsupported metric value type: %d\n", field.typeValue)
 			}
 		}
 	}
@@ -723,18 +739,33 @@ func (sinkHttp *SinkHttp) circuitAllow() bool {
 		}
 		sinkHttp.circuitState.Store(circuitStateHalfOpen)
 		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
+		sinkHttp.circuitHalfOpenProbeStart.Store(0)
 		allowed := sinkHttp.circuitHalfOpenProbeInFlight.CompareAndSwap(false, true)
+		if allowed {
+			sinkHttp.circuitHalfOpenProbeStart.Store(time.Now().UnixNano())
+		}
 		sinkHttp.circuitMutex.Unlock()
 		return allowed
 	case circuitStateHalfOpen:
 		sinkHttp.circuitMutex.Lock()
+		defer sinkHttp.circuitMutex.Unlock()
 		if sinkHttp.circuitState.Load() != circuitStateHalfOpen {
-			sinkHttp.circuitMutex.Unlock()
 			return false
 		}
-		allowed := sinkHttp.circuitHalfOpenProbeInFlight.CompareAndSwap(false, true)
-		sinkHttp.circuitMutex.Unlock()
-		return allowed
+		if sinkHttp.circuitHalfOpenProbeInFlight.Load() {
+			probeStart := sinkHttp.circuitHalfOpenProbeStart.Load()
+			if probeStart > 0 && time.Now().UnixNano()-probeStart > sinkHttp.circuitTimeout.Nanoseconds() {
+				sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
+				fmt.Fprintf(DefaultWriterErr, "ulog: circuit half-open probe timed out, resetting\n")
+			} else {
+				return false
+			}
+		}
+		if sinkHttp.circuitHalfOpenProbeInFlight.CompareAndSwap(false, true) {
+			sinkHttp.circuitHalfOpenProbeStart.Store(time.Now().UnixNano())
+			return true
+		}
+		return false
 	default:
 		return true
 	}
@@ -771,6 +802,7 @@ func (sinkHttp *SinkHttp) circuitRecord(success bool) {
 			return
 		}
 		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
+		sinkHttp.circuitHalfOpenProbeStart.Store(0)
 		if success {
 			sinkHttp.circuitState.Store(circuitStateClosed)
 			sinkHttp.circuitFailures.Store(0)
@@ -803,6 +835,9 @@ func (sinkHttp *SinkHttp) cleanupDedupCache() {
 func (sinkHttp *SinkHttp) evictDedupCache() {
 	sinkHttp.dedupEvictMutex.Lock()
 	defer sinkHttp.dedupEvictMutex.Unlock()
+	sinkHttp.evictDedupCacheLocked()
+}
+func (sinkHttp *SinkHttp) evictDedupCacheLocked() {
 	now := time.Now()
 	sinkHttp.dedupCache.Range(func(key, value any) bool {
 		if now.Sub(value.(time.Time)) > sinkHttp.dedupWindow {
@@ -847,7 +882,9 @@ func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
 		}
 	}
 	if sinkHttp.dedupCacheMaxSize > 0 && sinkHttp.dedupCacheCount.Load() >= sinkHttp.dedupCacheMaxSize {
-		sinkHttp.evictDedupCache()
+		sinkHttp.dedupEvictMutex.Lock()
+		sinkHttp.evictDedupCacheLocked()
+		sinkHttp.dedupEvictMutex.Unlock()
 	}
 	if _, loaded := sinkHttp.dedupCache.LoadOrStore(hash, time.Now()); !loaded {
 		sinkHttp.dedupCacheCount.Add(1)
