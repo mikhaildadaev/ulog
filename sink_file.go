@@ -248,25 +248,29 @@ func (fileSink *SinkFile) getCompressFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	defer dst.Close()
-	defer func() {
-		if err != nil {
-			os.Remove(tmpName)
-		}
-	}()
 	gz := gzip.NewWriter(dst)
-	defer gz.Close()
 	if _, err = io.Copy(gz, src); err != nil {
+		gz.Close()
+		dst.Close()
+		os.Remove(tmpName)
 		return err
 	}
 	if err = gz.Close(); err != nil {
+		dst.Close()
+		os.Remove(tmpName)
+		return err
+	}
+	if err = dst.Close(); err != nil {
+		os.Remove(tmpName)
 		return err
 	}
 	gzName := filename + ".gz"
-	if err = os.Rename(tmpName, gzName); err != nil {
-		if os.IsNotExist(err) {
-			return nil
+	if _, statErr := os.Stat(gzName); statErr == nil {
+		if err = os.Remove(gzName); err != nil {
+			return err
 		}
+	}
+	if err = os.Rename(tmpName, gzName); err != nil {
 		return err
 	}
 	err = os.Remove(filename)
