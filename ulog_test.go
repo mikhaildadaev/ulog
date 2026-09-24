@@ -1721,6 +1721,324 @@ func Test_SinkHttp_Sampling(t *testing.T) {
 		t.Errorf("Expected ~10 requests, got %d", count)
 	}
 }
+func Test_Stress_SinkHttp_ConcurrentWrite(t *testing.T) {
+	var (
+		mutex        sync.Mutex
+		requestCount int
+	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mutex.Lock()
+		requestCount++
+		mutex.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sinkHttp := NewSinkHttp(server.URL,
+		WithHttpDisabledBatch(),
+		WithHttpDisabledCircuit(),
+		WithHttpFilterLevel(LevelDebug),
+	)
+	defer sinkHttp.Close()
+	attributes := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
+	const (
+		goroutines   = 100
+		perGoroutine = 100
+	)
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < perGoroutine; j++ {
+				fields := []Field{
+					String("message", fmt.Sprintf("test-%d-%d", id, j)),
+					Int("id", id),
+					Int("j", j),
+				}
+				sinkHttp.WriteWithAttributes(attributes, fields)
+			}
+		}(i)
+	}
+	wg.Wait()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		mutex.Lock()
+		count := requestCount
+		mutex.Unlock()
+		if count >= goroutines*perGoroutine {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	mutex.Lock()
+	finalCount := requestCount
+	mutex.Unlock()
+	if finalCount != goroutines*perGoroutine {
+		t.Errorf("expected %d requests, got %d", goroutines*perGoroutine, finalCount)
+	}
+}
+func Test_Stress_SinkHttp_BatchTickerStress(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	sinkHttp := NewSinkHttp(server.URL,
+		WithHttpBatch(10, 100*time.Millisecond),
+		WithHttpFilterLevel(LevelDebug),
+	)
+	defer sinkHttp.Close()
+	for i := 0; i < 100; i++ {
+		WithHttpBatch(10, time.Duration(50+i)*time.Millisecond)(sinkHttp)
+	}
+	attributes := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
+	fields := []Field{String("message", "test")}
+	_, err := sinkHttp.WriteWithAttributes(attributes, fields)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	sinkHttp.batchMutex.Lock()
+	ticker := sinkHttp.batchTicker
+	sinkHttp.batchMutex.Unlock()
+	if ticker == nil {
+		t.Error("ticker is nil after stress")
+	}
+}
+func Test_Stress_SinkHttp_BatchToggle(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewSinkHttp(server.URL,
+		WithHttpBatch(10, 50*time.Millisecond),
+		WithHttpFilterLevel(LevelDebug),
+	)
+	defer sink.Close()
+	attrs := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
+	fields := []Field{String("message", "test")}
+	sink.WriteWithAttributes(attrs, fields)
+	WithHttpDisabledBatch()(sink)
+	sink.WriteWithAttributes(attrs, fields)
+	WithHttpBatch(5, 50*time.Millisecond)(sink)
+	for i := 0; i < 5; i++ {
+		sink.WriteWithAttributes(attrs, fields)
+	}
+	time.Sleep(200 * time.Millisecond)
+	sink.batchMutex.Lock()
+	ticker := sink.batchTicker
+	sink.batchMutex.Unlock()
+	if ticker == nil {
+		t.Error("ticker should be set")
+	}
+}
+func Test_Stress_SinkHttp_CircuitStuckProbe(t *testing.T) {
+	var requestCount atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		time.Sleep(200 * time.Millisecond)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+	sink := NewSinkHttp(server.URL,
+		WithHttpDisabledBatch(),
+		WithHttpCircuitBreaker(2, 50*time.Millisecond),
+	)
+	defer sink.Close()
+	attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
+	fields := []Field{String("msg", "test")}
+	sink.WriteWithAttributes(attrs, fields)
+	sink.WriteWithAttributes(attrs, fields)
+	if sink.circuitState.Load() != circuitStateOpen {
+		t.Fatalf("should be Open, got %d", sink.circuitState.Load())
+	}
+	time.Sleep(60 * time.Millisecond)
+	go sink.WriteWithAttributes(attrs, fields)
+	time.Sleep(20 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
+	if sink.circuitHalfOpenProbeInFlight.Load() {
+		t.Error("probe should be reset after timeout")
+	}
+}
+func Test_Stress_SinkHttp_CircuitToggle(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+	sink := NewSinkHttp(server.URL,
+		WithHttpDisabledBatch(),
+		WithHttpCircuitBreaker(2, 50*time.Millisecond),
+	)
+	defer sink.Close()
+	attrs := writeAttributes{typeLevel: LevelError, typeData: DataLog}
+	fields := []Field{String("msg", "test")}
+	sink.WriteWithAttributes(attrs, fields)
+	sink.WriteWithAttributes(attrs, fields)
+	if sink.circuitState.Load() != circuitStateOpen {
+		t.Fatal("should be Open")
+	}
+	WithHttpDisabledCircuit()(sink)
+	if sink.circuitState.Load() != circuitStateClosed {
+		t.Error("state should be Closed after disable")
+	}
+	if sink.circuitFailures.Load() != 0 {
+		t.Error("failures should be 0")
+	}
+	_, err := sink.WriteWithAttributes(attrs, fields)
+	if err != nil && err.Error() == "circuit breaker is open" {
+		t.Error("circuit breaker should be disabled")
+	}
+}
+func Test_Stress_SinkHttp_Deduplication_EvictionStress(t *testing.T) {
+	t.Run("EvictionAfterWindow", func(t *testing.T) {
+		var (
+			mutex        sync.Mutex
+			requestCount int
+		)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			mutex.Lock()
+			requestCount++
+			mutex.Unlock()
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+		sink := NewSinkHttp(server.URL,
+			WithHttpDedupWindow(100*time.Millisecond),
+			WithHttpDedupMaxSize(10),
+			WithHttpDisabledBatch(),
+			WithHttpFilterLevel(LevelDebug),
+		)
+		defer sink.Close()
+		attrs := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
+		for i := 0; i < 50; i++ {
+			fields := []Field{String("message", fmt.Sprintf("unique-%d", i))}
+			sink.WriteWithAttributes(attrs, fields)
+		}
+		time.Sleep(150 * time.Millisecond)
+		fields := []Field{String("message", "new-message")}
+		sink.WriteWithAttributes(attrs, fields)
+		cacheSize := sink.dedupCacheCount.Load()
+		if cacheSize > 15 {
+			t.Errorf("dedupCacheCount = %d, want <= 15 after eviction", cacheSize)
+		}
+	})
+	t.Run("UniqueInWindow", func(t *testing.T) {
+		var (
+			mutex        sync.Mutex
+			requestCount int
+		)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			mutex.Lock()
+			requestCount++
+			mutex.Unlock()
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+		sink := NewSinkHttp(server.URL,
+			WithHttpDedupWindow(500*time.Millisecond),
+			WithHttpDedupMaxSize(10),
+			WithHttpDisabledBatch(),
+			WithHttpFilterLevel(LevelDebug),
+		)
+		defer sink.Close()
+		attrs := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
+		for i := 0; i < 100; i++ {
+			fields := []Field{String("message", fmt.Sprintf("unique-%d", i))}
+			sink.WriteWithAttributes(attrs, fields)
+		}
+		time.Sleep(100 * time.Millisecond)
+		mutex.Lock()
+		count := requestCount
+		mutex.Unlock()
+		if count != 100 {
+			t.Errorf("expected 100 requests, got %d", count)
+		}
+		cacheSize := sink.dedupCacheCount.Load()
+		if cacheSize != 100 {
+			t.Errorf("dedupCacheCount = %d, want 100", cacheSize)
+		}
+	})
+}
+func Test_Stress_SinkHttp_LongRun(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping long run test in short mode")
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sink := NewSinkHttp(server.URL,
+		WithHttpBatch(10, 50*time.Millisecond),
+		WithHttpDedupWindow(100*time.Millisecond),
+		WithHttpCircuitBreaker(10, 100*time.Millisecond),
+		WithHttpFilterLevel(LevelDebug),
+	)
+	defer sink.Close()
+	attrs := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
+	deadline := time.Now().Add(10 * time.Second)
+	var count atomic.Int64
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for time.Now().Before(deadline) {
+				fields := []Field{
+					String("message", fmt.Sprintf("test-%d", id)),
+					Int("id", id),
+				}
+				sink.WriteWithAttributes(attrs, fields)
+				count.Add(1)
+			}
+		}(i)
+	}
+	wg.Wait()
+	t.Logf("wrote %d messages in 10 seconds", count.Load())
+	if sink.closed {
+		t.Error("sink should not be closed")
+	}
+}
+func Test_Stress_TeeSink_CloseIdempotent(t *testing.T) {
+	var closeCount atomic.Int32
+	fake := &fakeCloser{closeCount: &closeCount}
+	tee := NewTeeSink(fake)
+
+	err1 := tee.Close()
+	err2 := tee.Close()
+
+	if err1 != nil {
+		t.Errorf("first Close: %v", err1)
+	}
+	if err2 != nil {
+		t.Errorf("second Close: %v", err2)
+	}
+	if closeCount.Load() != 1 {
+		t.Errorf("Close called %d times, want 1", closeCount.Load())
+	}
+}
+
+func Test_Stress_TeeSink_ReplaceDoesNotClose(t *testing.T) {
+	var closeCount atomic.Int32
+	fake := &fakeCloser{closeCount: &closeCount}
+	tee := NewTeeSink(fake)
+	defer tee.Close()
+
+	tee.Replace(0, &bytes.Buffer{})
+
+	if closeCount.Load() != 0 {
+		t.Errorf("Replace should not close old writer, closed %d times", closeCount.Load())
+	}
+}
+
+type fakeCloser struct {
+	closeCount *atomic.Int32
+}
+
+func (f *fakeCloser) Write(p []byte) (int, error) { return len(p), nil }
+func (f *fakeCloser) Close() error {
+	f.closeCount.Add(1)
+	return nil
+}
 
 // Приватные функции
 func loadEnv(path string) {
