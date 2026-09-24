@@ -583,7 +583,7 @@ func (universalTelemetry *universalTelemetry) getCaller(level TypeLevel) string 
 	if level != LevelDebug {
 		return ""
 	}
-	pc, file, line, _ := runtime.Caller(2)
+	pc, file, line, _ := runtime.Caller(3)
 	if val, ok := universalTelemetry.cache.Load(pc); ok {
 		return val.(string)
 	}
@@ -600,19 +600,16 @@ func (universalTelemetry *universalTelemetry) getCaller(level TypeLevel) string 
 func (universalTelemetry *universalTelemetry) getLevel() TypeLevel {
 	return TypeLevel(universalTelemetry.level.Load())
 }
-func (universalTelemetry *universalTelemetry) getTheme() colorTheme {
-	universalTelemetry.mutex.RLock()
-	defer universalTelemetry.mutex.RUnlock()
-	return universalTelemetry.theme
-}
 func (universalTelemetry *universalTelemetry) route(context context.Context, attributes writeAttributes, fields []Field) {
 	if universalTelemetry.getLevel() > attributes.typeLevel {
 		return
 	}
+	attributes.caller = universalTelemetry.getCaller(attributes.typeLevel)
 	if universalTelemetry.extractor != nil && context != nil {
 		fields = append(fields, universalTelemetry.extractor(context)...)
 	}
 	universalTelemetry.mutex.RLock()
+	attributes.theme = universalTelemetry.theme
 	writer := universalTelemetry.writer
 	universalTelemetry.mutex.RUnlock()
 	if sinks, ok := writer.(SinkWriter); ok {
