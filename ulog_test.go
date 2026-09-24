@@ -657,15 +657,15 @@ func Test_SinkFactory_Discord(t *testing.T) {
 		if data.UserName != "ULog Bot" {
 			t.Errorf("expected username 'ULog Bot', got '%s'", data.UserName)
 		}
-		if data.Content != "test message" {
-			t.Errorf("expected content 'test message', got '%s'", data.Content)
+		if data.Content != "test" {
+			t.Errorf("expected content 'test', got '%s'", data.Content)
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer server.Close()
 	sinkDiscord := NewSinkDiscord(server.URL, "ULog Bot", "")
 	fields := []Field{
-		String("message", "test message"),
+		String("message", "test"),
 	}
 	_, err := sinkDiscord.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
@@ -695,8 +695,8 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 		var value map[string]interface{}
 		json.Unmarshal(record.Value, &value)
 		expectedFields := map[string]interface{}{
-			"message":  "test kafka message",
 			"service":  "test-service",
+			"message":  "test",
 			"trace_id": "5b8efff798038103d269b633813fc700",
 			"node_id":  "node-01",
 			"count":    float64(42),
@@ -723,8 +723,8 @@ func Test_SinkFactory_Kafka(t *testing.T) {
 	defer server.Close()
 	sinkKafka := NewSinkKafka(server.URL + "/topics/test-topic")
 	fields := []Field{
-		String("message", "test kafka message"),
 		String("service", "test-service"),
+		String("message", "test"),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("node_id", "node-01"),
 		Int("count", 42),
@@ -744,10 +744,47 @@ func Test_SinkFactory_Loki(t *testing.T) {
 	wg.Add(1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer wg.Done()
+		if r.Method != http.MethodPost {
+			t.Errorf("wrong method: %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("wrong Content-Type: %s", r.Header.Get("Content-Type"))
+		}
+		rawBody, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("failed to read body: %v", err)
+			return
+		}
+		t.Logf("Body (raw): %s", string(rawBody))
+		var prettyJSON bytes.Buffer
+		if err := json.Indent(&prettyJSON, rawBody, "", "  "); err == nil {
+			t.Logf("Body (pretty):\n%s", prettyJSON.String())
+		}
 		var data LokiData
-		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		if err := json.Unmarshal(rawBody, &data); err != nil {
 			t.Errorf("failed to decode JSON: %v", err)
 			return
+		}
+		resource := data.ResourceLogs[0].Resource
+		if len(resource.Attributes) != 3 {
+			t.Errorf("expected 3 resource attributes, got %d", len(resource.Attributes))
+			return
+		}
+		expectedResourceAttrs := map[string]string{
+			"service.name":                "test-service",
+			"service.namespace":           "payments",
+			"deployment.environment.name": "production",
+		}
+		foundAttrs := make(map[string]string)
+		for _, a := range resource.Attributes {
+			foundAttrs[a.Key] = a.Value.StringValue
+		}
+		for key, want := range expectedResourceAttrs {
+			if got, ok := foundAttrs[key]; !ok {
+				t.Errorf("resource attribute %q not found", key)
+			} else if got != want {
+				t.Errorf("resource attribute %q: expected %q, got %q", key, want, got)
+			}
 		}
 		lr := data.ResourceLogs[0].ScopeLogs[0].LogRecords[0]
 		if lr.Body.StringValue == nil || *lr.Body.StringValue != "test" {
@@ -755,6 +792,11 @@ func Test_SinkFactory_Loki(t *testing.T) {
 		}
 		if lr.SeverityText != "ERROR" {
 			t.Errorf("wrong severity: %s", lr.SeverityText)
+		}
+		for _, a := range lr.Attributes {
+			if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
+				t.Errorf("%s should NOT be duplicated in LogRecord.Attributes", a.Key)
+			}
 		}
 		foundUserID := false
 		foundTraceID := false
@@ -782,6 +824,9 @@ func Test_SinkFactory_Loki(t *testing.T) {
 	)
 	defer sinkLoki.Close()
 	fields := []Field{
+		String("service", "test-service"),
+		String("namespace", "payments"),
+		String("environment", "production"),
 		String("message", "test"),
 		String("user_id", "019687278c7e800087cbbdba4f634d9f"),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
@@ -814,7 +859,8 @@ func Test_SinkFactory_LokiCloud(t *testing.T) {
 	)
 	defer telemetry.Close()
 	telemetry.Error(DataLog,
-		String("message", "integration-test-log"),
+		String("service", "test-service"),
+		String("message", "test"),
 		String("user_id", "user-12345"),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 	)
@@ -830,30 +876,51 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 		if r.Header.Get("Content-Type") != "application/json" {
 			t.Errorf("wrong Content-Type: %s", r.Header.Get("Content-Type"))
 		}
+		rawBody, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("failed to read body: %v", err)
+			return
+		}
+		t.Logf("Body (raw): %s", string(rawBody))
+		var prettyJSON bytes.Buffer
+		if err := json.Indent(&prettyJSON, rawBody, "", "  "); err == nil {
+			t.Logf("Body (pretty):\n%s", prettyJSON.String())
+		}
 		var data PrometheusData
-		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		if err := json.Unmarshal(rawBody, &data); err != nil {
 			t.Errorf("failed to decode JSON: %v", err)
 			return
 		}
 		if len(data.ResourceMetrics) != 1 {
-			t.Fatalf("expected 1 resourceMetrics, got %d", len(data.ResourceMetrics))
+			t.Errorf("expected 1 resourceMetrics, got %d", len(data.ResourceMetrics))
+			return
 		}
 		rm := data.ResourceMetrics[0]
-		if len(rm.Resource.Attributes) != 1 {
-			t.Fatalf("expected 1 resource attribute, got %d", len(rm.Resource.Attributes))
+		if len(rm.Resource.Attributes) != 3 {
+			t.Errorf("expected 3 resource attributes, got %d", len(rm.Resource.Attributes))
+			return
 		}
-		attr := rm.Resource.Attributes[0]
-		if attr.Key != "service.name" {
-			t.Errorf("expected service.name, got %s", attr.Key)
+		expectedResourceAttrs := map[string]string{
+			"service.name":                "test-service",
+			"service.namespace":           "payments",
+			"deployment.environment.name": "production",
 		}
-		if attr.Value.StringValue != "ulog" {
-			t.Errorf("expected ulog, got %s", attr.Value.StringValue)
+		foundAttrs := make(map[string]string)
+		for _, attr := range rm.Resource.Attributes {
+			foundAttrs[attr.Key] = attr.Value.StringValue
+		}
+		for key, want := range expectedResourceAttrs {
+			if got, ok := foundAttrs[key]; !ok {
+				t.Errorf("resource attribute %q not found", key)
+			} else if got != want {
+				t.Errorf("resource attribute %q: expected %q, got %q", key, want, got)
+			}
 		}
 		if len(rm.ScopeMetrics) != 1 {
-			t.Fatalf("expected 1 scopeMetrics, got %d", len(rm.ScopeMetrics))
+			t.Errorf("expected 1 scopeMetrics, got %d", len(rm.ScopeMetrics))
+			return
 		}
 		sm := rm.ScopeMetrics[0]
-
 		if sm.Scope.Name != "ulog" {
 			t.Errorf("expected scope.name=ulog, got %s", sm.Scope.Name)
 		}
@@ -861,30 +928,36 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 			t.Errorf("expected scope.version=%s, got %s", Version, sm.Scope.Version)
 		}
 		if len(sm.Metrics) != 1 {
-			t.Fatalf("expected 1 metric, got %d", len(sm.Metrics))
+			t.Errorf("expected 1 metric, got %d", len(sm.Metrics))
+			return
 		}
 		metric := sm.Metrics[0]
 		if metric.Name != "http_requests_total" {
 			t.Errorf("wrong metric name: %s", metric.Name)
 		}
-		if len(metric.Gauge.DataPoints) != 1 {
-			t.Fatalf("expected 1 dataPoint, got %d", len(metric.Gauge.DataPoints))
+		if metric.Sum == nil {
+			t.Fatalf("expected Sum (Counter), got nil")
 		}
-		dp := metric.Gauge.DataPoints[0]
+		if metric.Sum.AggregationTemporality != 2 {
+			t.Errorf("expected CUMULATIVE temporality (2), got %d", metric.Sum.AggregationTemporality)
+		}
+		if !metric.Sum.IsMonotonic {
+			t.Error("expected monotonic counter")
+		}
+		if len(metric.Sum.DataPoints) != 1 {
+			t.Fatalf("expected 1 dataPoint, got %d", len(metric.Sum.DataPoints))
+		}
+		dp := metric.Sum.DataPoints[0]
 		if dp.AsDouble != 42.0 {
 			t.Errorf("wrong value: %f", dp.AsDouble)
 		}
 		if dp.TimeUnixNano == "" {
 			t.Error("timeUnixNano is empty")
 		}
-		foundMethod := false
 		for _, a := range dp.Attributes {
-			if a.Key == "method" && a.Value.StringValue == "GET" {
-				foundMethod = true
+			if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
+				t.Errorf("%s should NOT be duplicated in DataPoint.Attributes", a.Key)
 			}
-		}
-		if !foundMethod {
-			t.Error("method attribute not found")
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"partialSuccess":{}}`))
@@ -896,8 +969,10 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 	)
 	defer sinkPrometheus.Close()
 	fields := []Field{
+		String("service", "test-service"),
+		String("namespace", "payments"),
+		String("environment", "production"),
 		String("name", "http_requests_total"),
-		String("method", "GET"),
 		Float64("value", 42.0),
 	}
 	_, err := sinkPrometheus.WriteWithAttributes(
@@ -928,9 +1003,11 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 	)
 	defer telemetry.Close()
 	telemetry.Error(DataMetric,
-		String("name", "ulog_test_metric"),
-		Float64("value", 42.0),
+		String("service", "test-service"),
+		String("namespace", "payments"),
 		String("environment", "production"),
+		String("name", "http_requests_total"),
+		Float64("value", 42.0),
 	)
 }
 func Test_SinkFactory_Slack(t *testing.T) {
@@ -945,15 +1022,15 @@ func Test_SinkFactory_Slack(t *testing.T) {
 		if data.UserName != "ULog" {
 			t.Errorf("expected username 'ULog', got '%s'", data.UserName)
 		}
-		if data.Text != "test message" {
-			t.Errorf("expected text 'test message', got '%s'", data.Text)
+		if data.Text != "test" {
+			t.Errorf("expected text 'test', got '%s'", data.Text)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 	sinkSlack := NewSinkSlack(server.URL, "ULog", ":robot:", "", "#alerts")
 	fields := []Field{
-		String("message", "test message"),
+		String("message", "test"),
 	}
 	_, err := sinkSlack.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
@@ -976,11 +1053,11 @@ func Test_SinkFactory_Telegram(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 			t.Errorf("failed to decode JSON: %v", err)
 		}
-		if data.ChatID != "test-chat-123" {
-			t.Errorf("expected chat_id 'test-chat-123', got '%s'", data.ChatID)
+		if data.ChatID != "chat-123" {
+			t.Errorf("expected chat_id 'chat-123', got '%s'", data.ChatID)
 		}
-		if data.Text != "test message" {
-			t.Errorf("expected text 'test message', got '%s'", data.Text)
+		if data.Text != "test" {
+			t.Errorf("expected text 'test', got '%s'", data.Text)
 		}
 		if data.ParseMode != "HTML" {
 			t.Errorf("expected parse_mode 'HTML', got '%s'", data.ParseMode)
@@ -988,9 +1065,9 @@ func Test_SinkFactory_Telegram(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkTelegram := NewSinkTelegram(server.URL, "test-chat-123")
+	sinkTelegram := NewSinkTelegram(server.URL, "chat-123")
 	fields := []Field{
-		String("message", "test message"),
+		String("message", "test"),
 	}
 	_, err := sinkTelegram.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
@@ -1006,9 +1083,49 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 	wg.Add(1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer wg.Done()
-		var trace TempoData
-		json.NewDecoder(r.Body).Decode(&trace)
-		span := trace.ResourceSpans[0].ScopeSpans[0].Spans[0]
+		if r.Method != http.MethodPost {
+			t.Errorf("wrong method: %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("wrong Content-Type: %s", r.Header.Get("Content-Type"))
+		}
+		rawBody, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("failed to read body: %v", err)
+			return
+		}
+		t.Logf("Body (raw): %s", string(rawBody))
+		var prettyJSON bytes.Buffer
+		if err := json.Indent(&prettyJSON, rawBody, "", "  "); err == nil {
+			t.Logf("Body (pretty):\n%s", prettyJSON.String())
+		}
+		var data TempoData
+		if err := json.Unmarshal(rawBody, &data); err != nil {
+			t.Errorf("failed to decode JSON: %v", err)
+			return
+		}
+		resource := data.ResourceSpans[0].Resource
+		if len(resource.Attributes) != 3 {
+			t.Errorf("expected 3 resource attributes, got %d", len(resource.Attributes))
+			return
+		}
+		expectedResourceAttrs := map[string]string{
+			"service.name":                "test-service",
+			"service.namespace":           "payments",
+			"deployment.environment.name": "production",
+		}
+		foundAttrs := make(map[string]string)
+		for _, a := range resource.Attributes {
+			foundAttrs[a.Key] = a.Value.StringValue
+		}
+		for key, want := range expectedResourceAttrs {
+			if got, ok := foundAttrs[key]; !ok {
+				t.Errorf("resource attribute %q not found", key)
+			} else if got != want {
+				t.Errorf("resource attribute %q: expected %q, got %q", key, want, got)
+			}
+		}
+		span := data.ResourceSpans[0].ScopeSpans[0].Spans[0]
 		if span.Name != "test" {
 			t.Errorf("wrong name: %s", span.Name)
 		}
@@ -1017,6 +1134,11 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		}
 		if span.TraceID != "5b8efff798038103d269b633813fc700" {
 			t.Errorf("wrong trace_id: %s", span.TraceID)
+		}
+		for _, a := range span.Attributes {
+			if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
+				t.Errorf("%s should NOT be duplicated in Span.Attributes", a.Key)
+			}
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -1027,6 +1149,9 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 	)
 	defer sinkTempo.Close()
 	fields := []Field{
+		String("service", "test-service"),
+		String("namespace", "payments"),
+		String("environment", "production"),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7E-C3C1-B100"),
 		String("name", "test"),
@@ -1060,9 +1185,10 @@ func Test_SinkFactory_TempoCloud(t *testing.T) {
 	)
 	defer telemetry.Close()
 	telemetry.Error(DataTrace,
+		String("service", "test-service"),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7EC3C1B105"),
-		String("name", "integration-test-span"),
+		String("name", "test"),
 		Int64("duration", 150),
 	)
 }
@@ -1081,15 +1207,15 @@ func Test_SinkFactory_Wechat(t *testing.T) {
 		if data.MsgType != "markdown" {
 			t.Errorf("expected msgtype 'markdown', got '%s'", data.MsgType)
 		}
-		if data.Content != "test message" {
-			t.Errorf("expected content 'test message', got '%s'", data.Content)
+		if data.Content != "test" {
+			t.Errorf("expected content 'test', got '%s'", data.Content)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 	sinkWechat := NewSinkWechat(server.URL)
 	fields := []Field{
-		String("message", "test message"),
+		String("message", "test"),
 	}
 	_, err := sinkWechat.WriteWithAttributes(
 		writeAttributes{typeLevel: LevelError, typeData: DataLog},
@@ -1108,7 +1234,7 @@ func Test_SinkFile(t *testing.T) {
 		t.Fatalf("NewFileSink failed: %v", err)
 	}
 	defer sinkFile.Close()
-	data := []byte("test message\n")
+	data := []byte("test\n")
 	n, err := sinkFile.Write(data)
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
