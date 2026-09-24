@@ -121,7 +121,7 @@ var (
 		},
 	}
 	osExit          = os.Exit
-	timeCacheMu     sync.Mutex
+	timeCacheMu     sync.RWMutex
 	timeCacheSec    int64
 	timeCachePrefix = make([]byte, 0, 32)
 	timeCacheTZ     string
@@ -195,9 +195,13 @@ func getLevel(typeLevel TypeLevel) string {
 func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 	unixSec := timestamp.Unix()
 	unixNano := timestamp.UnixNano()
-	if atomic.LoadInt64(&timeCacheSec) == unixSec {
+	timeCacheMu.RLock()
+	if timeCacheSec == unixSec {
 		dataBuf.Write(timeCachePrefix)
+		dataBuf.WriteString(timeCacheTZ)
+		timeCacheMu.RUnlock()
 	} else {
+		timeCacheMu.RUnlock()
 		timeCacheMu.Lock()
 		if timeCacheSec != unixSec {
 			timeBuf := timePool.Get().([]byte)
@@ -211,10 +215,12 @@ func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 				timeCacheTZ = string(tzBuf)
 				timePool.Put(tzBuf)
 			})
-			atomic.StoreInt64(&timeCacheSec, unixSec)
+
+			timeCacheSec = unixSec
 		}
-		timeCacheMu.Unlock()
 		dataBuf.Write(timeCachePrefix)
+		dataBuf.WriteString(timeCacheTZ)
+		timeCacheMu.Unlock()
 	}
 	millis := (unixNano / 1_000_000) % 1000
 	micros := (unixNano / 1_000) % 1000
@@ -225,7 +231,6 @@ func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 	dataBuf.WriteByte(byte('0' + (micros/100)%10))
 	dataBuf.WriteByte(byte('0' + (micros/10)%10))
 	dataBuf.WriteByte(byte('0' + micros%10))
-	dataBuf.WriteString(timeCacheTZ)
 }
 func getTypeData(buf *bytes.Buffer, typeData TypeData) {
 	switch typeData {
