@@ -201,9 +201,7 @@ func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 		timeCacheMu.Lock()
 		if timeCacheSec != unixSec {
 			timeCachePrefix = timestamp.Format("2006-01-02T15:04:05")
-			if timeCacheTZ == "" {
-				timeCacheTZ = timestamp.Format("-07:00")
-			}
+			timeCacheTZ = timestamp.Format("-07:00")
 			timeCacheSec = unixSec
 		}
 		prefix := timeCachePrefix
