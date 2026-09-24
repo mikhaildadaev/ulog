@@ -960,17 +960,11 @@ func (sinkHttp *SinkHttp) evictDedupTTL() {
 func (sinkHttp *SinkHttp) evictDedupSize() {
 	sinkHttp.dedupEvictMutex.Lock()
 	defer sinkHttp.dedupEvictMutex.Unlock()
-	if !sinkHttp.dedupEvictRequested.Load() {
-		return
-	}
 	threshold := sinkHttp.evictDedupThreshold()
 	if threshold <= 0 {
-		sinkHttp.dedupEvictRequested.Store(false)
 		return
 	}
-	over := sinkHttp.dedupCacheCount.Load() - threshold
-	if over <= 0 {
-		sinkHttp.dedupEvictRequested.Store(false)
+	if sinkHttp.dedupCacheCount.Load() <= threshold {
 		return
 	}
 	type entry struct {
@@ -987,7 +981,6 @@ func (sinkHttp *SinkHttp) evictDedupSize() {
 	})
 	remove := sinkHttp.dedupCacheCount.Load() - sinkHttp.dedupCacheMaxSize
 	if remove <= 0 {
-		sinkHttp.dedupEvictRequested.Store(false)
 		return
 	}
 	if remove > int64(len(entries)) {
@@ -998,7 +991,6 @@ func (sinkHttp *SinkHttp) evictDedupSize() {
 			sinkHttp.dedupCacheCount.Add(-1)
 		}
 	}
-	sinkHttp.dedupEvictRequested.Store(false)
 }
 func (sinkHttp *SinkHttp) evictDedupThreshold() int64 {
 	if sinkHttp.dedupCacheMaxSize <= 0 {
@@ -1044,10 +1036,7 @@ func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
 		}
 	}
 	if _, loaded := sinkHttp.dedupCache.LoadOrStore(hash, time.Now()); !loaded {
-		count := sinkHttp.dedupCacheCount.Add(1)
-		if threshold := sinkHttp.evictDedupThreshold(); threshold > 0 && count > threshold {
-			sinkHttp.dedupEvictRequested.Store(true)
-		}
+		sinkHttp.dedupCacheCount.Add(1)
 	}
 	return false
 }
