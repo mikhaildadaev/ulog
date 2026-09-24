@@ -675,6 +675,95 @@ func Test_Sink(t *testing.T) {
 		t.Errorf("Close() returned error: %v", err)
 	}
 }
+func Test_Sink_MixedWriters(t *testing.T) {
+	var (
+		mutex        sync.Mutex
+		httpRequests int
+		httpBody     []byte
+	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		r.Body.Close()
+		mutex.Lock()
+		httpRequests++
+		httpBody = body
+		mutex.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sinkHttp := NewSinkHttp(server.URL,
+		WithHttpDisabledBatch(),
+		WithHttpDisabledCircuit(),
+		WithHttpFilterLevel(LevelDebug),
+	)
+	defer sinkHttp.Close()
+	var buf bytes.Buffer
+	tee := NewTeeSink(sinkHttp, &buf)
+	defer tee.Close()
+	attrs := writeAttributes{
+		typeData:   DataLog,
+		typeFormat: FormatJson,
+		typeLevel:  LevelInfo,
+	}
+	fields := []Field{
+		String("message", "test"),
+		Int("count", 42),
+	}
+	n, err := tee.WriteWithAttributes(attrs, fields)
+	if err != nil {
+		t.Fatalf("WriteWithAttributes failed: %v", err)
+	}
+	if n == 0 {
+		t.Error("expected non-zero bytes written")
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		mutex.Lock()
+		count := httpRequests
+		mutex.Unlock()
+		if count >= 1 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	mutex.Lock()
+	reqCount := httpRequests
+	capturedBody := httpBody
+	mutex.Unlock()
+	if reqCount != 1 {
+		t.Errorf("SinkWriter: expected 1 HTTP request, got %d", reqCount)
+	}
+	var httpJSON map[string]any
+	if err := json.Unmarshal(capturedBody, &httpJSON); err != nil {
+		t.Errorf("SinkWriter: invalid JSON: %v", err)
+	}
+	if httpJSON["message"] != "test" {
+		t.Errorf("SinkWriter: expected message 'test', got %v", httpJSON["message"])
+	}
+	if httpJSON["count"] != float64(42) {
+		t.Errorf("SinkWriter: expected count 42, got %v", httpJSON["count"])
+	}
+	output := buf.String()
+	if output == "" {
+		t.Fatal("io.Writer: expected content, got empty")
+	}
+	var bufJSON map[string]any
+	if err := json.Unmarshal([]byte(output), &bufJSON); err != nil {
+		t.Errorf("io.Writer: invalid JSON: %v", err)
+	}
+	if bufJSON["message"] != "test" {
+		t.Errorf("io.Writer: expected message 'test', got %v", bufJSON["message"])
+	}
+	if bufJSON["count"] != float64(42) {
+		t.Errorf("io.Writer: expected count 42, got %v", bufJSON["count"])
+	}
+	if bufJSON["type"] != "log" {
+		t.Errorf("io.Writer: expected type 'log', got %v", bufJSON["type"])
+	}
+	if bufJSON["level"] != "info" {
+		t.Errorf("io.Writer: expected level 'info', got %v", bufJSON["level"])
+	}
+}
 func Test_SinkFactory_Discord(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -1393,6 +1482,65 @@ func Test_SinkFile_CleanupByCount(t *testing.T) {
 		t.Errorf("Expected max 3 files, got %d", len(files))
 	}
 }
+func Test_SinkFile_Concurrent(t *testing.T) {
+	tmpDir := t.TempDir()
+	logFile := filepath.Join(tmpDir, "test.log")
+	sinkFile, err := NewSinkFile(logFile,
+		WithFileMaxSize(1),
+		WithFileMaxBackups(5),
+	)
+	if err != nil {
+		t.Fatalf("NewSinkFile failed: %v", err)
+	}
+	defer sinkFile.Close()
+	const (
+		goroutines   = 50
+		perGoroutine = 200
+	)
+	var wg sync.WaitGroup
+	var writeErrors atomic.Int64
+	var bytesWritten atomic.Int64
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < perGoroutine; j++ {
+				line := fmt.Sprintf("goroutine=%d iteration=%d\n", id, j)
+				n, err := sinkFile.Write([]byte(line))
+				if err != nil {
+					writeErrors.Add(1)
+					continue
+				}
+				bytesWritten.Add(int64(n))
+			}
+		}(i)
+	}
+	wg.Wait()
+	if n := writeErrors.Load(); n != 0 {
+		t.Errorf("unexpected write errors: %d", n)
+	}
+	if err := sinkFile.Close(); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+	totalBytes := int64(0)
+	files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
+	if err != nil {
+		t.Fatalf("Glob failed: %v", err)
+	}
+	for _, f := range files {
+		info, err := os.Stat(f)
+		if err != nil {
+			continue
+		}
+		totalBytes += info.Size()
+	}
+	if totalBytes == 0 {
+		t.Error("no bytes written to any log file")
+	}
+	if bytesWritten.Load() == 0 {
+		t.Error("sinkFile.Write returned 0 bytes for all calls")
+	}
+}
 func Test_SinkFile_Rotate(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFile := filepath.Join(tmpDir, "test.log")
@@ -1426,6 +1574,188 @@ func Test_SinkFile_Rotate(t *testing.T) {
 	if len(files) == 0 {
 		t.Error("No log files created")
 	}
+}
+func Test_SinkFile_WriteWithAttributes(t *testing.T) {
+	t.Run("Json", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		logFile := filepath.Join(tmpDir, "test.log")
+		sinkFile, err := NewSinkFile(logFile)
+		if err != nil {
+			t.Fatalf("NewSinkFile failed: %v", err)
+		}
+		defer sinkFile.Close()
+		attributes := writeAttributes{
+			typeData:   DataLog,
+			typeFormat: FormatJson,
+			typeLevel:  LevelInfo,
+		}
+		fields := []Field{
+			String("message", "test message"),
+			Int("count", 42),
+		}
+		n, err := sinkFile.WriteWithAttributes(attributes, fields)
+		if err != nil {
+			t.Fatalf("WriteWithAttributes failed: %v", err)
+		}
+		if n == 0 {
+			t.Error("expected non-zero bytes written")
+		}
+		content, err := os.ReadFile(logFile)
+		if err != nil {
+			t.Fatalf("ReadFile failed: %v", err)
+		}
+		output := string(content)
+		var record map[string]any
+		if err := json.Unmarshal([]byte(strings.TrimSpace(output)), &record); err != nil {
+			t.Fatalf("output is not valid JSON: %v\noutput: %q", err, output)
+		}
+		if record["level"] != "info" {
+			t.Errorf("level: expected 'info', got %v", record["level"])
+		}
+		if record["type"] != "log" {
+			t.Errorf("type: expected 'log', got %v", record["type"])
+		}
+		if record["message"] != "test message" {
+			t.Errorf("message: expected 'test message', got %v", record["message"])
+		}
+		if record["count"] != float64(42) {
+			t.Errorf("count: expected 42, got %v", record["count"])
+		}
+		if _, ok := record["timestamp"]; !ok {
+			t.Error("timestamp missing")
+		}
+	})
+	t.Run("Text", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		logFile := filepath.Join(tmpDir, "test.log")
+		sinkFile, err := NewSinkFile(logFile)
+		if err != nil {
+			t.Fatalf("NewSinkFile failed: %v", err)
+		}
+		defer sinkFile.Close()
+		attributes := writeAttributes{
+			typeData:   DataLog,
+			typeFormat: FormatText,
+			typeLevel:  LevelInfo,
+			theme:      themeDark,
+		}
+		fields := []Field{
+			String("message", "test message"),
+			Int("count", 42),
+		}
+		_, err = sinkFile.WriteWithAttributes(attributes, fields)
+		if err != nil {
+			t.Fatalf("WriteWithAttributes failed: %v", err)
+		}
+		content, err := os.ReadFile(logFile)
+		if err != nil {
+			t.Fatalf("ReadFile failed: %v", err)
+		}
+		output := string(content)
+		if !strings.Contains(output, "message=\"test message\"") {
+			t.Errorf("message not found in output: %q", output)
+		}
+		if !strings.Contains(output, "count=42") {
+			t.Errorf("count not found in output: %q", output)
+		}
+		if !strings.Contains(output, `type="log"`) {
+			t.Errorf("type not found in output: %q", output)
+		}
+		if !strings.Contains(output, "[INFO]") {
+			t.Errorf("level prefix not found in output: %q", output)
+		}
+	})
+	t.Run("UnsupportedFormat", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		logFile := filepath.Join(tmpDir, "test.log")
+		sinkFile, err := NewSinkFile(logFile)
+		if err != nil {
+			t.Fatalf("NewSinkFile failed: %v", err)
+		}
+		defer sinkFile.Close()
+		attributes := writeAttributes{
+			typeData:   DataLog,
+			typeFormat: TypeFormat(999),
+			typeLevel:  LevelInfo,
+		}
+		fields := []Field{String("message", "test")}
+		_, err = sinkFile.WriteWithAttributes(attributes, fields)
+		if err == nil {
+			t.Error("expected error for unsupported format")
+		}
+		if !strings.Contains(err.Error(), "unsupported format") {
+			t.Errorf("expected 'unsupported format' error, got: %v", err)
+		}
+	})
+	t.Run("Rotation", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		logFile := filepath.Join(tmpDir, "test.log")
+		sinkFile, err := NewSinkFile(logFile,
+			WithFileMaxSize(1),
+			WithFileMaxBackups(3),
+		)
+		if err != nil {
+			t.Fatalf("NewSinkFile failed: %v", err)
+		}
+		defer sinkFile.Close()
+		attributes := writeAttributes{
+			typeData:   DataLog,
+			typeFormat: FormatJson,
+			typeLevel:  LevelInfo,
+		}
+		bigMessage := strings.Repeat("A", 512*1024)
+		fields := []Field{String("message", bigMessage)}
+		for i := 0; i < 2; i++ {
+			_, err := sinkFile.WriteWithAttributes(attributes, fields)
+			if err != nil {
+				t.Fatalf("WriteWithAttributes #%d failed: %v", i, err)
+			}
+		}
+		files, err := filepath.Glob(filepath.Join(tmpDir, "test*.log*"))
+		if err != nil {
+			t.Fatalf("Glob failed: %v", err)
+		}
+		if len(files) < 2 {
+			t.Errorf("expected at least 2 files after rotation, got %d: %v", len(files), files)
+		}
+	})
+	t.Run("ViaTelemetry", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		logFile := filepath.Join(tmpDir, "test.log")
+		sinkFile, err := NewSinkFile(logFile)
+		if err != nil {
+			t.Fatalf("NewSinkFile failed: %v", err)
+		}
+		defer sinkFile.Close()
+		telemetry := NewTelemetry(
+			WithMode(ModeSync, sinkFile),
+			WithFormat(FormatJson),
+			WithLevel(LevelDebug),
+		)
+		defer telemetry.Close()
+		telemetry.Info(DataLog,
+			String("message", "hello from telemetry"),
+			Int("user_id", 12345),
+		)
+		content, err := os.ReadFile(logFile)
+		if err != nil {
+			t.Fatalf("ReadFile failed: %v", err)
+		}
+		output := strings.TrimSpace(string(content))
+		var record map[string]any
+		if err := json.Unmarshal([]byte(output), &record); err != nil {
+			t.Fatalf("output is not valid JSON: %v\noutput: %q", err, output)
+		}
+		if record["message"] != "hello from telemetry" {
+			t.Errorf("message: expected 'hello from telemetry', got %v", record["message"])
+		}
+		if record["user_id"] != float64(12345) {
+			t.Errorf("user_id: expected 12345, got %v", record["user_id"])
+		}
+		if record["level"] != "info" {
+			t.Errorf("level: expected 'info', got %v", record["level"])
+		}
+	})
 }
 func Test_SinkHttp(t *testing.T) {
 	var mutex sync.Mutex
@@ -1754,6 +2084,51 @@ func Test_SinkHttp_Circuit(t *testing.T) {
 				sink.circuitState.Load(), circuitStateOpen)
 		}
 	})
+}
+func Test_SinkHttp_CloseDuringWrite(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(1 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	sinkHttp := NewSinkHttp(server.URL,
+		WithHttpDisabledBatch(),
+		WithHttpDisabledCircuit(),
+		WithHttpFilterLevel(LevelDebug),
+	)
+	const (
+		goroutines   = 50
+		perGoroutine = 50
+	)
+	var wg sync.WaitGroup
+	var writeErrors atomic.Int64
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < perGoroutine; j++ {
+				attrs := writeAttributes{
+					typeData:  DataLog,
+					typeLevel: LevelInfo,
+				}
+				fields := []Field{
+					String("message", fmt.Sprintf("test-%d-%d", id, j)),
+					Int("id", id),
+					Int("j", j),
+				}
+				_, err := sinkHttp.WriteWithAttributes(attrs, fields)
+				if err != nil {
+					writeErrors.Add(1)
+				}
+			}
+		}(i)
+	}
+	time.Sleep(10 * time.Millisecond)
+	if err := sinkHttp.Close(); err != nil {
+		t.Errorf("Close failed: %v", err)
+	}
+	wg.Wait()
+	t.Logf("write errors after Close: %d", writeErrors.Load())
 }
 func Test_SinkHttp_Deduplication(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
