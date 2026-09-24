@@ -28,6 +28,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -56,6 +57,23 @@ func Test_Telemetry(t *testing.T) {
 		t.Errorf("Expected 'test info text', got %q", buf.String())
 	}
 }
+func Test_Telemetry_Caller(t *testing.T) {
+	buf := &bytes.Buffer{}
+	telemetry := NewTelemetry(
+		WithLevel(LevelDebug),
+		WithFormat(FormatJson),
+		WithMode(ModeSync, buf),
+	)
+	defer telemetry.Close()
+	line := 0
+	_, _, line, _ = runtime.Caller(0)
+	telemetry.Debug(DataLog, String("msg", "test"))
+	output := buf.String()
+	expected := fmt.Sprintf(`"caller":"ulog_test.go:%d"`, line+1)
+	if !strings.Contains(output, expected) {
+		t.Errorf("expected %s, got %s", expected, output)
+	}
+}
 func Test_Telemetry_Close(t *testing.T) {
 	t.Run("Async", func(t *testing.T) {
 		buf := &bytes.Buffer{}
@@ -82,6 +100,18 @@ func Test_Telemetry_Close(t *testing.T) {
 			t.Error("Logger stopped working after Close in sync mode")
 		}
 	})
+}
+func Test_Telemetry_GetTime(t *testing.T) {
+	var buf1 bytes.Buffer
+	getTime(&buf1, time.Date(2026, 1, 15, 12, 0, 0, 0, time.FixedZone("CET", 3600)))
+	var buf2 bytes.Buffer
+	getTime(&buf2, time.Date(2026, 1, 15, 12, 0, 1, 0, time.FixedZone("CEST", 7200)))
+	if !strings.Contains(buf1.String(), "+01:00") {
+		t.Errorf("first call: expected +01:00, got %s", buf1.String())
+	}
+	if !strings.Contains(buf2.String(), "+02:00") {
+		t.Errorf("second call: expected +02:00 (TZ changed), got %s", buf2.String())
+	}
 }
 func Test_Telemetry_Extractor(t *testing.T) {
 	tests := []struct {
@@ -1875,7 +1905,6 @@ func Test_SinkHttp_Sampling(t *testing.T) {
 	counts := 100
 	rate := int32(10)
 	expected := counts / int(rate)
-	delta := 1
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mutex.Lock()
 		requestCount++
@@ -1888,6 +1917,7 @@ func Test_SinkHttp_Sampling(t *testing.T) {
 		WithHttpFilterLevel(LevelDebug),
 		WithHttpSampleRate(rate),
 	)
+	defer sinkHttp.Close()
 	attributes := writeAttributes{
 		typeData:  DataLog,
 		typeLevel: LevelInfo,
@@ -1900,8 +1930,9 @@ func Test_SinkHttp_Sampling(t *testing.T) {
 	mutex.Lock()
 	count := requestCount
 	mutex.Unlock()
-	if count < expected-delta || count > expected+delta {
-		t.Errorf("Expected ~10 requests, got %d", count)
+	if count != expected {
+		t.Errorf("Expected exactly %d requests (deterministic sampling), got %d",
+			expected, count)
 	}
 }
 func Test_Stress_Sink_TimeConcurrent(t *testing.T) {
@@ -1944,6 +1975,7 @@ func Test_Stress_SinkHttp_ConcurrentWrite(t *testing.T) {
 	)
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
+	var writeErrors atomic.Int64
 	for i := 0; i < goroutines; i++ {
 		go func(id int) {
 			defer wg.Done()
@@ -1953,11 +1985,16 @@ func Test_Stress_SinkHttp_ConcurrentWrite(t *testing.T) {
 					Int("id", id),
 					Int("j", j),
 				}
-				sinkHttp.WriteWithAttributes(attributes, fields)
+				if _, err := sinkHttp.WriteWithAttributes(attributes, fields); err != nil {
+					writeErrors.Add(1)
+				}
 			}
 		}(i)
 	}
 	wg.Wait()
+	if n := writeErrors.Load(); n != 0 {
+		t.Errorf("unexpected write errors: %d", n)
+	}
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		mutex.Lock()
@@ -2088,7 +2125,52 @@ func Test_Stress_SinkHttp_CircuitToggle(t *testing.T) {
 	}
 }
 func Test_Stress_SinkHttp_Deduplication_EvictionStress(t *testing.T) {
-	t.Run("EvictionAfterWindow", func(t *testing.T) {
+	t.Run("SizeEviction", func(t *testing.T) {
+		var (
+			mutex        sync.Mutex
+			requestCount int
+		)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			mutex.Lock()
+			requestCount++
+			mutex.Unlock()
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+		const (
+			maxSize    = 1000
+			totalWrite = 2500
+		)
+		sink := NewSinkHttp(server.URL,
+			WithHttpDedupWindow(1*time.Hour),
+			WithHttpDedupMaxSize(maxSize),
+			WithHttpDisabledBatch(),
+			WithHttpDisabledCircuit(),
+			WithHttpFilterLevel(LevelDebug),
+		)
+		defer sink.Close()
+		attrs := writeAttributes{typeData: DataLog, typeLevel: LevelInfo}
+		for i := 0; i < totalWrite; i++ {
+			fields := []Field{String("message", fmt.Sprintf("unique-%d", i))}
+			sink.WriteWithAttributes(attrs, fields)
+		}
+		deadline := time.Now().Add(10 * time.Second)
+		for time.Now().Before(deadline) {
+			if sink.dedupCacheCount.Load() <= maxSize {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		cacheSize := sink.dedupCacheCount.Load()
+		if cacheSize > maxSize {
+			t.Errorf("dedupCacheCount = %d, want <= %d after size-based eviction",
+				cacheSize, maxSize)
+		}
+		if cacheSize == 0 {
+			t.Error("dedupCacheCount = 0 — eviction removed everything (unexpected)")
+		}
+	})
+	t.Run("TTLEviction", func(t *testing.T) {
 		var (
 			mutex        sync.Mutex
 			requestCount int
@@ -2104,6 +2186,7 @@ func Test_Stress_SinkHttp_Deduplication_EvictionStress(t *testing.T) {
 			WithHttpDedupWindow(100*time.Millisecond),
 			WithHttpDedupMaxSize(10),
 			WithHttpDisabledBatch(),
+			WithHttpDisabledCircuit(),
 			WithHttpFilterLevel(LevelDebug),
 		)
 		defer sink.Close()
@@ -2114,14 +2197,14 @@ func Test_Stress_SinkHttp_Deduplication_EvictionStress(t *testing.T) {
 		}
 		deadline := time.Now().Add(2 * time.Second)
 		for time.Now().Before(deadline) {
-			if sink.dedupCacheCount.Load() <= 15 {
+			if sink.dedupCacheCount.Load() == 0 {
 				break
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
 		cacheSize := sink.dedupCacheCount.Load()
-		if cacheSize > 15 {
-			t.Errorf("dedupCacheCount = %d, want <= 15 after eviction", cacheSize)
+		if cacheSize != 0 {
+			t.Errorf("dedupCacheCount = %d, want 0 after TTL eviction", cacheSize)
 		}
 	})
 	t.Run("UniqueInWindow", func(t *testing.T) {
@@ -2138,8 +2221,8 @@ func Test_Stress_SinkHttp_Deduplication_EvictionStress(t *testing.T) {
 		defer server.Close()
 		sink := NewSinkHttp(server.URL,
 			WithHttpDedupWindow(500*time.Millisecond),
-			WithHttpDedupMaxSize(10),
 			WithHttpDisabledBatch(),
+			WithHttpDisabledCircuit(),
 			WithHttpFilterLevel(LevelDebug),
 		)
 		defer sink.Close()
@@ -2157,7 +2240,7 @@ func Test_Stress_SinkHttp_Deduplication_EvictionStress(t *testing.T) {
 		}
 		cacheSize := sink.dedupCacheCount.Load()
 		if cacheSize != 100 {
-			t.Errorf("dedupCacheCount = %d, want 100", cacheSize)
+			t.Errorf("dedupCacheCount = %d, want 100 (TTL not yet triggered)", cacheSize)
 		}
 	})
 }
@@ -2195,7 +2278,10 @@ func Test_Stress_SinkHttp_LongRun(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
-	t.Logf("wrote %d messages in 10 seconds", count.Load())
+	t.Logf("wrote %d messages in 5 seconds", count.Load())
+	if count.Load() == 0 {
+		t.Error("expected messages to be written")
+	}
 	if sink.closed {
 		t.Error("sink should not be closed")
 	}
