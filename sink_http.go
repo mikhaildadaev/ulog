@@ -921,22 +921,30 @@ func (sinkHttp *SinkHttp) cleanupDedupCache() {
 	sinkHttp.mutex.Lock()
 	dedupStopChan := sinkHttp.dedupStopChan
 	sinkHttp.mutex.Unlock()
-	interval := sinkHttp.dedupWindow / 10
-	if interval < 100*time.Millisecond {
-		interval = 100 * time.Millisecond
+	ttlInterval := sinkHttp.dedupWindow / 10
+	if ttlInterval < 100*time.Millisecond {
+		ttlInterval = 100 * time.Millisecond
 	}
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+	sizeInterval := 1 * time.Second
+	if sizeInterval > ttlInterval {
+		sizeInterval = ttlInterval
+	}
+	ttlTicker := time.NewTicker(ttlInterval)
+	defer ttlTicker.Stop()
+	sizeTicker := time.NewTicker(sizeInterval)
+	defer sizeTicker.Stop()
 	for {
 		select {
-		case <-ticker.C:
-			sinkHttp.evictDedupCache()
+		case <-ttlTicker.C:
+			sinkHttp.evictDedupTTL()
+		case <-sizeTicker.C:
+			sinkHttp.evictDedupSize()
 		case <-dedupStopChan:
 			return
 		}
 	}
 }
-func (sinkHttp *SinkHttp) evictDedupCache() {
+func (sinkHttp *SinkHttp) evictDedupTTL() {
 	sinkHttp.dedupEvictMutex.Lock()
 	defer sinkHttp.dedupEvictMutex.Unlock()
 	now := time.Now()
@@ -948,6 +956,10 @@ func (sinkHttp *SinkHttp) evictDedupCache() {
 		}
 		return true
 	})
+}
+func (sinkHttp *SinkHttp) evictDedupSize() {
+	sinkHttp.dedupEvictMutex.Lock()
+	defer sinkHttp.dedupEvictMutex.Unlock()
 	if !sinkHttp.dedupEvictRequested.Load() {
 		return
 	}
