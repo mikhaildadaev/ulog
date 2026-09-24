@@ -121,6 +121,13 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 			sinkHttp.cleanupDedupCache()
 		}()
 	}
+	if sinkHttp.circuitEnabled {
+		sinkHttp.wg.Add(1)
+		go func() {
+			defer sinkHttp.wg.Done()
+			sinkHttp.circuitProbeWatchdog()
+		}()
+	}
 	return sinkHttp
 }
 
@@ -768,6 +775,43 @@ func (sinkHttp *SinkHttp) circuitAllow() bool {
 		return false
 	default:
 		return true
+	}
+}
+func (sinkHttp *SinkHttp) circuitProbeWatchdog() {
+	interval := sinkHttp.circuitTimeout / 2
+	if interval < 10*time.Millisecond {
+		interval = 10 * time.Millisecond
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if !sinkHttp.circuitEnabled {
+				continue
+			}
+			if sinkHttp.circuitState.Load() != circuitStateHalfOpen {
+				continue
+			}
+			if !sinkHttp.circuitHalfOpenProbeInFlight.Load() {
+				continue
+			}
+			probeStart := sinkHttp.circuitHalfOpenProbeStart.Load()
+			if probeStart == 0 {
+				continue
+			}
+			if time.Now().UnixNano()-probeStart <= sinkHttp.circuitTimeout.Nanoseconds() {
+				continue
+			}
+			sinkHttp.circuitMutex.Lock()
+			if sinkHttp.circuitState.Load() == circuitStateHalfOpen {
+				sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
+				fmt.Fprintf(DefaultWriterErr, "ulog: circuit half-open probe timed out, resetting\n")
+			}
+			sinkHttp.circuitMutex.Unlock()
+		case <-sinkHttp.batchChan:
+			return
+		}
 	}
 }
 func (sinkHttp *SinkHttp) circuitRecord(success bool) {
