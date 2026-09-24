@@ -55,7 +55,6 @@ type SinkHttp struct {
 	dedupCacheCount              atomic.Int64
 	dedupCacheMaxSize            int64
 	dedupEvictMutex              sync.Mutex
-	dedupEvictRequested          atomic.Bool
 	dedupStopChan                chan struct{}
 	dedupWindow                  time.Duration
 	endPoint                     string
@@ -960,18 +959,18 @@ func (sinkHttp *SinkHttp) evictDedupTTL() {
 func (sinkHttp *SinkHttp) evictDedupSize() {
 	sinkHttp.dedupEvictMutex.Lock()
 	defer sinkHttp.dedupEvictMutex.Unlock()
-	threshold := sinkHttp.evictDedupThreshold()
-	if threshold <= 0 {
+	if sinkHttp.dedupCacheMaxSize <= 0 {
 		return
 	}
-	if sinkHttp.dedupCacheCount.Load() <= threshold {
+	count := sinkHttp.dedupCacheCount.Load()
+	if count <= sinkHttp.dedupCacheMaxSize {
 		return
 	}
 	type entry struct {
 		key      any
 		lastSeen time.Time
 	}
-	entries := make([]entry, 0, sinkHttp.dedupCacheCount.Load())
+	entries := make([]entry, 0, count)
 	sinkHttp.dedupCache.Range(func(key, value any) bool {
 		entries = append(entries, entry{key: key, lastSeen: value.(time.Time)})
 		return true
@@ -979,28 +978,15 @@ func (sinkHttp *SinkHttp) evictDedupSize() {
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].lastSeen.Before(entries[j].lastSeen)
 	})
-	remove := sinkHttp.dedupCacheCount.Load() - sinkHttp.dedupCacheMaxSize
+	remove := int64(len(entries)) - sinkHttp.dedupCacheMaxSize
 	if remove <= 0 {
 		return
-	}
-	if remove > int64(len(entries)) {
-		remove = int64(len(entries))
 	}
 	for i := int64(0); i < remove; i++ {
 		if _, loaded := sinkHttp.dedupCache.LoadAndDelete(entries[i].key); loaded {
 			sinkHttp.dedupCacheCount.Add(-1)
 		}
 	}
-}
-func (sinkHttp *SinkHttp) evictDedupThreshold() int64 {
-	if sinkHttp.dedupCacheMaxSize <= 0 {
-		return 0
-	}
-	h := sinkHttp.dedupCacheMaxSize / 10
-	if h < 1000 {
-		h = 1000
-	}
-	return sinkHttp.dedupCacheMaxSize + h
 }
 func (sinkHttp *SinkHttp) flush() error {
 	sinkHttp.batchMutex.Lock()
