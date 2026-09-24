@@ -430,9 +430,10 @@ func (standardTelemetry *standardTelemetry) Write(p []byte) (n int, err error) {
 }
 func (universalTelemetry *universalTelemetry) Close() error {
 	universalTelemetry.mutex.RLock()
+	mode := universalTelemetry.mode
 	writer := universalTelemetry.writer
 	universalTelemetry.mutex.RUnlock()
-	if universalTelemetry.mode == ModeAsync {
+	if mode == ModeAsync {
 		if asyncWriter, ok := writer.(*asyncWriter); ok {
 			return asyncWriter.Close()
 		}
