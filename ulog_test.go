@@ -1162,7 +1162,7 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 					if dp.Sum == nil || *dp.Sum != 12.5 {
 						t.Errorf("expected sum 12.5, got %v", dp.Sum)
 					}
-					if len(dp.BucketCounts) != 4 {
+					if len(dp.BucketCounts) != 5 {
 						t.Errorf("expected 4 bucket counts, got %d", len(dp.BucketCounts))
 					}
 					if len(dp.ExplicitBounds) != 4 {
@@ -1194,7 +1194,7 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 					String("type", "histogram"),
 					Int64("count", 150),
 					Float64("sum", 12.5),
-					Ints64("bucket_counts", []int64{10, 40, 70, 30}),
+					Ints64("bucket_counts", []int64{10, 40, 70, 30, 0}),
 					Floats64("explicit_bounds", []float64{0.1, 0.5, 1.0, 5.0}),
 				)
 			}
@@ -1273,7 +1273,7 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 			String("type", "histogram"),
 			Int64("count", 150),
 			Float64("sum", 12.5),
-			Ints64("bucket_counts", []int64{10, 40, 70, 30}),
+			Ints64("bucket_counts", []int64{10, 40, 70, 30, 0}),
 			Floats64("explicit_bounds", []float64{0.1, 0.5, 1.0, 5.0}),
 		)
 	})
