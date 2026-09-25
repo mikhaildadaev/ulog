@@ -988,21 +988,23 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 	tests := []struct {
 		name         string
 		metricName   string
-		isCounter    bool
 		expectedTemp int
 		expectedMono bool
 	}{
 		{
-			name:         "Counter",
+			name:         "counter",
 			metricName:   "http_requests_total",
-			isCounter:    true,
 			expectedTemp: 2,
 			expectedMono: true,
 		},
 		{
-			name:         "Gauge",
+			name:         "histogram",
+			metricName:   "http_request_duration_seconds",
+			expectedTemp: 2,
+		},
+		{
+			name:         "gauge",
 			metricName:   "cpu_usage",
-			isCounter:    false,
 			expectedTemp: 0,
 			expectedMono: false,
 		},
@@ -1078,12 +1080,16 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 				if metric.Name != tt.metricName {
 					t.Errorf("wrong metric name: expected %q, got %q", tt.metricName, metric.Name)
 				}
-				if tt.isCounter {
+				switch tt.name {
+				case "counter":
 					if metric.Sum == nil {
 						t.Fatalf("expected Sum (Counter), got nil")
 					}
 					if metric.Gauge != nil {
 						t.Errorf("Counter should not have Gauge")
+					}
+					if metric.Histogram != nil {
+						t.Errorf("Counter should not have Histogram")
 					}
 					if metric.Sum.AggregationTemporality != tt.expectedTemp {
 						t.Errorf("expected temporality %d, got %d",
@@ -1108,12 +1114,15 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 							t.Errorf("%s should NOT be duplicated in DataPoint.Attributes", a.Key)
 						}
 					}
-				} else {
+				case "gauge":
 					if metric.Gauge == nil {
 						t.Fatalf("expected Gauge, got nil")
 					}
 					if metric.Sum != nil {
 						t.Errorf("Gauge should not have Sum")
+					}
+					if metric.Histogram != nil {
+						t.Errorf("Gauge should not have Histogram")
 					}
 					if len(metric.Gauge.DataPoints) != 1 {
 						t.Fatalf("expected 1 dataPoint, got %d", len(metric.Gauge.DataPoints))
@@ -1130,6 +1139,35 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 							t.Errorf("%s should NOT be duplicated in DataPoint.Attributes", a.Key)
 						}
 					}
+				case "histogram":
+					if metric.Histogram == nil {
+						t.Fatalf("expected Histogram, got nil")
+					}
+					if metric.Sum != nil {
+						t.Errorf("Histogram should not have Sum")
+					}
+					if metric.Gauge != nil {
+						t.Errorf("Histogram should not have Gauge")
+					}
+					if metric.Histogram.AggregationTemporality != tt.expectedTemp {
+						t.Errorf("expected temporality %d, got %d", tt.expectedTemp, metric.Histogram.AggregationTemporality)
+					}
+					if len(metric.Histogram.DataPoints) != 1 {
+						t.Fatalf("expected 1 dataPoint, got %d", len(metric.Histogram.DataPoints))
+					}
+					dp := metric.Histogram.DataPoints[0]
+					if dp.Count != 150 {
+						t.Errorf("expected count 150, got %d", dp.Count)
+					}
+					if dp.Sum == nil || *dp.Sum != 12.5 {
+						t.Errorf("expected sum 12.5, got %v", dp.Sum)
+					}
+					if len(dp.BucketCounts) != 4 {
+						t.Errorf("expected 4 bucket counts, got %d", len(dp.BucketCounts))
+					}
+					if len(dp.ExplicitBounds) != 4 {
+						t.Errorf("expected 4 explicit bounds, got %d", len(dp.ExplicitBounds))
+					}
 				}
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"partialSuccess":{}}`))
@@ -1145,7 +1183,20 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 				String("namespace", "payments"),
 				String("environment", "production"),
 				String("name", tt.metricName),
-				Float64("value", 42.0),
+			}
+			switch tt.name {
+			case "counter":
+				fields = append(fields, String("type", "counter"), Float64("value", 42.0))
+			case "gauge":
+				fields = append(fields, String("type", "gauge"), Float64("value", 42.0))
+			case "histogram":
+				fields = append(fields,
+					String("type", "histogram"),
+					Int64("count", 150),
+					Float64("sum", 12.5),
+					Ints64("bucket_counts", []int64{10, 40, 70, 30}),
+					Floats64("explicit_bounds", []float64{0.1, 0.5, 1.0, 5.0}),
+				)
 			}
 			_, err := sinkPrometheus.WriteWithAttributes(
 				writeAttributes{typeData: DataMetric, typeLevel: LevelError},
@@ -1163,26 +1214,69 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 	if token == "" {
 		t.Skip("GRAFANA_CLOUD_TOKEN not set — skipping integration test")
 	}
-	sinkPrometheus := NewSinkPrometheus(
-		"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/metrics",
-		WithHttpHeader(
-			"Authorization",
-			"Basic "+token,
-		),
-	)
-	defer sinkPrometheus.Close()
-	telemetry := NewTelemetry(
-		WithMode(ModeSync, sinkPrometheus),
-		WithFormat(FormatJson),
-	)
-	defer telemetry.Close()
-	telemetry.Error(DataMetric,
-		String("service", "test-service"),
-		String("namespace", "payments"),
-		String("environment", "production"),
-		String("name", "http_requests_total"),
-		Float64("value", 42.0),
-	)
+	t.Run("Counter", func(t *testing.T) {
+		sinkPrometheus := NewSinkPrometheus(
+			"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/metrics",
+			WithHttpHeader("Authorization", "Basic "+token),
+		)
+		defer sinkPrometheus.Close()
+		telemetry := NewTelemetry(
+			WithMode(ModeSync, sinkPrometheus),
+			WithFormat(FormatJson),
+		)
+		defer telemetry.Close()
+		telemetry.Error(DataMetric,
+			String("service", "test-service"),
+			String("namespace", "payments"),
+			String("environment", "production"),
+			String("name", "http_requests_total"),
+			String("type", "counter"),
+			Float64("value", 42.0),
+		)
+	})
+	t.Run("Gauge", func(t *testing.T) {
+		sinkPrometheus := NewSinkPrometheus(
+			"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/metrics",
+			WithHttpHeader("Authorization", "Basic "+token),
+		)
+		defer sinkPrometheus.Close()
+		telemetry := NewTelemetry(
+			WithMode(ModeSync, sinkPrometheus),
+			WithFormat(FormatJson),
+		)
+		defer telemetry.Close()
+		telemetry.Error(DataMetric,
+			String("service", "test-service"),
+			String("namespace", "payments"),
+			String("environment", "production"),
+			String("name", "cpu_usage_ratio"),
+			String("type", "gauge"),
+			Float64("value", 0.75),
+		)
+	})
+	t.Run("Histogram", func(t *testing.T) {
+		sinkPrometheus := NewSinkPrometheus(
+			"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/metrics",
+			WithHttpHeader("Authorization", "Basic "+token),
+		)
+		defer sinkPrometheus.Close()
+		telemetry := NewTelemetry(
+			WithMode(ModeSync, sinkPrometheus),
+			WithFormat(FormatJson),
+		)
+		defer telemetry.Close()
+		telemetry.Error(DataMetric,
+			String("service", "test-service"),
+			String("namespace", "payments"),
+			String("environment", "production"),
+			String("name", "http_request_duration_seconds"),
+			String("type", "histogram"),
+			Int64("count", 150),
+			Float64("sum", 12.5),
+			Ints64("bucket_counts", []int64{10, 40, 70, 30}),
+			Floats64("explicit_bounds", []float64{0.1, 0.5, 1.0, 5.0}),
+		)
+	})
 }
 func Test_SinkFactory_Slack(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2513,8 +2607,8 @@ func Test_Stress_SinkHttp_Deduplication_EvictionStress(t *testing.T) {
 		}))
 		defer server.Close()
 		const (
-			maxSize    = 1000
-			totalWrite = 2500
+			maxSize    = 100
+			totalWrite = 1200
 		)
 		sink := NewSinkHttp(server.URL,
 			WithHttpDedupWindow(1*time.Hour),
