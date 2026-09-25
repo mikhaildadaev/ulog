@@ -69,12 +69,25 @@ type PrometheusScopeMetrics struct {
 	Metrics []PrometheusMetric `json:"metrics"`
 }
 type PrometheusMetric struct {
-	Name  string           `json:"name"`
-	Gauge *PrometheusGauge `json:"gauge,omitempty"`
-	Sum   *PrometheusSum   `json:"sum,omitempty"`
+	Name      string               `json:"name"`
+	Gauge     *PrometheusGauge     `json:"gauge,omitempty"`
+	Histogram *PrometheusHistogram `json:"histogram,omitempty"`
+	Sum       *PrometheusSum       `json:"sum,omitempty"`
 }
 type PrometheusGauge struct {
 	DataPoints []PrometheusDataPoint `json:"dataPoints"`
+}
+type PrometheusHistogram struct {
+	AggregationTemporality int                        `json:"aggregationTemporality"`
+	DataPoints             []PrometheusHistogramPoint `json:"dataPoints"`
+}
+type PrometheusHistogramPoint struct {
+	TimeUnixNano   string          `json:"timeUnixNano"`
+	Count          uint64          `json:"count"`
+	Sum            *float64        `json:"sum,omitempty"`
+	BucketCounts   []uint64        `json:"bucketCounts"`
+	ExplicitBounds []float64       `json:"explicitBounds"`
+	Attributes     []OTLPAttribute `json:"attributes,omitempty"`
 }
 type PrometheusSum struct {
 	AggregationTemporality int                   `json:"aggregationTemporality"`
@@ -272,16 +285,19 @@ func NewSinkPrometheus(endPoint string, params ...httpParams) *SinkPrometheus {
 		WithHttpFilterData(DataMetric),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			name, value := getDataMetric(fields)
-			attrs := getOpenTelemetryAttributes(fields, "name", "value", "service", "namespace", "environment", "type")
+			attrs := getOpenTelemetryAttributes(fields, "name", "value", "service", "namespace", "environment", "type", "count", "sum", "bucket_counts", "explicit_bounds")
 			service := getOpenTelemetryService(fields)
-			metricType := getOpenTelemetryType(fields, name)
+			format, err := getOpenTelemetryType(fields)
+			if err != nil {
+				return nil, err
+			}
 			dataPoint := PrometheusDataPoint{
 				TimeUnixNano: fmt.Sprintf("%d", time.Now().UnixNano()),
 				AsDouble:     value,
 				Attributes:   attrs,
 			}
 			var metric PrometheusMetric
-			switch metricType {
+			switch format {
 			case "counter":
 				metric = PrometheusMetric{
 					Name: name,
@@ -291,11 +307,29 @@ func NewSinkPrometheus(endPoint string, params ...httpParams) *SinkPrometheus {
 						IsMonotonic:            true,
 					},
 				}
-			default:
+			case "gauge":
 				metric = PrometheusMetric{
 					Name: name,
 					Gauge: &PrometheusGauge{
 						DataPoints: []PrometheusDataPoint{dataPoint},
+					},
+				}
+			case "histogram":
+				count, sum, buckets, bounds := getHistogram(fields)
+				metric = PrometheusMetric{
+					Name: name,
+					Histogram: &PrometheusHistogram{
+						AggregationTemporality: 2,
+						DataPoints: []PrometheusHistogramPoint{
+							{
+								TimeUnixNano:   fmt.Sprintf("%d", time.Now().UnixNano()),
+								Count:          count,
+								Sum:            &sum,
+								BucketCounts:   buckets,
+								ExplicitBounds: bounds,
+								Attributes:     attrs,
+							},
+						},
 					},
 				}
 			}

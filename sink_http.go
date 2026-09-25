@@ -524,6 +524,41 @@ func getField(field Field) any {
 	}
 	return nil
 }
+func getHistogram(fields []Field) (count uint64, sum float64, buckets []uint64, bounds []float64) {
+	for _, f := range fields {
+		switch f.nameKey {
+		case "count":
+			switch f.typeValue {
+			case FieldInt64:
+				count = uint64(f.valueInt64)
+			case FieldInt:
+				count = uint64(f.valueInt)
+			}
+		case "sum":
+			if f.typeValue == FieldFloat64 {
+				sum = f.valueFloat64
+			}
+		case "bucket_counts":
+			switch f.typeValue {
+			case FieldInts64:
+				buckets = make([]uint64, len(f.valueInts64))
+				for i, v := range f.valueInts64 {
+					buckets[i] = uint64(v)
+				}
+			case FieldInts:
+				buckets = make([]uint64, len(f.valueInts))
+				for i, v := range f.valueInts {
+					buckets[i] = uint64(v)
+				}
+			}
+		case "explicit_bounds":
+			if f.typeValue == FieldFloats64 {
+				bounds = f.valueFloats64
+			}
+		}
+	}
+	return
+}
 func getKafkaAttributes(fields []Field) map[string]any {
 	valueData := make(map[string]any, len(fields))
 	for _, field := range fields {
@@ -719,21 +754,16 @@ func getOpenTelemetryService(fields []Field) string {
 	}
 	return "ulog"
 }
-func getOpenTelemetryType(fields []Field, name string) string {
+func getOpenTelemetryType(fields []Field) (string, error) {
 	for _, f := range fields {
 		if f.nameKey == "type" && f.typeValue == FieldString {
 			switch f.valueString {
 			case "counter", "gauge", "histogram":
-				return f.valueString
+				return f.valueString, nil
 			}
 		}
 	}
-	if strings.HasSuffix(name, "_total") ||
-		strings.HasSuffix(name, "_count") ||
-		strings.HasSuffix(name, "_sum") {
-		return "counter"
-	}
-	return "gauge"
+	return "", fmt.Errorf("ulog: metric type is required (use String(\"type\", \"counter\"|\"gauge\"|\"histogram\"))")
 }
 func normalizeTraceID(value string) (string, error) {
 	v := strings.ToLower(strings.ReplaceAll(value, "-", ""))
