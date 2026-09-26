@@ -773,8 +773,8 @@ func Test_SinkFactory_Discord(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 			t.Errorf("failed to decode JSON: %v", err)
 		}
-		if data.UserName != "ULog Bot" {
-			t.Errorf("expected username 'ULog Bot', got '%s'", data.UserName)
+		if data.UserName != "ULog Test Bot" {
+			t.Errorf("expected username 'ULog Test Bot', got '%s'", data.UserName)
 		}
 		if data.Content != "test" {
 			t.Errorf("expected content 'test', got '%s'", data.Content)
@@ -782,8 +782,9 @@ func Test_SinkFactory_Discord(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer server.Close()
-	sinkDiscord := NewSinkDiscord(server.URL, "ULog Bot", "")
+	sinkDiscord := NewSinkDiscord(server.URL, "ULog Test Bot", "")
 	fields := []Field{
+		String("environment", "production"),
 		String("message", "test"),
 	}
 	_, err := sinkDiscord.WriteWithAttributes(
@@ -794,6 +795,23 @@ func Test_SinkFactory_Discord(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	sinkDiscord.Close()
+}
+func Test_SinkFactory_DiscordCloud(t *testing.T) {
+	endPoint := os.Getenv("DISCORD_END_POINT")
+	if endPoint == "" {
+		t.Skip("DISCORD_END_POINT not set — skipping integration test")
+	}
+	sink := NewSinkDiscord(endPoint, "ULog Test Bot", "")
+	defer sink.Close()
+	telemetry := NewTelemetry(
+		WithMode(ModeSync, sink),
+		WithFormat(FormatJson),
+	)
+	defer telemetry.Close()
+	telemetry.Error(DataLog,
+		String("environment", "production"),
+		String("message", "test"),
+	)
 }
 func Test_SinkFactory_Kafka(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -959,12 +977,13 @@ func Test_SinkFactory_Loki(t *testing.T) {
 	wg.Wait()
 }
 func Test_SinkFactory_LokiCloud(t *testing.T) {
+	endPoint := os.Getenv("LOKI_END_POINT")
 	token := os.Getenv("GRAFANA_CLOUD_TOKEN")
-	if token == "" {
-		t.Skip("GRAFANA_CLOUD_TOKEN not set — skipping integration test")
+	if endPoint == "" || token == "" {
+		t.Skip("LOKI_END_POINT or GRAFANA_CLOUD_TOKEN not set — skipping integration test")
 	}
 	sinkLoki := NewSinkLoki(
-		"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/logs",
+		endPoint,
 		WithHttpHeader("Authorization", "Basic "+token),
 		WithHttpDisabledBatch(),
 	)
@@ -1211,13 +1230,14 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 	}
 }
 func Test_SinkFactory_PrometheusCloud(t *testing.T) {
+	endPoint := os.Getenv("PROMETHEUS_END_POINT")
 	token := os.Getenv("GRAFANA_CLOUD_TOKEN")
-	if token == "" {
-		t.Skip("GRAFANA_CLOUD_TOKEN not set — skipping integration test")
+	if endPoint == "" || token == "" {
+		t.Skip("PROMETHEUS_END_POINT or GRAFANA_CLOUD_TOKEN not set — skipping integration test")
 	}
 	t.Run("Counter", func(t *testing.T) {
 		sinkPrometheus := NewSinkPrometheus(
-			"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/metrics",
+			endPoint,
 			WithHttpHeader("Authorization", "Basic "+token),
 			WithHttpDisabledBatch(),
 		)
@@ -1238,7 +1258,7 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 	})
 	t.Run("Gauge", func(t *testing.T) {
 		sinkPrometheus := NewSinkPrometheus(
-			"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/metrics",
+			endPoint,
 			WithHttpHeader("Authorization", "Basic "+token),
 		)
 		defer sinkPrometheus.Close()
@@ -1258,7 +1278,7 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 	})
 	t.Run("Histogram", func(t *testing.T) {
 		sinkPrometheus := NewSinkPrometheus(
-			"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/metrics",
+			endPoint,
 			WithHttpHeader("Authorization", "Basic "+token),
 		)
 		defer sinkPrometheus.Close()
@@ -1311,6 +1331,23 @@ func Test_SinkFactory_Slack(t *testing.T) {
 	}
 	sinkSlack.Close()
 }
+func Test_SinkFactory_SlackCloud(t *testing.T) {
+	endPoint := os.Getenv("SLACK_END_POINT")
+	if endPoint == "" {
+		t.Skip("SLACK_END_POINT not set — skipping integration test")
+	}
+	sink := NewSinkSlack(endPoint, "ULog", ":robot:", "", "#alerts")
+	defer sink.Close()
+	telemetry := NewTelemetry(
+		WithMode(ModeSync, sink),
+		WithFormat(FormatJson),
+	)
+	defer telemetry.Close()
+	telemetry.Error(DataLog,
+		String("environment", "production"),
+		String("message", "test"),
+	)
+}
 func Test_SinkFactory_Telegram(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -1347,6 +1384,24 @@ func Test_SinkFactory_Telegram(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	sinkTelegram.Close()
+}
+func Test_SinkFactory_TelegramCloud(t *testing.T) {
+	endPoint := os.Getenv("TELEGRAM_END_POINT")
+	chatID := os.Getenv("TELEGRAM_CHAT_ID")
+	if endPoint == "" || chatID == "" {
+		t.Skip("TELEGRAM_END_POINT or TELEGRAM_CHAT_ID not set — skipping integration test")
+	}
+	sink := NewSinkTelegram(endPoint, chatID)
+	defer sink.Close()
+	telemetry := NewTelemetry(
+		WithMode(ModeSync, sink),
+		WithFormat(FormatJson),
+	)
+	defer telemetry.Close()
+	telemetry.Error(DataLog,
+		String("environment", "production"),
+		String("message", "test"),
+	)
 }
 func Test_SinkFactory_Tempo(t *testing.T) {
 	var wg sync.WaitGroup
@@ -1434,12 +1489,13 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 	wg.Wait()
 }
 func Test_SinkFactory_TempoCloud(t *testing.T) {
+	endPoint := os.Getenv("TEMPO_END_POINT")
 	token := os.Getenv("GRAFANA_CLOUD_TOKEN")
-	if token == "" {
-		t.Skip("GRAFANA_CLOUD_TOKEN not set — skipping integration test")
+	if endPoint == "" || token == "" {
+		t.Skip("TEMPO_END_POINT or GRAFANA_CLOUD_TOKEN not set — skipping integration test")
 	}
 	sinkTempo := NewSinkTempo(
-		"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/traces",
+		endPoint,
 		WithHttpHeader("Authorization", "Basic "+token),
 		WithHttpDisabledBatch(),
 	)
@@ -1682,7 +1738,7 @@ func Test_SinkFile_WriteWithAttributes(t *testing.T) {
 			typeLevel:  LevelInfo,
 		}
 		fields := []Field{
-			String("message", "test message"),
+			String("message", "test"),
 			Int("count", 42),
 		}
 		n, err := sinkFile.WriteWithAttributes(attributes, fields)
@@ -1707,8 +1763,8 @@ func Test_SinkFile_WriteWithAttributes(t *testing.T) {
 		if record["type"] != "log" {
 			t.Errorf("type: expected 'log', got %v", record["type"])
 		}
-		if record["message"] != "test message" {
-			t.Errorf("message: expected 'test message', got %v", record["message"])
+		if record["message"] != "test" {
+			t.Errorf("message: expected 'test', got %v", record["message"])
 		}
 		if record["count"] != float64(42) {
 			t.Errorf("count: expected 42, got %v", record["count"])
@@ -1732,7 +1788,7 @@ func Test_SinkFile_WriteWithAttributes(t *testing.T) {
 			theme:      themeDark,
 		}
 		fields := []Field{
-			String("message", "test message"),
+			String("message", "test"),
 			Int("count", 42),
 		}
 		_, err = sinkFile.WriteWithAttributes(attributes, fields)
@@ -1744,7 +1800,7 @@ func Test_SinkFile_WriteWithAttributes(t *testing.T) {
 			t.Fatalf("ReadFile failed: %v", err)
 		}
 		output := string(content)
-		if !strings.Contains(output, "message=\"test message\"") {
+		if !strings.Contains(output, "message=\"test\"") {
 			t.Errorf("message not found in output: %q", output)
 		}
 		if !strings.Contains(output, "count=42") {
