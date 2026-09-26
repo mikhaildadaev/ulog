@@ -17,6 +17,7 @@
 package ulog
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"fmt"
@@ -31,6 +32,7 @@ import (
 
 // Публичные структуры
 type SinkFile struct {
+	bufWriter   *bufio.Writer
 	currentSize int64
 	file        *os.File
 	filename    string
@@ -58,6 +60,7 @@ func NewSinkFile(filename string, params ...fileParams) (*SinkFile, error) {
 		return nil, fmt.Errorf("failed to get file info: %w", err)
 	}
 	sinkFile := &SinkFile{
+		bufWriter:   bufio.NewWriterSize(file, 64*1024),
 		currentSize: info.Size(),
 		file:        file,
 		filename:    filename,
@@ -104,18 +107,35 @@ func (sinkFile *SinkFile) Close() error {
 		}
 		sinkFile.mutex.Lock()
 		defer sinkFile.mutex.Unlock()
+		if sinkFile.bufWriter != nil {
+			if flushErr := sinkFile.bufWriter.Flush(); flushErr != nil {
+				err = flushErr
+			}
+			sinkFile.bufWriter = nil
+		}
 		if sinkFile.file != nil {
-			err = sinkFile.file.Close()
+			if closeErr := sinkFile.file.Close(); closeErr != nil && err == nil {
+				err = closeErr
+			}
+			sinkFile.file = nil
 		}
 	})
 	return err
 }
-func (sinkFile *SinkFile) Write(p []byte) (n int, err error) {
+func (sinkFile *SinkFile) Flush() error {
+	sinkFile.mutex.Lock()
+	defer sinkFile.mutex.Unlock()
+	if sinkFile.bufWriter == nil {
+		return nil
+	}
+	return sinkFile.bufWriter.Flush()
+}
+func (sinkFile *SinkFile) Write(p []byte) (int, error) {
 	sinkFile.mutex.Lock()
 	needRotate := sinkFile.currentSize+int64(len(p)) > sinkFile.maxSize
 	sinkFile.mutex.Unlock()
 	if needRotate {
-		if err := sinkFile.getRotateFile(); err != nil {
+		if err := sinkFile.rotate(); err != nil {
 			return 0, err
 		}
 	}
@@ -125,16 +145,19 @@ func (sinkFile *SinkFile) Write(p []byte) (n int, err error) {
 			break
 		}
 		sinkFile.mutex.Unlock()
-		time.Sleep(time.Microsecond)
+		time.Sleep(time.Millisecond)
 	}
 	defer sinkFile.mutex.Unlock()
-	n, err = sinkFile.file.Write(p)
+	if sinkFile.bufWriter == nil {
+		return 0, fmt.Errorf("sink is closed")
+	}
+	n, err := sinkFile.bufWriter.Write(p)
 	if err == nil {
 		sinkFile.currentSize += int64(n)
 	}
 	return n, err
 }
-func (sinkFile *SinkFile) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
+func (sinkFile *SinkFile) WriteWithAttributes(attributes writeAttributes, fields []Field) (int, error) {
 	bufData := dataPool.Get().(*bytes.Buffer)
 	bufData.Reset()
 	defer dataPool.Put(bufData)
@@ -151,7 +174,7 @@ func (sinkFile *SinkFile) WriteWithAttributes(attributes writeAttributes, fields
 	needRotate := sinkFile.currentSize+int64(len(data)) > sinkFile.maxSize
 	sinkFile.mutex.Unlock()
 	if needRotate {
-		if err := sinkFile.getRotateFile(); err != nil {
+		if err := sinkFile.rotate(); err != nil {
 			return 0, err
 		}
 	}
@@ -161,10 +184,13 @@ func (sinkFile *SinkFile) WriteWithAttributes(attributes writeAttributes, fields
 			break
 		}
 		sinkFile.mutex.Unlock()
-		time.Sleep(time.Microsecond)
+		time.Sleep(time.Millisecond)
 	}
 	defer sinkFile.mutex.Unlock()
-	n, err = sinkFile.file.Write(data)
+	if sinkFile.bufWriter == nil {
+		return 0, fmt.Errorf("sink is closed")
+	}
+	n, err := sinkFile.bufWriter.Write(data)
 	if err == nil {
 		sinkFile.currentSize += int64(n)
 	}
@@ -279,20 +305,34 @@ func (fileSink *SinkFile) getCompressFile(filename string) error {
 	}
 	return err
 }
-func (sinkFile *SinkFile) getRotateFile() error {
+func (sinkFile *SinkFile) rotate() error {
 	if !sinkFile.rotating.CompareAndSwap(false, true) {
 		return nil
 	}
 	defer sinkFile.rotating.Store(false)
 	sinkFile.mutex.Lock()
+	if sinkFile.bufWriter != nil {
+		if err := sinkFile.bufWriter.Flush(); err != nil {
+			fmt.Fprintf(DefaultWriterErr, "ulog: failed to flush before rotation: %v\n", err)
+		}
+	}
 	if sinkFile.file != nil {
 		sinkFile.file.Close()
 		sinkFile.file = nil
 	}
 	sinkFile.mutex.Unlock()
-	timestamp := time.Now().Format("20060102-150405")
+	timestamp := time.Now().Format("20060102-150405.000000")
 	backupName := sinkFile.getBackupName(timestamp)
 	if err := os.Rename(sinkFile.filename, backupName); err != nil {
+		newFile, openErr := os.OpenFile(sinkFile.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		if openErr != nil {
+			return fmt.Errorf("rotate failed and reopen failed: %w (original: %v)", openErr, err)
+		}
+		sinkFile.mutex.Lock()
+		sinkFile.file = newFile
+		sinkFile.bufWriter = bufio.NewWriterSize(newFile, 64*1024)
+		sinkFile.currentSize = 0
+		sinkFile.mutex.Unlock()
 		return err
 	}
 	sinkFile.wg.Add(1)
@@ -308,6 +348,7 @@ func (sinkFile *SinkFile) getRotateFile() error {
 	}
 	sinkFile.mutex.Lock()
 	sinkFile.file = newFile
+	sinkFile.bufWriter = bufio.NewWriterSize(newFile, 64*1024)
 	sinkFile.currentSize = 0
 	sinkFile.mutex.Unlock()
 	sinkFile.wg.Add(1)
