@@ -116,11 +116,9 @@ func (sinkFile *SinkFile) Close() error {
 		sinkFile.mutex.Lock()
 		if sinkFile.flushTicker != nil {
 			sinkFile.flushTicker.Stop()
-			sinkFile.flushTicker = nil
 		}
 		if sinkFile.flushDone != nil {
 			close(sinkFile.flushDone)
-			sinkFile.flushDone = nil
 		}
 		sinkFile.mutex.Unlock()
 		done := make(chan struct{})
@@ -316,9 +314,10 @@ func (fileSink *SinkFile) compress(filename string) error {
 	return err
 }
 func (sinkFile *SinkFile) flushLoop() {
+	ticker := sinkFile.flushTicker
 	for {
 		select {
-		case <-sinkFile.flushTicker.C:
+		case <-ticker.C:
 			sinkFile.Flush()
 		case <-sinkFile.flushDone:
 			return
