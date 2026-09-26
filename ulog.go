@@ -170,7 +170,31 @@ func getData(typeData TypeData) string {
 		return "UNKNOWN"
 	}
 }
-func getLevel(typeLevel TypeLevel) string {
+func getKind(fields []Field) int {
+	for _, f := range fields {
+		if f.nameKey == "kind" && f.typeValue == FieldInt {
+			return f.valueInt
+		}
+	}
+	return int(KindInternal)
+}
+func getLevelNumber(level TypeLevel) int {
+	switch level {
+	case LevelDebug:
+		return 5
+	case LevelInfo:
+		return 9
+	case LevelWarn:
+		return 13
+	case LevelError:
+		return 17
+	case LevelFatal:
+		return 21
+	default:
+		return 0
+	}
+}
+func getLevelText(typeLevel TypeLevel) string {
 	switch typeLevel {
 	case LevelDebug:
 		return "DEBUG"
