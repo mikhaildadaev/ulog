@@ -1566,6 +1566,9 @@ func Test_SinkFile(t *testing.T) {
 	if n != len(data) {
 		t.Errorf("Expected %d bytes written, got %d", len(data), n)
 	}
+	if err := sinkFile.Flush(); err != nil {
+		t.Fatalf("Flush failed: %v", err)
+	}
 	content, err := os.ReadFile(logFile)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
@@ -1748,6 +1751,9 @@ func Test_SinkFile_WriteWithAttributes(t *testing.T) {
 		if n == 0 {
 			t.Error("expected non-zero bytes written")
 		}
+		if err := sinkFile.Flush(); err != nil {
+			t.Fatalf("Flush failed: %v", err)
+		}
 		content, err := os.ReadFile(logFile)
 		if err != nil {
 			t.Fatalf("ReadFile failed: %v", err)
@@ -1794,6 +1800,9 @@ func Test_SinkFile_WriteWithAttributes(t *testing.T) {
 		_, err = sinkFile.WriteWithAttributes(attributes, fields)
 		if err != nil {
 			t.Fatalf("WriteWithAttributes failed: %v", err)
+		}
+		if err := sinkFile.Flush(); err != nil {
+			t.Fatalf("Flush failed: %v", err)
 		}
 		content, err := os.ReadFile(logFile)
 		if err != nil {
@@ -1885,6 +1894,9 @@ func Test_SinkFile_WriteWithAttributes(t *testing.T) {
 			String("message", "hello from telemetry"),
 			Int("user_id", 12345),
 		)
+		if err := sinkFile.Flush(); err != nil {
+			t.Fatalf("Flush failed: %v", err)
+		}
 		content, err := os.ReadFile(logFile)
 		if err != nil {
 			t.Fatalf("ReadFile failed: %v", err)
