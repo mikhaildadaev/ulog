@@ -1131,7 +1131,7 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 						t.Fatalf("expected 1 dataPoint, got %d", len(metric.Gauge.DataPoints))
 					}
 					dp := metric.Gauge.DataPoints[0]
-					if dp.AsDouble != 42.0 {
+					if dp.AsDouble != 0.75 {
 						t.Errorf("wrong value: %f", dp.AsDouble)
 					}
 					if dp.TimeUnixNano == "" {
@@ -1196,7 +1196,7 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 			case "gauge":
 				fields = append(fields,
 					String("type", "gauge"),
-					Float64("value", 42.0),
+					Float64("value", 0.75),
 				)
 			case "histogram":
 				fields = append(fields,
@@ -1434,7 +1434,7 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		Kind(KindServer),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7E-C3C1-B100"),
-		Int64("duration", 100),
+		Int64("duration", 150),
 	}
 	_, err := sinkTempo.WriteWithAttributes(
 		writeAttributes{typeData: DataTrace, typeLevel: LevelError},
