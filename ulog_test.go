@@ -890,9 +890,9 @@ func Test_SinkFactory_Loki(t *testing.T) {
 			return
 		}
 		expectedResourceAttrs := map[string]string{
+			"deployment.environment.name": "production",
 			"service.name":                "test-service",
 			"service.namespace":           "payments",
-			"deployment.environment.name": "production",
 		}
 		foundAttrs := make(map[string]string)
 		for _, a := range resource.Attributes {
@@ -909,8 +909,11 @@ func Test_SinkFactory_Loki(t *testing.T) {
 		if lr.Body.StringValue == nil || *lr.Body.StringValue != "test" {
 			t.Errorf("wrong message: %v", lr.Body.StringValue)
 		}
+		if lr.SeverityNumber != 17 {
+			t.Errorf("wrong severityNumber: %d, want 17 (ERROR)", lr.SeverityNumber)
+		}
 		if lr.SeverityText != "ERROR" {
-			t.Errorf("wrong severity: %s", lr.SeverityText)
+			t.Errorf("wrong severityText: %s, want ERROR", lr.SeverityText)
 		}
 		for _, a := range lr.Attributes {
 			if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
@@ -943,9 +946,9 @@ func Test_SinkFactory_Loki(t *testing.T) {
 	)
 	defer sinkLoki.Close()
 	fields := []Field{
+		String("environment", "production"),
 		String("service", "test-service"),
 		String("namespace", "payments"),
-		String("environment", "production"),
 		String("message", "test"),
 		String("user_id", "019687278c7e800087cbbdba4f634d9f"),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
@@ -966,10 +969,8 @@ func Test_SinkFactory_LokiCloud(t *testing.T) {
 	}
 	sinkLoki := NewSinkLoki(
 		"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/logs",
-		WithHttpHeader(
-			"Authorization",
-			"Basic "+token,
-		),
+		WithHttpHeader("Authorization", "Basic "+token),
+		WithHttpDisabledBatch(),
 	)
 	defer sinkLoki.Close()
 	telemetry := NewTelemetry(
@@ -978,10 +979,12 @@ func Test_SinkFactory_LokiCloud(t *testing.T) {
 	)
 	defer telemetry.Close()
 	telemetry.Error(DataLog,
+		String("environment", "production"),
 		String("service", "test-service"),
+		String("namespace", "payments"),
 		String("message", "test"),
-		String("user_id", "user-12345"),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
+		String("user_id", "user-12345"),
 	)
 }
 func Test_SinkFactory_Prometheus(t *testing.T) {
@@ -1046,9 +1049,9 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 					return
 				}
 				expectedResourceAttrs := map[string]string{
+					"deployment.environment.name": "production",
 					"service.name":                "test-service",
 					"service.namespace":           "payments",
-					"deployment.environment.name": "production",
 				}
 				foundAttrs := make(map[string]string)
 				for _, attr := range rm.Resource.Attributes {
@@ -1179,16 +1182,22 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 			)
 			defer sinkPrometheus.Close()
 			fields := []Field{
+				String("environment", "production"),
 				String("service", "test-service"),
 				String("namespace", "payments"),
-				String("environment", "production"),
 				String("name", tt.metricName),
 			}
 			switch tt.name {
 			case "counter":
-				fields = append(fields, String("type", "counter"), Float64("value", 42.0))
+				fields = append(fields,
+					String("type", "counter"),
+					Float64("value", 42.0),
+				)
 			case "gauge":
-				fields = append(fields, String("type", "gauge"), Float64("value", 42.0))
+				fields = append(fields,
+					String("type", "gauge"),
+					Float64("value", 42.0),
+				)
 			case "histogram":
 				fields = append(fields,
 					String("type", "histogram"),
@@ -1218,6 +1227,7 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 		sinkPrometheus := NewSinkPrometheus(
 			"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/metrics",
 			WithHttpHeader("Authorization", "Basic "+token),
+			WithHttpDisabledBatch(),
 		)
 		defer sinkPrometheus.Close()
 		telemetry := NewTelemetry(
@@ -1226,9 +1236,9 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 		)
 		defer telemetry.Close()
 		telemetry.Error(DataMetric,
+			String("environment", "production"),
 			String("service", "test-service"),
 			String("namespace", "payments"),
-			String("environment", "production"),
 			String("name", "http_requests_total"),
 			String("type", "counter"),
 			Float64("value", 42.0),
@@ -1246,9 +1256,9 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 		)
 		defer telemetry.Close()
 		telemetry.Error(DataMetric,
+			String("environment", "production"),
 			String("service", "test-service"),
 			String("namespace", "payments"),
-			String("environment", "production"),
 			String("name", "cpu_usage_ratio"),
 			String("type", "gauge"),
 			Float64("value", 0.75),
@@ -1266,9 +1276,9 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 		)
 		defer telemetry.Close()
 		telemetry.Error(DataMetric,
+			String("environment", "production"),
 			String("service", "test-service"),
 			String("namespace", "payments"),
-			String("environment", "production"),
 			String("name", "http_request_duration_seconds"),
 			String("type", "histogram"),
 			Int64("count", 150),
@@ -1378,9 +1388,9 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 			return
 		}
 		expectedResourceAttrs := map[string]string{
+			"deployment.environment.name": "production",
 			"service.name":                "test-service",
 			"service.namespace":           "payments",
-			"deployment.environment.name": "production",
 		}
 		foundAttrs := make(map[string]string)
 		for _, a := range resource.Attributes {
@@ -1417,12 +1427,13 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 	)
 	defer sinkTempo.Close()
 	fields := []Field{
+		String("environment", "production"),
 		String("service", "test-service"),
 		String("namespace", "payments"),
-		String("environment", "production"),
+		String("name", "test"),
+		Kind(KindServer),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7E-C3C1-B100"),
-		String("name", "test"),
 		Int64("duration", 100),
 	}
 	_, err := sinkTempo.WriteWithAttributes(
@@ -1441,10 +1452,8 @@ func Test_SinkFactory_TempoCloud(t *testing.T) {
 	}
 	sinkTempo := NewSinkTempo(
 		"https://otlp-gateway-prod-eu-north-0.grafana.net/otlp/v1/traces",
-		WithHttpHeader(
-			"Authorization",
-			"Basic "+token,
-		),
+		WithHttpHeader("Authorization", "Basic "+token),
+		WithHttpDisabledBatch(),
 	)
 	defer sinkTempo.Close()
 	telemetry := NewTelemetry(
@@ -1453,12 +1462,13 @@ func Test_SinkFactory_TempoCloud(t *testing.T) {
 	)
 	defer telemetry.Close()
 	telemetry.Error(DataTrace,
+		String("environment", "production"),
 		String("service", "test-service"),
 		String("namespace", "payments"),
-		String("environment", "production"),
+		String("name", "test"),
+		Kind(KindServer),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7EC3C1B100"),
-		String("name", "test"),
 		Int64("duration", 150),
 	)
 }
@@ -2193,9 +2203,14 @@ func Test_SinkHttp_CloseDuringWrite(t *testing.T) {
 	const (
 		goroutines   = 50
 		perGoroutine = 50
+		totalWrites  = goroutines * perGoroutine
 	)
-	var wg sync.WaitGroup
-	var writeErrors atomic.Int64
+	var (
+		wg            sync.WaitGroup
+		successWrites atomic.Int64
+		closedErrors  atomic.Int64
+		otherErrors   atomic.Int64
+	)
 	wg.Add(goroutines)
 	for i := 0; i < goroutines; i++ {
 		go func(id int) {
@@ -2211,8 +2226,14 @@ func Test_SinkHttp_CloseDuringWrite(t *testing.T) {
 					Int("j", j),
 				}
 				_, err := sinkHttp.WriteWithAttributes(attrs, fields)
-				if err != nil {
-					writeErrors.Add(1)
+				switch {
+				case err == nil:
+					successWrites.Add(1)
+				case strings.Contains(err.Error(), "sink is closed"):
+					closedErrors.Add(1)
+				default:
+					otherErrors.Add(1)
+					t.Logf("unexpected error: %v", err)
 				}
 			}
 		}(i)
@@ -2221,8 +2242,35 @@ func Test_SinkHttp_CloseDuringWrite(t *testing.T) {
 	if err := sinkHttp.Close(); err != nil {
 		t.Errorf("Close failed: %v", err)
 	}
-	wg.Wait()
-	t.Logf("write errors after Close: %d", writeErrors.Load())
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("goroutines did not finish after Close — possible deadlock")
+	}
+	success := successWrites.Load()
+	closed := closedErrors.Load()
+	other := otherErrors.Load()
+	if success == 0 || closed == 0 || other != 0 || int64(totalWrites) != success+closed+other {
+		t.Logf("success: %d, closed: %d, other errors: %d (total: %d)", success, closed, other, totalWrites)
+	}
+	if success == 0 {
+		t.Error("expected some successful writes before Close, got 0")
+	}
+	if closed == 0 {
+		t.Error("expected some writes to be rejected after Close, got 0")
+	}
+	if other != 0 {
+		t.Errorf("expected 0 unexpected errors, got %d", other)
+	}
+	if int64(totalWrites) != success+closed+other {
+		t.Errorf("total mismatch: %d != %d + %d + %d",
+			totalWrites, success, closed, other)
+	}
 }
 func Test_SinkHttp_Deduplication(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
