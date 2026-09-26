@@ -8,6 +8,18 @@ outline: deep
 На этой странице описаны все параметры конфигурации **SinkFile**: максимальный возраст файлов, количество резервных копий и размер файла перед ротацией. Каждый параметр показан с рабочим примером кода.
 :::
 
+## WithFileFlushInterval
+Задаёт интервал периодического сброса буфера на диск.
+```go
+sinkFile, err := ulog.NewSinkFile("app.log",
+    ulog.WithFileFlushInterval(2*time.Second),
+)
+if err != nil {
+    fmt.Fprintf(ulog.DefaultWriterErr, "ulog: %v\n", err)
+}
+defer sinkFile.Close()
+```
+
 ## WithFileMaxAge
 Устанавливает максимальное количество дней хранения старых лог-файлов. Файлы старше этого срока будут автоматически удалены при ротации.
 ```go

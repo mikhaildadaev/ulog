@@ -8,6 +8,18 @@ outline: deep
 本页涵盖了 `SinkFile` 的所有配置选项：最大文件保留天数、备份文件数量和文件大小限制。每个选项都附有可运行的代码示例。
 :::
 
+## WithFileFlushInterval
+设置缓冲区定期刷写到磁盘的时间间隔。
+```go
+sinkFile, err := ulog.NewSinkFile("app.log",
+    ulog.WithFileFlushInterval(2*time.Second),
+)
+if err != nil {
+    fmt.Fprintf(ulog.DefaultWriterErr, "ulog: %v\n", err)
+}
+defer sinkFile.Close()
+```
+
 ## WithFileMaxAge
 设置旧日志文件的最大保留天数。超过此期限的文件将在轮换时自动删除。
 ```go

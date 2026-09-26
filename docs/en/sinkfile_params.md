@@ -8,6 +8,18 @@ outline: deep
 This page covers all configuration options for `SinkFile`: maximum file age, backup count, and file size before rotation. Each option is shown with a working code example and expected behavior.
 :::
 
+## WithFileFlushInterval
+Sets the interval for periodic buffer flush to disk.
+```go
+sinkFile, err := ulog.NewSinkFile("app.log",
+    ulog.WithFileFlushInterval(2*time.Second),
+)
+if err != nil {
+    fmt.Fprintf(ulog.DefaultWriterErr, "ulog: %v\n", err)
+}
+defer sinkFile.Close()
+```
+
 ## WithFileMaxAge
 Sets the maximum number of days to keep old log files. Files older than this will be automatically deleted during rotation.
 ```go

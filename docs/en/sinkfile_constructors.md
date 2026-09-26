@@ -34,8 +34,9 @@ telemetry.Error(ulog.DataLog,
 )
 ```
 
-| Name                                                                      | Description                             | Default | 
-|---------------------------------------------------------------------------|-----------------------------------------|---------|
-| [`WithFileMaxAge(dayCount)`](/en/sinkfile_params#withfilemaxage)          | Maximum days to keep old log files      |      30 |
-| [`WithFileMaxBackups(fileCount)`](/en/sinkfile_params#withfilemaxbackups) | Maximum number of old log files to keep |      10 |
-| [`WithFileMaxSize(fileSize)`](/en/sinkfile_params#withfilemaxsize)        | Maximum file size (MB) before rotation  |     100 |
+| Name                                                                           | Description                                | Default | 
+|--------------------------------------------------------------------------------|--------------------------------------------|---------|
+| [`WithFileFlushInterval(interval)`](/en/sinkfile_params#withfileflushinterval) | Interval for periodic buffer flush to disk |      1s |
+| [`WithFileMaxAge(dayCount)`](/en/sinkfile_params#withfilemaxage)               | Maximum days to keep old log files         |      30 |
+| [`WithFileMaxBackups(fileCount)`](/en/sinkfile_params#withfilemaxbackups)      | Maximum number of old log files to keep    |      10 |
+| [`WithFileMaxSize(fileSize)`](/en/sinkfile_params#withfilemaxsize)             | Maximum file size (MB) before rotation     |     100 |
