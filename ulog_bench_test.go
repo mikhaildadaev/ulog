@@ -346,13 +346,14 @@ func Benchmark_SinkFile_Multi(b *testing.B) {
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
-			logFile := filepath.Join(tmpDir, "ulog_file.log")
+			logFile := filepath.Join(tmpDir, "ulog_file_"+format.name+".log")
 			sinkFile, err := NewSinkFile(logFile,
 				WithFileMaxSize(15),
 			)
 			if err != nil {
 				b.Fatal(err)
 			}
+			defer sinkFile.Close()
 			teeSink := NewTeeSink(sinkFile)
 			telemetry := NewTelemetry(
 				WithExtractor("node_id", "trace_id"),
@@ -395,13 +396,14 @@ func Benchmark_SinkFile_Single(b *testing.B) {
 	}
 	for _, format := range formats {
 		b.Run(format.name, func(b *testing.B) {
-			logFile := filepath.Join(tmpDir, "ulog_file.log")
+			logFile := filepath.Join(tmpDir, "ulog_file_"+format.name+".log")
 			sinkFile, err := NewSinkFile(logFile,
 				WithFileMaxSize(15),
 			)
 			if err != nil {
 				b.Fatal(err)
 			}
+			defer sinkFile.Close()
 			teeSink := NewTeeSink(sinkFile)
 			telemetry := NewTelemetry(
 				WithExtractor("node_id", "trace_id"),
