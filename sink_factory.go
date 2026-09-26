@@ -51,10 +51,11 @@ type LokiScopeLogs struct {
 	LogRecords []LokiLogRecord `json:"logRecords"`
 }
 type LokiLogRecord struct {
-	TimeUnixNano string          `json:"timeUnixNano"`
-	SeverityText string          `json:"severityText,omitempty"`
-	Body         OTLPBody        `json:"body"`
-	Attributes   []OTLPAttribute `json:"attributes,omitempty"`
+	TimeUnixNano   string          `json:"timeUnixNano"`
+	SeverityNumber int             `json:"severityNumber,omitempty"`
+	SeverityText   string          `json:"severityText,omitempty"`
+	Body           OTLPBody        `json:"body"`
+	Attributes     []OTLPAttribute `json:"attributes,omitempty"`
 }
 type SinkLoki = SinkHttp
 type PrometheusData struct {
@@ -200,7 +201,7 @@ func NewSinkKafka(endPoint string, params ...httpParams) *SinkKafka {
 		WithHttpFilterLevel(LevelInfo),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			valueData := getKafkaAttributes(fields)
-			valueData["_level"] = getLevel(attributes.typeLevel)
+			valueData["_level"] = getLevelText(attributes.typeLevel)
 			valueData["_type"] = getData(attributes.typeData)
 			valueData["_timestamp"] = time.Now().Format(time.RFC3339Nano)
 			valueJSON, err := json.Marshal(valueData)
@@ -264,10 +265,11 @@ func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
 								},
 								LogRecords: []LokiLogRecord{
 									{
-										TimeUnixNano: fmt.Sprintf("%d", now),
-										SeverityText: getLevel(attributes.typeLevel),
-										Body:         OTLPBody{StringValue: &message},
-										Attributes:   attrs,
+										TimeUnixNano:   fmt.Sprintf("%d", now),
+										SeverityNumber: getLevelNumber(attributes.typeLevel),
+										SeverityText:   getLevelText(attributes.typeLevel),
+										Body:           OTLPBody{StringValue: &message},
+										Attributes:     attrs,
 									},
 								},
 							},
@@ -441,7 +443,7 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 										TraceID:           traceID,
 										SpanID:            spanID,
 										Name:              name,
-										Kind:              1,
+										Kind:              getKind(fields),
 										StartTimeUnixNano: fmt.Sprintf("%d", startNano),
 										EndTimeUnixNano:   fmt.Sprintf("%d", endNano),
 										Attributes:        attrs,
