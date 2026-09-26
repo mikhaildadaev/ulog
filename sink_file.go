@@ -201,7 +201,7 @@ func (sinkFile *SinkFile) WriteWithAttributes(attributes writeAttributes, fields
 type fileParams func(*SinkFile)
 
 // Приватные функции
-func (sinkFile *SinkFile) cleanupBackups() error {
+func (sinkFile *SinkFile) cleanup() error {
 	pattern := sinkFile.getBackupPattern() + ".gz"
 	files, err := filepath.Glob(pattern)
 	if err != nil {
@@ -242,25 +242,7 @@ func (sinkFile *SinkFile) cleanupBackups() error {
 	}
 	return nil
 }
-func (sinkFile *SinkFile) getBackupName(timestamp string) string {
-	ext := filepath.Ext(sinkFile.filename)
-	if ext == "" {
-		return fmt.Sprintf("%s-%s.log", sinkFile.filename, timestamp)
-	}
-	nameWithoutExt := sinkFile.filename[:len(sinkFile.filename)-len(ext)]
-	return fmt.Sprintf("%s-%s%s", nameWithoutExt, timestamp, ext)
-}
-func (sinkFile *SinkFile) getBackupPattern() string {
-	base := filepath.Base(sinkFile.filename)
-	dir := filepath.Dir(sinkFile.filename)
-	ext := filepath.Ext(sinkFile.filename)
-	if ext == "" {
-		return filepath.Join(dir, base+"-*.log*")
-	}
-	nameWithoutExt := base[:len(base)-len(ext)]
-	return filepath.Join(dir, nameWithoutExt+"-*.log*")
-}
-func (fileSink *SinkFile) getCompressFile(filename string) error {
+func (fileSink *SinkFile) compress(filename string) error {
 	src, err := os.Open(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -305,6 +287,24 @@ func (fileSink *SinkFile) getCompressFile(filename string) error {
 	}
 	return err
 }
+func (sinkFile *SinkFile) getBackupName(timestamp string) string {
+	ext := filepath.Ext(sinkFile.filename)
+	if ext == "" {
+		return fmt.Sprintf("%s-%s.log", sinkFile.filename, timestamp)
+	}
+	nameWithoutExt := sinkFile.filename[:len(sinkFile.filename)-len(ext)]
+	return fmt.Sprintf("%s-%s%s", nameWithoutExt, timestamp, ext)
+}
+func (sinkFile *SinkFile) getBackupPattern() string {
+	base := filepath.Base(sinkFile.filename)
+	dir := filepath.Dir(sinkFile.filename)
+	ext := filepath.Ext(sinkFile.filename)
+	if ext == "" {
+		return filepath.Join(dir, base+"-*.log*")
+	}
+	nameWithoutExt := base[:len(base)-len(ext)]
+	return filepath.Join(dir, nameWithoutExt+"-*.log*")
+}
 func (sinkFile *SinkFile) rotate() error {
 	if !sinkFile.rotating.CompareAndSwap(false, true) {
 		return nil
@@ -338,7 +338,7 @@ func (sinkFile *SinkFile) rotate() error {
 	sinkFile.wg.Add(1)
 	go func() {
 		defer sinkFile.wg.Done()
-		if err := sinkFile.getCompressFile(backupName); err != nil {
+		if err := sinkFile.compress(backupName); err != nil {
 			fmt.Fprintf(DefaultWriterErr, "failed to compress %s: %v\n", backupName, err)
 		}
 	}()
@@ -354,7 +354,7 @@ func (sinkFile *SinkFile) rotate() error {
 	sinkFile.wg.Add(1)
 	go func() {
 		defer sinkFile.wg.Done()
-		if err := sinkFile.cleanupBackups(); err != nil {
+		if err := sinkFile.cleanup(); err != nil {
 			fmt.Fprintf(DefaultWriterErr, "failed to cleanup backups: %v\n", err)
 		}
 	}()
