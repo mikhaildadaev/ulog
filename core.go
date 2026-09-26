@@ -29,6 +29,7 @@ import (
 type TypeData int
 type TypeField int
 type TypeFormat int
+type TypeKind int
 type TypeLevel int
 type TypeMode int
 type TypeTheme int
@@ -62,6 +63,14 @@ const (
 const (
 	FormatJson TypeFormat = iota
 	FormatText
+)
+const (
+	KindUnspecified TypeKind = iota
+	KindInternal
+	KindServer
+	KindClient
+	KindProducer
+	KindConsumer
 )
 const (
 	LevelDebug TypeLevel = iota
@@ -262,6 +271,9 @@ func Ints64(nameKey string, valueInts64 []int64) Field {
 		typeValue:   FieldInts64,
 		valueInts64: valueInts64,
 	}
+}
+func Kind(kind TypeKind) Field {
+	return Int("kind", int(kind))
 }
 func String(nameKey string, valueString string) Field {
 	return Field{
