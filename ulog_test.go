@@ -773,8 +773,8 @@ func Test_SinkFactory_Discord(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 			t.Errorf("failed to decode JSON: %v", err)
 		}
-		if data.UserName != "ULog Test Bot" {
-			t.Errorf("expected username 'ULog Test Bot', got '%s'", data.UserName)
+		if data.UserName != "ULOG Test Bot" {
+			t.Errorf("expected username 'ULOG Test Bot', got '%s'", data.UserName)
 		}
 		if data.Content != "test" {
 			t.Errorf("expected content 'test', got '%s'", data.Content)
@@ -782,7 +782,7 @@ func Test_SinkFactory_Discord(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer server.Close()
-	sinkDiscord := NewSinkDiscord(server.URL, "ULog Test Bot", "")
+	sinkDiscord := NewSinkDiscord(server.URL, "ULOG Test Bot", "")
 	fields := []Field{
 		String("environment", "production"),
 		String("message", "test"),
@@ -801,7 +801,7 @@ func Test_SinkFactory_DiscordCloud(t *testing.T) {
 	if endPoint == "" {
 		t.Skip("DISCORD_END_POINT not set — skipping integration test")
 	}
-	sink := NewSinkDiscord(endPoint, "ULog Test Bot", "")
+	sink := NewSinkDiscord(endPoint, "ULOG Test Bot", "")
 	defer sink.Close()
 	telemetry := NewTelemetry(
 		WithMode(ModeSync, sink),
@@ -1306,11 +1306,11 @@ func Test_SinkFactory_Slack(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 			t.Errorf("failed to decode JSON: %v", err)
 		}
-		if data.Channel != "#alerts" {
-			t.Errorf("expected channel '#alerts', got '%s'", data.Channel)
+		if data.Channel != "#alert" {
+			t.Errorf("expected channel '#alert', got '%s'", data.Channel)
 		}
-		if data.UserName != "ULog" {
-			t.Errorf("expected username 'ULog', got '%s'", data.UserName)
+		if data.UserName != "ULOG Test Bot" {
+			t.Errorf("expected username 'ULOG Test Bot', got '%s'", data.UserName)
 		}
 		if data.Text != "test" {
 			t.Errorf("expected text 'test', got '%s'", data.Text)
@@ -1318,7 +1318,7 @@ func Test_SinkFactory_Slack(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	sinkSlack := NewSinkSlack(server.URL, "ULog", ":robot:", "", "#alerts")
+	sinkSlack := NewSinkSlack(server.URL, "ULOG Test Bot", "", "", "#alert")
 	fields := []Field{
 		String("message", "test"),
 	}
@@ -1336,7 +1336,7 @@ func Test_SinkFactory_SlackCloud(t *testing.T) {
 	if endPoint == "" {
 		t.Skip("SLACK_END_POINT not set — skipping integration test")
 	}
-	sink := NewSinkSlack(endPoint, "ULog", ":robot:", "", "#alerts")
+	sink := NewSinkSlack(endPoint, "ULOG Test Bot", "", "", "#alert")
 	defer sink.Close()
 	telemetry := NewTelemetry(
 		WithMode(ModeSync, sink),
