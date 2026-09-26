@@ -32,17 +32,20 @@ import (
 
 // Публичные структуры
 type SinkFile struct {
-	bufWriter   *bufio.Writer
-	currentSize int64
-	file        *os.File
-	filename    string
-	maxAge      int
-	maxBackups  int
-	maxSize     int64
-	mutex       sync.Mutex
-	once        sync.Once
-	rotating    atomic.Bool
-	wg          sync.WaitGroup
+	bufWriter     *bufio.Writer
+	currentSize   int64
+	file          *os.File
+	filename      string
+	flushDone     chan struct{}
+	flushInterval time.Duration
+	flushTicker   *time.Ticker
+	maxAge        int
+	maxBackups    int
+	maxSize       int64
+	mutex         sync.Mutex
+	once          sync.Once
+	rotating      atomic.Bool
+	wg            sync.WaitGroup
 }
 
 // Публичные конструкторы
@@ -60,21 +63,36 @@ func NewSinkFile(filename string, params ...fileParams) (*SinkFile, error) {
 		return nil, fmt.Errorf("failed to get file info: %w", err)
 	}
 	sinkFile := &SinkFile{
-		bufWriter:   bufio.NewWriterSize(file, 64*1024),
-		currentSize: info.Size(),
-		file:        file,
-		filename:    filename,
-		maxAge:      30,
-		maxBackups:  10,
-		maxSize:     100 * 1024 * 1024,
+		bufWriter:     bufio.NewWriterSize(file, 64*1024),
+		currentSize:   info.Size(),
+		file:          file,
+		filename:      filename,
+		flushInterval: 1 * time.Second,
+		maxAge:        30,
+		maxBackups:    10,
+		maxSize:       100 * 1024 * 1024,
 	}
 	for _, param := range params {
 		param(sinkFile)
+	}
+	if sinkFile.flushInterval > 0 {
+		sinkFile.flushDone = make(chan struct{})
+		sinkFile.flushTicker = time.NewTicker(sinkFile.flushInterval)
+		sinkFile.wg.Add(1)
+		go func() {
+			defer sinkFile.wg.Done()
+			sinkFile.flushLoop()
+		}()
 	}
 	return sinkFile, nil
 }
 
 // Публичные функции
+func WithFileFlushInterval(interval time.Duration) fileParams {
+	return func(sinkFile *SinkFile) {
+		sinkFile.flushInterval = interval
+	}
+}
 func WithFileMaxAge(days int) fileParams {
 	return func(sinkFile *SinkFile) {
 		sinkFile.maxAge = days
@@ -95,6 +113,16 @@ func WithFileMaxSize(sizeMB int) fileParams {
 func (sinkFile *SinkFile) Close() error {
 	var err error
 	sinkFile.once.Do(func() {
+		sinkFile.mutex.Lock()
+		if sinkFile.flushTicker != nil {
+			sinkFile.flushTicker.Stop()
+			sinkFile.flushTicker = nil
+		}
+		if sinkFile.flushDone != nil {
+			close(sinkFile.flushDone)
+			sinkFile.flushDone = nil
+		}
+		sinkFile.mutex.Unlock()
 		done := make(chan struct{})
 		go func() {
 			sinkFile.wg.Wait()
@@ -286,6 +314,16 @@ func (fileSink *SinkFile) compress(filename string) error {
 		return nil
 	}
 	return err
+}
+func (sinkFile *SinkFile) flushLoop() {
+	for {
+		select {
+		case <-sinkFile.flushTicker.C:
+			sinkFile.Flush()
+		case <-sinkFile.flushDone:
+			return
+		}
+	}
 }
 func (sinkFile *SinkFile) getBackupName(timestamp string) string {
 	ext := filepath.Ext(sinkFile.filename)
