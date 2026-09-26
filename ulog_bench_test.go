@@ -354,13 +354,12 @@ func Benchmark_SinkFile_Multi(b *testing.B) {
 				b.Fatal(err)
 			}
 			defer sinkFile.Close()
-			teeSink := NewTeeSink(sinkFile)
 			telemetry := NewTelemetry(
 				WithExtractor("node_id", "trace_id"),
 				WithFormat(FormatJson),
 			)
 			defer telemetry.Close()
-			telemetry.SetMode(format.mode, teeSink, format.bufferSize)
+			telemetry.SetMode(format.mode, sinkFile, format.bufferSize)
 			if b.N == 1 {
 				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
 			}
@@ -404,13 +403,12 @@ func Benchmark_SinkFile_Single(b *testing.B) {
 				b.Fatal(err)
 			}
 			defer sinkFile.Close()
-			teeSink := NewTeeSink(sinkFile)
 			telemetry := NewTelemetry(
 				WithExtractor("node_id", "trace_id"),
 				WithFormat(FormatJson),
 			)
 			defer telemetry.Close()
-			telemetry.SetMode(format.mode, teeSink, format.bufferSize)
+			telemetry.SetMode(format.mode, sinkFile, format.bufferSize)
 			if b.N == 1 {
 				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
 			}
@@ -444,14 +442,14 @@ func Benchmark_SinkHttp_Multi(b *testing.B) {
 				WithHttpDisabledCircuit(),
 				WithHttpFilterLevel(LevelDebug),
 			)
-			tee := NewTeeSink(sinkHttp)
+			defer sinkHttp.Close()
 			telemetry := NewTelemetry(
 				WithExtractor("node_id", "trace_id"),
 				WithFormat(FormatJson),
 				WithLevel(LevelDebug),
 			)
 			defer telemetry.Close()
-			telemetry.SetMode(format.mode, tee, format.bufSize)
+			telemetry.SetMode(format.mode, sinkHttp, format.bufSize)
 			if b.N == 1 {
 				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
 			}
@@ -487,14 +485,14 @@ func Benchmark_SinkHttp_Single(b *testing.B) {
 				WithHttpDisabledCircuit(),
 				WithHttpFilterLevel(LevelDebug),
 			)
-			tee := NewTeeSink(sinkHttp)
+			defer sinkHttp.Close()
 			telemetry := NewTelemetry(
 				WithExtractor("node_id", "trace_id"),
 				WithFormat(FormatJson),
 				WithLevel(LevelDebug),
 			)
 			defer telemetry.Close()
-			telemetry.SetMode(format.mode, tee, format.bufSize)
+			telemetry.SetMode(format.mode, sinkHttp, format.bufSize)
 			if b.N == 1 {
 				telemetry.ErrorWithContext(ctx, DataLog, String("message", "test error text"))
 			}
