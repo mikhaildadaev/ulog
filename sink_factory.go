@@ -409,7 +409,7 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 			if err != nil {
 				return nil, fmt.Errorf("invalid trace data: %w", err)
 			}
-			attrs := getOpenTelemetryAttributes(fields, "name", "trace_id", "span_id", "duration", "service", "namespace", "environment")
+			attrs := getOpenTelemetryAttributes(fields, "environment", "service", "namespace", "name", "kind", "trace_id", "span_id", "duration")
 			now := time.Now()
 			startNano := now.UnixNano()
 			endNano := startNano + duration*1_000_000
