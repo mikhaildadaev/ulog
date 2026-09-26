@@ -874,11 +874,7 @@ func Test_SinkFactory_Loki(t *testing.T) {
 			t.Errorf("failed to read body: %v", err)
 			return
 		}
-		t.Logf("Body (raw): %s", string(rawBody))
-		var prettyJSON bytes.Buffer
-		if err := json.Indent(&prettyJSON, rawBody, "", "  "); err == nil {
-			t.Logf("Body (pretty):\n%s", prettyJSON.String())
-		}
+		writeBody(t, rawBody)
 		var data LokiData
 		if err := json.Unmarshal(rawBody, &data); err != nil {
 			t.Errorf("failed to decode JSON: %v", err)
@@ -1029,11 +1025,7 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 					t.Errorf("failed to read body: %v", err)
 					return
 				}
-				t.Logf("Body (raw): %s", string(rawBody))
-				var prettyJSON bytes.Buffer
-				if err := json.Indent(&prettyJSON, rawBody, "", "  "); err == nil {
-					t.Logf("Body (pretty):\n%s", prettyJSON.String())
-				}
+				writeBody(t, rawBody)
 				var data PrometheusData
 				if err := json.Unmarshal(rawBody, &data); err != nil {
 					t.Errorf("failed to decode JSON: %v", err)
@@ -1372,11 +1364,7 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 			t.Errorf("failed to read body: %v", err)
 			return
 		}
-		t.Logf("Body (raw): %s", string(rawBody))
-		var prettyJSON bytes.Buffer
-		if err := json.Indent(&prettyJSON, rawBody, "", "  "); err == nil {
-			t.Logf("Body (pretty):\n%s", prettyJSON.String())
-		}
+		writeBody(t, rawBody)
 		var data TempoData
 		if err := json.Unmarshal(rawBody, &data); err != nil {
 			t.Errorf("failed to decode JSON: %v", err)
@@ -3155,4 +3143,16 @@ func testWarn(telemetry Telemetry) {
 }
 func testWarnWithContext(telemetry Telemetry) {
 	telemetry.WarnWithContext(context.Background(), DataLog, String("message", "test warn text"))
+}
+func writeBody(t *testing.T, rawBody []byte) {
+	t.Helper()
+	var debugBody = false
+	if !debugBody {
+		return
+	}
+	t.Logf("Body (raw): %s", string(rawBody))
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, rawBody, "", "  "); err == nil {
+		t.Logf("Body (pretty):\n%s", prettyJSON.String())
+	}
 }
