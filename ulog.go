@@ -158,18 +158,6 @@ func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
 }
 
 // Приватные функции
-func getData(typeData TypeData) string {
-	switch typeData {
-	case DataLog:
-		return "LOG"
-	case DataMetric:
-		return "METRIC"
-	case DataTrace:
-		return "TRACE"
-	default:
-		return "UNKNOWN"
-	}
-}
 func getLevelNumber(level TypeLevel) int {
 	switch level {
 	case LevelDebug:
@@ -244,6 +232,18 @@ func getTypeData(buf *bytes.Buffer, typeData TypeData) {
 		buf.WriteString(`metric`)
 	case DataTrace:
 		buf.WriteString(`trace`)
+	}
+}
+func getTypeTelemetry(typeData TypeData) string {
+	switch typeData {
+	case DataLog:
+		return "LOG"
+	case DataMetric:
+		return "METRIC"
+	case DataTrace:
+		return "TRACE"
+	default:
+		return "UNKNOWN"
 	}
 }
 func escapeJson(buf *bytes.Buffer, s string) {
