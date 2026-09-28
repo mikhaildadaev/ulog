@@ -994,10 +994,10 @@ func Test_SinkFactory_Loki(t *testing.T) {
 	wg.Wait()
 }
 func Test_SinkFactory_LokiCloud(t *testing.T) {
-	endPoint := os.Getenv("LOKI_END_POINT")
-	token := os.Getenv("GRAFANA_CLOUD_TOKEN")
+	endPoint := os.Getenv("GRAFANA_END_POINT_LOKI")
+	token := os.Getenv("GRAFANA_TOKEN")
 	if endPoint == "" || token == "" {
-		t.Skip("LOKI_END_POINT or GRAFANA_CLOUD_TOKEN not set — skipping integration test")
+		t.Skip("GRAFANA_END_POINT_LOKI or GRAFANA_TOKEN not set — skipping integration test")
 	}
 	sinkLoki := NewSinkLoki(
 		endPoint,
@@ -1298,10 +1298,10 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 	}
 }
 func Test_SinkFactory_PrometheusCloud(t *testing.T) {
-	endPoint := os.Getenv("PROMETHEUS_END_POINT")
-	token := os.Getenv("GRAFANA_CLOUD_TOKEN")
+	endPoint := os.Getenv("GRAFANA_END_POINT_PROMETHEUS")
+	token := os.Getenv("GRAFANA_TOKEN")
 	if endPoint == "" || token == "" {
-		t.Skip("PROMETHEUS_END_POINT or GRAFANA_CLOUD_TOKEN not set — skipping integration test")
+		t.Skip("GRAFANA_END_POINT_PROMETHEUS or GRAFANA_TOKEN not set — skipping integration test")
 	}
 	t.Run("Counter", func(t *testing.T) {
 		sinkPrometheus := NewSinkPrometheus(
@@ -1639,10 +1639,10 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 	wg.Wait()
 }
 func Test_SinkFactory_TempoCloud(t *testing.T) {
-	endPoint := os.Getenv("TEMPO_END_POINT")
-	token := os.Getenv("GRAFANA_CLOUD_TOKEN")
+	endPoint := os.Getenv("GRAFANA_END_POINT_TEMPO")
+	token := os.Getenv("GRAFANA_TOKEN")
 	if endPoint == "" || token == "" {
-		t.Skip("TEMPO_END_POINT or GRAFANA_CLOUD_TOKEN not set — skipping integration test")
+		t.Skip("GRAFANA_END_POINT_TEMPO or GRAFANA_TOKEN not set — skipping integration test")
 	}
 	sinkTempo := NewSinkTempo(
 		endPoint,
