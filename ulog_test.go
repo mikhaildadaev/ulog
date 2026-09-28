@@ -782,7 +782,7 @@ func Test_SinkFactory_Discord(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer server.Close()
-	sinkDiscord := NewSinkDiscord(server.URL, "ULOG Test Bot", "")
+	sinkDiscord := NewSinkDiscord(server.URL, "ULOG Test Bot", "", true)
 	fields := []Field{
 		String("environment", "production"),
 		String("message", "test"),
@@ -801,7 +801,7 @@ func Test_SinkFactory_DiscordCloud(t *testing.T) {
 	if endPoint == "" {
 		t.Skip("DISCORD_END_POINT not set — skipping integration test")
 	}
-	sink := NewSinkDiscord(endPoint, "ULOG Test Bot", "")
+	sink := NewSinkDiscord(endPoint, "ULOG Test Bot", "", true)
 	defer sink.Close()
 	telemetry := NewTelemetry(
 		WithMode(ModeSync, sink),
