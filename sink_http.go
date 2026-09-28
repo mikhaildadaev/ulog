@@ -404,10 +404,6 @@ var fieldExtractor = map[TypeField]func(Field) any{
 }
 
 // Приватные структуры
-type otlpAttributes struct {
-	record   []OTLPAttribute
-	resource []OTLPAttribute
-}
 type rateLimitError struct {
 	retryAfter time.Duration
 }

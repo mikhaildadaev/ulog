@@ -220,23 +220,18 @@ func NewSinkKafka(endPoint string, params ...httpParams) *SinkKafka {
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelInfo),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			valueData := getKafkaAttributes(fields)
-			valueData["_level"] = getLevelText(attributes.typeLevel)
-			valueData["_type"] = getData(attributes.typeData)
-			valueData["_timestamp"] = time.Now().Format(time.RFC3339Nano)
-			valueJSON, err := json.Marshal(valueData)
+			data, err := getKafkaData(attributes, fields)
 			if err != nil {
-				return nil, fmt.Errorf("failed to marshal value: %w", err)
+				return nil, fmt.Errorf("invalid kafka data: %w", err)
 			}
-			key := getKafkaKey(fields)
 			records := struct {
 				Records []KafkaData `json:"records"`
 			}{
 				Records: []KafkaData{
 					{
-						Key:       key,
-						Value:     valueJSON,
-						Timestamp: time.Now(),
+						Key:       data.key,
+						Timestamp: data.timestamp,
+						Value:     data.value,
 					},
 				},
 			}
@@ -501,11 +496,20 @@ var (
 )
 
 // Приватные структуры
+type kafkaData struct {
+	key       string
+	timestamp time.Time
+	value     []byte
+}
 type lokiData struct {
 	flags   uint32
 	message string
 	spanID  string
 	traceID string
+}
+type otlpData struct {
+	record   []OTLPAttribute
+	resource []OTLPAttribute
 }
 type prometheusData struct {
 	buckets []uint64
@@ -650,8 +654,8 @@ func appendOpenTelemetryAttributeRecord(attrs *[]OTLPAttribute, f Field) {
 		})
 	}
 }
-func formatOpenTelemetryAttributes(fields []Field, skipKeys ...string) otlpAttributes {
-	result := otlpAttributes{
+func formatOpenTelemetryAttributes(fields []Field, skipKeys ...string) otlpData {
+	result := otlpData{
 		resource: make([]OTLPAttribute, 0, 5),
 		record:   make([]OTLPAttribute, 0, len(fields)),
 	}
@@ -712,8 +716,11 @@ func formatOpenTelemetryAttributes(fields []Field, skipKeys ...string) otlpAttri
 	}
 	return result
 }
-func getKafkaAttributes(fields []Field) map[string]any {
-	valueData := make(map[string]any, len(fields))
+func getKafkaData(attributes writeAttributes, fields []Field) (kafkaData, error) {
+	key := ""
+	keyPriority := 4
+	now := time.Now()
+	value := make(map[string]any, len(fields)+3)
 	for _, field := range fields {
 		v := getUniversalFieldValue(field)
 		if field.typeValue == FieldString {
@@ -727,28 +734,50 @@ func getKafkaAttributes(fields []Field) map[string]any {
 					v = normalized
 				}
 			}
-		}
-		valueData[field.nameKey] = v
-	}
-	return valueData
-}
-func getKafkaKey(fields []Field) string {
-	priorities := []string{"trace_id", "node_id", "user_id", "request_id"}
-	for _, k := range priorities {
-		for _, field := range fields {
-			if field.nameKey != k || field.typeValue != FieldString {
-				continue
-			}
-			if k == "trace_id" {
-				if normalized, err := normalizeTraceID(field.valueString); err == nil {
-					return normalized
+			if p, ok := getKafkaDataKeyPriority(field.nameKey); ok && p < keyPriority {
+				candidate := field.valueString
+				valid := true
+				if field.nameKey == "trace_id" {
+					normalized, err := normalizeTraceID(field.valueString)
+					if err != nil {
+						valid = false
+					} else {
+						candidate = normalized
+					}
 				}
-				continue
+				if valid {
+					key = candidate
+					keyPriority = p
+				}
 			}
-			return field.valueString
 		}
+		value[field.nameKey] = v
 	}
-	return ""
+	value["_level"] = getLevelText(attributes.typeLevel)
+	value["_timestamp"] = now.Format(time.RFC3339Nano)
+	value["_type"] = getTypeTelemetry(attributes.typeData)
+	valueJSON, err := json.Marshal(value)
+	if err != nil {
+		return kafkaData{}, fmt.Errorf("failed to marshal value: %w", err)
+	}
+	return kafkaData{
+		key:       key,
+		timestamp: now,
+		value:     valueJSON,
+	}, nil
+}
+func getKafkaDataKeyPriority(name string) (int, bool) {
+	switch name {
+	case "trace_id":
+		return 0, true
+	case "node_id":
+		return 1, true
+	case "user_id":
+		return 2, true
+	case "request_id":
+		return 3, true
+	}
+	return 0, false
 }
 func getLokiData(fields []Field) (lokiData, error) {
 	var (
