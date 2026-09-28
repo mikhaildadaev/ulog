@@ -170,13 +170,13 @@ func getData(typeData TypeData) string {
 		return "UNKNOWN"
 	}
 }
-func getKind(fields []Field) int {
+func getKind(fields []Field) TypeKind {
 	for _, f := range fields {
 		if f.nameKey == "kind" && f.typeValue == FieldInt {
-			return f.valueInt
+			return TypeKind(f.valueInt)
 		}
 	}
-	return int(KindInternal)
+	return KindInternal
 }
 func getLevelNumber(level TypeLevel) int {
 	switch level {
