@@ -198,14 +198,14 @@ func NewSinkDiscord(endPoint, userName, avatarURL string, params ...httpParams) 
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message, err := getUniversalAlertData(fields)
+			data, err := getUniversalAlertData(fields)
 			if err != nil {
 				return nil, fmt.Errorf("invalid alert data: %w", err)
 			}
 			tts := false
 			discordData := DiscordData{
 				AvatarURL: avatarURL,
-				Content:   message,
+				Content:   data,
 				TTS:       &tts,
 				UserName:  userName,
 			}
@@ -373,7 +373,7 @@ func NewSinkSlack(endPoint, userName, iconEmoji, iconURL, channel string, params
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message, err := getUniversalAlertData(fields)
+			data, err := getUniversalAlertData(fields)
 			if err != nil {
 				return nil, fmt.Errorf("invalid alert data: %w", err)
 			}
@@ -381,7 +381,7 @@ func NewSinkSlack(endPoint, userName, iconEmoji, iconURL, channel string, params
 				Channel:   channel,
 				IconEmoji: iconEmoji,
 				IconURL:   iconURL,
-				Text:      message,
+				Text:      data,
 				UserName:  userName,
 			}
 			return json.Marshal(slackData)
@@ -395,13 +395,13 @@ func NewSinkTelegram(endPoint, chatID string, params ...httpParams) *SinkTelegra
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message, err := getUniversalAlertData(fields)
+			data, err := getUniversalAlertData(fields)
 			if err != nil {
 				return nil, fmt.Errorf("invalid alert data: %w", err)
 			}
 			telegramData := TelegramData{
 				ChatID:    chatID,
-				Text:      message,
+				Text:      data,
 				ParseMode: "HTML",
 			}
 			return json.Marshal(telegramData)
@@ -468,12 +468,12 @@ func NewSinkWechat(endPoint string, params ...httpParams) *SinkWechat {
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message, err := getUniversalAlertData(fields)
+			data, err := getUniversalAlertData(fields)
 			if err != nil {
 				return nil, fmt.Errorf("invalid alert data: %w", err)
 			}
 			wechatData := WechatData{
-				Content: message,
+				Content: data,
 				MsgType: "markdown",
 			}
 			return json.Marshal(wechatData)
