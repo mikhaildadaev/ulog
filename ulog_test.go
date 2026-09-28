@@ -1539,6 +1539,9 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		if span.Status.Code != StatusOK {
 			t.Errorf("wrong status code: %d, want %d (OK)", span.Status.Code, StatusOK)
 		}
+		if span.Status.Message != "everything is fine" {
+			t.Errorf("wrong status.message: expected %q, got %q", "everything is fine", span.Status.Message)
+		}
 		if span.StartTimeUnixNano == "" {
 			t.Error("startTimeUnixNano is empty")
 		}
@@ -1575,9 +1578,7 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 			switch a.Key {
 			case "service", "namespace", "environment":
 				t.Errorf("resource attribute %q should NOT be in Span.Attributes", a.Key)
-			case "parent_span_id", "status", "kind", "links",
-				"trace_id", "span_id", "name", "duration",
-				"trace_state", "flags":
+			case "parent_span_id", "status", "status_message", "kind", "links", "trace_id", "span_id", "name", "duration", "trace_state", "flags":
 				t.Errorf("special field %q should NOT be in Span.Attributes", a.Key)
 			}
 			attrs[a.Key] = a.Value
@@ -1622,6 +1623,7 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		String("parent_span_id", "AAA19B7E-C3C1-B100"),
 		Int64("duration", 150),
 		String("status", "OK"),
+		String("status_message", "everything is fine"),
 		Strings("links", []string{
 			"5B8EFFF7-9803-8103-D269-B633813FC701:EEE19B7EC3C1B101",
 		}),
@@ -1666,6 +1668,7 @@ func Test_SinkFactory_TempoCloud(t *testing.T) {
 		String("parent_span_id", "AAA19B7EC3C1B100"),
 		Int64("duration", 150),
 		String("status", "OK"),
+		String("status_message", "everything is fine"),
 		Strings("links", []string{
 			"5B8EFFF7-9803-8103-D269-B633813FC701:EEE19B7EC3C1B101",
 		}),
@@ -3372,7 +3375,7 @@ func testWarnWithContext(telemetry Telemetry) {
 }
 func writeBody(t *testing.T, rawBody []byte) {
 	t.Helper()
-	var debugBody = true
+	var debugBody = false
 	if !debugBody {
 		return
 	}
