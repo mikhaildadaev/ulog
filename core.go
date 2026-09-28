@@ -32,6 +32,7 @@ type TypeFormat int
 type TypeKind int
 type TypeLevel int
 type TypeMode int
+type TypeStatus int
 type TypeTheme int
 
 // Публичные константы
@@ -82,6 +83,11 @@ const (
 const (
 	ModeAsync TypeMode = iota
 	ModeSync
+)
+const (
+	StatusUnset TypeStatus = iota
+	StatusOK
+	StatusError
 )
 const (
 	ThemeDark TypeTheme = iota
