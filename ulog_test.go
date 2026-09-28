@@ -923,11 +923,23 @@ func Test_SinkFactory_Loki(t *testing.T) {
 		if lr.Body.StringValue == nil || *lr.Body.StringValue != "test" {
 			t.Errorf("wrong message: %v", lr.Body.StringValue)
 		}
-		if lr.SeverityNumber != 17 {
-			t.Errorf("wrong severityNumber: %d, want 17 (ERROR)", lr.SeverityNumber)
-		}
 		if lr.SeverityText != "ERROR" {
-			t.Errorf("wrong severityText: %s, want ERROR", lr.SeverityText)
+			t.Errorf("wrong severity text: %s", lr.SeverityText)
+		}
+		if lr.SeverityNumber != 17 {
+			t.Errorf("wrong severity number: %d, want 17 (ERROR)", lr.SeverityNumber)
+		}
+		if lr.TraceID != "5b8efff798038103d269b633813fc700" {
+			t.Errorf("wrong trace_id: %q", lr.TraceID)
+		}
+		if lr.SpanID != "eee19b7ec3c1b100" {
+			t.Errorf("wrong span_id: %q", lr.SpanID)
+		}
+		if lr.TimeUnixNano == "" {
+			t.Error("timeUnixNano is empty")
+		}
+		if lr.ObservedTimeUnixNano == "" {
+			t.Error("observedTimeUnixNano is empty")
 		}
 		for _, a := range lr.Attributes {
 			if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
@@ -935,20 +947,16 @@ func Test_SinkFactory_Loki(t *testing.T) {
 			}
 		}
 		foundUserID := false
-		foundTraceID := false
 		for _, a := range lr.Attributes {
 			if a.Key == "user_id" && a.Value.StringValue == "019687278c7e800087cbbdba4f634d9f" {
 				foundUserID = true
 			}
-			if a.Key == "trace_id" && a.Value.StringValue == "5b8efff798038103d269b633813fc700" {
-				foundTraceID = true
+			if a.Key == "trace_id" || a.Key == "span_id" {
+				t.Errorf("%s should NOT be duplicated in LogRecord.Attributes (it's top-level now)", a.Key)
 			}
 		}
 		if !foundUserID {
 			t.Error("user_id attribute not found")
-		}
-		if !foundTraceID {
-			t.Error("trace_id attribute not found")
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"partialSuccess":{}}`))
@@ -964,8 +972,10 @@ func Test_SinkFactory_Loki(t *testing.T) {
 		String("service", "test-service"),
 		String("namespace", "payments"),
 		String("message", "test"),
-		String("user_id", "019687278c7e800087cbbdba4f634d9f"),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
+		String("span_id", "EEE19B7E-C3C1-B100"),
+		String("user_id", "019687278c7e800087cbbdba4f634d9f"),
+		Int("flags", int(TraceFlagsSampled)),
 	}
 	_, err := sinkLoki.WriteWithAttributes(
 		writeAttributes{typeData: DataLog, typeLevel: LevelError},
@@ -999,7 +1009,9 @@ func Test_SinkFactory_LokiCloud(t *testing.T) {
 		String("namespace", "payments"),
 		String("message", "test"),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
-		String("user_id", "user-12345"),
+		String("span_id", "EEE19B7E-C3C1-B100"),
+		String("user_id", "019687278c7e800087cbbdba4f634d9f"),
+		Int("flags", int(TraceFlagsSampled)),
 	)
 }
 func Test_SinkFactory_Prometheus(t *testing.T) {
@@ -1456,10 +1468,31 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		if span.TraceID != "5b8efff798038103d269b633813fc700" {
 			t.Errorf("wrong trace_id: %s", span.TraceID)
 		}
+		if span.ParentSpanID != "aaa19b7ec3c1b100" {
+			t.Errorf("wrong parent_span_id: %s", span.ParentSpanID)
+		}
+		if span.Kind != KindServer {
+			t.Errorf("wrong kind: %d, want %d (Server)", span.Kind, KindServer)
+		}
+		if span.Status.Code != StatusOK {
+			t.Errorf("wrong status code: %d, want %d (OK)", span.Status.Code, StatusOK)
+		}
 		for _, a := range span.Attributes {
 			if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
 				t.Errorf("%s should NOT be duplicated in Span.Attributes", a.Key)
 			}
+			if a.Key == "parent_span_id" || a.Key == "status" || a.Key == "kind" || a.Key == "links" {
+				t.Errorf("%s should NOT be duplicated in Span.Attributes", a.Key)
+			}
+		}
+		if len(span.Links) != 1 {
+			t.Fatalf("expected 1 links, got %d", len(span.Links))
+		}
+		if span.Links[0].TraceID != "5b8efff798038103d269b633813fc701" {
+			t.Errorf("link[0].TraceID: expected '5b8efff798038103d269b633813fc701', got %q", span.Links[0].TraceID)
+		}
+		if span.Links[0].SpanID != "eee19b7ec3c1b101" {
+			t.Errorf("link[0].SpanID: expected 'eee19b7ec3c1b101', got %q", span.Links[0].SpanID)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -1477,6 +1510,11 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		Kind(KindServer),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7E-C3C1-B100"),
+		String("parent_span_id", "AAA19B7E-C3C1-B100"),
+		String("status", "OK"),
+		Strings("links", []string{
+			"5B8EFFF7-9803-8103-D269-B633813FC701:EEE19B7EC3C1B101",
+		}),
 		Int64("duration", 150),
 	}
 	_, err := sinkTempo.WriteWithAttributes(
@@ -1513,6 +1551,11 @@ func Test_SinkFactory_TempoCloud(t *testing.T) {
 		Kind(KindServer),
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7EC3C1B100"),
+		String("parent_span_id", "AAA19B7EC3C1B100"),
+		String("status", "OK"),
+		Strings("links", []string{
+			"5B8EFFF7-9803-8103-D269-B633813FC701:EEE19B7EC3C1B101",
+		}),
 		Int64("duration", 150),
 	)
 }
@@ -3214,7 +3257,7 @@ func testWarnWithContext(telemetry Telemetry) {
 }
 func writeBody(t *testing.T, rawBody []byte) {
 	t.Helper()
-	var debugBody = false
+	var debugBody = true
 	if !debugBody {
 		return
 	}
