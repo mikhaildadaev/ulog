@@ -908,18 +908,19 @@ func Test_SinkFactory_Loki(t *testing.T) {
 			"service.name":                "test-service",
 			"service.namespace":           "payments",
 		}
-		foundAttrs := make(map[string]string)
+		foundResourceAttrs := make(map[string]string, len(resource.Attributes))
 		for _, a := range resource.Attributes {
-			foundAttrs[a.Key] = a.Value.StringValue
+			foundResourceAttrs[a.Key] = a.Value.StringValue
 		}
 		for key, want := range expectedResourceAttrs {
-			if got, ok := foundAttrs[key]; !ok {
+			if got, ok := foundResourceAttrs[key]; !ok {
 				t.Errorf("resource attribute %q not found", key)
 			} else if got != want {
 				t.Errorf("resource attribute %q: expected %q, got %q", key, want, got)
 			}
 		}
 		lr := data.ResourceLogs[0].ScopeLogs[0].LogRecords[0]
+
 		if lr.Body.StringValue == nil || *lr.Body.StringValue != "test" {
 			t.Errorf("wrong message: %v", lr.Body.StringValue)
 		}
@@ -941,19 +942,26 @@ func Test_SinkFactory_Loki(t *testing.T) {
 		if lr.ObservedTimeUnixNano == "" {
 			t.Error("observedTimeUnixNano is empty")
 		}
-		for _, a := range lr.Attributes {
-			if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
-				t.Errorf("%s should NOT be duplicated in LogRecord.Attributes", a.Key)
-			}
+		if lr.Flags != 1 {
+			t.Errorf("wrong flags: %d, want 1 (sampled)", lr.Flags)
 		}
+		attrs := make(map[string]OTLPAttrValue, len(lr.Attributes))
 		foundUserID := false
 		for _, a := range lr.Attributes {
+			switch a.Key {
+			case "service", "namespace", "environment":
+				t.Errorf("resource attribute %q should NOT be in LogRecord.Attributes", a.Key)
+			case "message":
+				t.Error("message should NOT be in LogRecord.Attributes (it's top-level body)")
+			case "trace_id", "span_id":
+				t.Errorf("%s should NOT be in LogRecord.Attributes (it's top-level)", a.Key)
+			case "flags":
+				t.Error("flags should NOT be in LogRecord.Attributes (it's top-level)")
+			}
 			if a.Key == "user_id" && a.Value.StringValue == "019687278c7e800087cbbdba4f634d9f" {
 				foundUserID = true
 			}
-			if a.Key == "trace_id" || a.Key == "span_id" {
-				t.Errorf("%s should NOT be duplicated in LogRecord.Attributes (it's top-level now)", a.Key)
-			}
+			attrs[a.Key] = a.Value
 		}
 		if !foundUserID {
 			t.Error("user_id attribute not found")
@@ -1029,6 +1037,7 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 			name:         "histogram",
 			metricName:   "http_request_duration_seconds",
 			expectedTemp: 2,
+			expectedMono: false,
 		},
 		{
 			name:         "gauge",
@@ -1036,6 +1045,18 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 			expectedTemp: 0,
 			expectedMono: false,
 		},
+	}
+	skipKeys := map[string]bool{
+		"name":            true,
+		"value":           true,
+		"type":            true,
+		"count":           true,
+		"sum":             true,
+		"bucket_counts":   true,
+		"explicit_bounds": true,
+		"service":         true,
+		"namespace":       true,
+		"environment":     true,
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1074,12 +1095,12 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 					"service.name":                "test-service",
 					"service.namespace":           "payments",
 				}
-				foundAttrs := make(map[string]string)
+				foundResourceAttrs := make(map[string]string, len(rm.Resource.Attributes))
 				for _, attr := range rm.Resource.Attributes {
-					foundAttrs[attr.Key] = attr.Value.StringValue
+					foundResourceAttrs[attr.Key] = attr.Value.StringValue
 				}
 				for key, want := range expectedResourceAttrs {
-					if got, ok := foundAttrs[key]; !ok {
+					if got, ok := foundResourceAttrs[key]; !ok {
 						t.Errorf("resource attribute %q not found", key)
 					} else if got != want {
 						t.Errorf("resource attribute %q: expected %q, got %q", key, want, got)
@@ -1103,6 +1124,31 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 				metric := sm.Metrics[0]
 				if metric.Name != tt.metricName {
 					t.Errorf("wrong metric name: expected %q, got %q", tt.metricName, metric.Name)
+				}
+				checkAttrs := func(attrs []OTLPAttribute) {
+					for _, a := range attrs {
+						if skipKeys[a.Key] {
+							t.Errorf("attribute %q should NOT be in DataPoint.Attributes", a.Key)
+						}
+					}
+				}
+				checkExtraAttrs := func(attrs []OTLPAttribute, expected map[string]string) {
+					found := make(map[string]string, len(attrs))
+					for _, a := range attrs {
+						switch a.Value.StringValue {
+						case "":
+							found[a.Key] = a.Value.IntValue
+						default:
+							found[a.Key] = a.Value.StringValue
+						}
+					}
+					for key, want := range expected {
+						if got, ok := found[key]; !ok {
+							t.Errorf("attribute %q not found in dataPoint", key)
+						} else if got != want {
+							t.Errorf("attribute %q: expected %q, got %q", key, want, got)
+						}
+					}
 				}
 				switch tt.name {
 				case "counter":
@@ -1133,11 +1179,11 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 					if dp.TimeUnixNano == "" {
 						t.Error("timeUnixNano is empty")
 					}
-					for _, a := range dp.Attributes {
-						if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
-							t.Errorf("%s should NOT be duplicated in DataPoint.Attributes", a.Key)
-						}
-					}
+					checkAttrs(dp.Attributes)
+					checkExtraAttrs(dp.Attributes, map[string]string{
+						"method": "GET",
+						"path":   "/api/users",
+					})
 				case "gauge":
 					if metric.Gauge == nil {
 						t.Fatalf("expected Gauge, got nil")
@@ -1158,11 +1204,11 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 					if dp.TimeUnixNano == "" {
 						t.Error("timeUnixNano is empty")
 					}
-					for _, a := range dp.Attributes {
-						if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
-							t.Errorf("%s should NOT be duplicated in DataPoint.Attributes", a.Key)
-						}
-					}
+					checkAttrs(dp.Attributes)
+					checkExtraAttrs(dp.Attributes, map[string]string{
+						"method": "GET",
+						"path":   "/api/users",
+					})
 				case "histogram":
 					if metric.Histogram == nil {
 						t.Fatalf("expected Histogram, got nil")
@@ -1174,7 +1220,8 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 						t.Errorf("Histogram should not have Gauge")
 					}
 					if metric.Histogram.AggregationTemporality != tt.expectedTemp {
-						t.Errorf("expected temporality %d, got %d", tt.expectedTemp, metric.Histogram.AggregationTemporality)
+						t.Errorf("expected temporality %d, got %d",
+							tt.expectedTemp, metric.Histogram.AggregationTemporality)
 					}
 					if len(metric.Histogram.DataPoints) != 1 {
 						t.Fatalf("expected 1 dataPoint, got %d", len(metric.Histogram.DataPoints))
@@ -1187,11 +1234,16 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 						t.Errorf("expected sum 12.5, got %v", dp.Sum)
 					}
 					if len(dp.BucketCounts) != 5 {
-						t.Errorf("expected 4 bucket counts, got %d", len(dp.BucketCounts))
+						t.Errorf("expected 5 bucket counts, got %d", len(dp.BucketCounts))
 					}
 					if len(dp.ExplicitBounds) != 4 {
 						t.Errorf("expected 4 explicit bounds, got %d", len(dp.ExplicitBounds))
 					}
+					checkAttrs(dp.Attributes)
+					checkExtraAttrs(dp.Attributes, map[string]string{
+						"method": "GET",
+						"path":   "/api/users",
+					})
 				}
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"partialSuccess":{}}`))
@@ -1213,11 +1265,15 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 				fields = append(fields,
 					String("type", "counter"),
 					Float64("value", 42.0),
+					String("method", "GET"),
+					String("path", "/api/users"),
 				)
 			case "gauge":
 				fields = append(fields,
 					String("type", "gauge"),
 					Float64("value", 0.75),
+					String("method", "GET"),
+					String("path", "/api/users"),
 				)
 			case "histogram":
 				fields = append(fields,
@@ -1226,6 +1282,8 @@ func Test_SinkFactory_Prometheus(t *testing.T) {
 					Float64("sum", 12.5),
 					Ints64("bucket_counts", []int64{10, 40, 70, 30, 0}),
 					Floats64("explicit_bounds", []float64{0.1, 0.5, 1.0, 5.0}),
+					String("method", "GET"),
+					String("path", "/api/users"),
 				)
 			}
 			_, err := sinkPrometheus.WriteWithAttributes(
@@ -1264,6 +1322,8 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 			String("name", "http_requests_total"),
 			String("type", "counter"),
 			Float64("value", 42.0),
+			String("method", "GET"),
+			String("path", "/api/users"),
 		)
 	})
 	t.Run("Gauge", func(t *testing.T) {
@@ -1284,6 +1344,8 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 			String("name", "cpu_usage_ratio"),
 			String("type", "gauge"),
 			Float64("value", 0.75),
+			String("method", "GET"),
+			String("path", "/api/users"),
 		)
 	})
 	t.Run("Histogram", func(t *testing.T) {
@@ -1307,6 +1369,8 @@ func Test_SinkFactory_PrometheusCloud(t *testing.T) {
 			Float64("sum", 12.5),
 			Ints64("bucket_counts", []int64{10, 40, 70, 30, 0}),
 			Floats64("explicit_bounds", []float64{0.1, 0.5, 1.0, 5.0}),
+			String("method", "GET"),
+			String("path", "/api/users"),
 		)
 	})
 }
@@ -1445,12 +1509,12 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 			"service.name":                "test-service",
 			"service.namespace":           "payments",
 		}
-		foundAttrs := make(map[string]string)
+		foundResourceAttrs := make(map[string]string, len(resource.Attributes))
 		for _, a := range resource.Attributes {
-			foundAttrs[a.Key] = a.Value.StringValue
+			foundResourceAttrs[a.Key] = a.Value.StringValue
 		}
 		for key, want := range expectedResourceAttrs {
-			if got, ok := foundAttrs[key]; !ok {
+			if got, ok := foundResourceAttrs[key]; !ok {
 				t.Errorf("resource attribute %q not found", key)
 			} else if got != want {
 				t.Errorf("resource attribute %q: expected %q, got %q", key, want, got)
@@ -1475,22 +1539,69 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		if span.Status.Code != StatusOK {
 			t.Errorf("wrong status code: %d, want %d (OK)", span.Status.Code, StatusOK)
 		}
-		for _, a := range span.Attributes {
-			if a.Key == "service" || a.Key == "namespace" || a.Key == "environment" {
-				t.Errorf("%s should NOT be duplicated in Span.Attributes", a.Key)
-			}
-			if a.Key == "parent_span_id" || a.Key == "status" || a.Key == "kind" || a.Key == "links" {
-				t.Errorf("%s should NOT be duplicated in Span.Attributes", a.Key)
+		if span.StartTimeUnixNano == "" {
+			t.Error("startTimeUnixNano is empty")
+		}
+		if span.EndTimeUnixNano == "" {
+			t.Error("endTimeUnixNano is empty")
+		}
+		startNano, errStart := strconv.ParseInt(span.StartTimeUnixNano, 10, 64)
+		if errStart != nil {
+			t.Errorf("failed to parse startTimeUnixNano: %v", errStart)
+		}
+		endNano, errEnd := strconv.ParseInt(span.EndTimeUnixNano, 10, 64)
+		if errEnd != nil {
+			t.Errorf("failed to parse endTimeUnixNano: %v", errEnd)
+		}
+		if errStart == nil && errEnd == nil {
+			durationMs := (endNano - startNano) / 1_000_000
+			if durationMs != 150 {
+				t.Errorf("duration: expected 150ms, got %dms", durationMs)
 			}
 		}
 		if len(span.Links) != 1 {
-			t.Fatalf("expected 1 links, got %d", len(span.Links))
+			t.Fatalf("expected 1 link, got %d", len(span.Links))
 		}
 		if span.Links[0].TraceID != "5b8efff798038103d269b633813fc701" {
-			t.Errorf("link[0].TraceID: expected '5b8efff798038103d269b633813fc701', got %q", span.Links[0].TraceID)
+			t.Errorf("link[0].TraceID: expected %q, got %q",
+				"5b8efff798038103d269b633813fc701", span.Links[0].TraceID)
 		}
 		if span.Links[0].SpanID != "eee19b7ec3c1b101" {
-			t.Errorf("link[0].SpanID: expected 'eee19b7ec3c1b101', got %q", span.Links[0].SpanID)
+			t.Errorf("link[0].SpanID: expected %q, got %q",
+				"eee19b7ec3c1b101", span.Links[0].SpanID)
+		}
+		attrs := make(map[string]OTLPAttrValue, len(span.Attributes))
+		for _, a := range span.Attributes {
+			switch a.Key {
+			case "service", "namespace", "environment":
+				t.Errorf("resource attribute %q should NOT be in Span.Attributes", a.Key)
+			case "parent_span_id", "status", "kind", "links",
+				"trace_id", "span_id", "name", "duration",
+				"trace_state", "flags":
+				t.Errorf("special field %q should NOT be in Span.Attributes", a.Key)
+			}
+			attrs[a.Key] = a.Value
+		}
+		expectedAttrs := map[string]func(v OTLPAttrValue) bool{
+			"http.method": func(v OTLPAttrValue) bool {
+				return v.StringValue == "GET"
+			},
+			"http.status_code": func(v OTLPAttrValue) bool {
+				return v.IntValue == "200"
+			},
+			"http.url": func(v OTLPAttrValue) bool {
+				return v.StringValue == "/api/users"
+			},
+		}
+		for key, check := range expectedAttrs {
+			v, ok := attrs[key]
+			if !ok {
+				t.Errorf("attribute %q not found in span", key)
+				continue
+			}
+			if !check(v) {
+				t.Errorf("attribute %q has unexpected value: %+v", key, v)
+			}
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -1509,11 +1620,14 @@ func Test_SinkFactory_Tempo(t *testing.T) {
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7E-C3C1-B100"),
 		String("parent_span_id", "AAA19B7E-C3C1-B100"),
+		Int64("duration", 150),
 		String("status", "OK"),
 		Strings("links", []string{
 			"5B8EFFF7-9803-8103-D269-B633813FC701:EEE19B7EC3C1B101",
 		}),
-		Int64("duration", 150),
+		String("http.method", "GET"),
+		String("http.url", "/api/users"),
+		Int("http.status_code", 200),
 	}
 	_, err := sinkTempo.WriteWithAttributes(
 		writeAttributes{typeData: DataTrace, typeLevel: LevelError},
@@ -1550,11 +1664,14 @@ func Test_SinkFactory_TempoCloud(t *testing.T) {
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7EC3C1B100"),
 		String("parent_span_id", "AAA19B7EC3C1B100"),
+		Int64("duration", 150),
 		String("status", "OK"),
 		Strings("links", []string{
 			"5B8EFFF7-9803-8103-D269-B633813FC701:EEE19B7EC3C1B101",
 		}),
-		Int64("duration", 150),
+		String("http.method", "GET"),
+		String("http.url", "/api/users"),
+		Int("http.status_code", 200),
 	)
 }
 func Test_SinkFactory_Wechat(t *testing.T) {
