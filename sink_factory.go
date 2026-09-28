@@ -491,7 +491,7 @@ var (
 		"name", "value", "type", "count", "sum", "bucket_counts", "explicit_bounds",
 	}
 	skipKeysTempo = []string{
-		"name", "kind", "links", "trace_id", "span_id", "parent_span_id", "duration", "status", "trace_state", "flags",
+		"name", "kind", "links", "trace_id", "span_id", "parent_span_id", "duration", "status", "status_message", "trace_state", "flags",
 	}
 )
 
@@ -919,6 +919,10 @@ func getTempoData(fields []Field) (tempoData, error) {
 			if f.typeValue == FieldString {
 				rawStatus = f.valueString
 			}
+		case "status_message":
+			if f.typeValue == FieldString {
+				result.statusMessage = f.valueString
+			}
 		case "links":
 			if f.typeValue == FieldStrings {
 				for _, raw := range f.valueStrings {
@@ -978,7 +982,6 @@ func getTempoData(fields []Field) (tempoData, error) {
 		result.statusCode = StatusOK
 	case "error", "failed":
 		result.statusCode = StatusError
-		result.statusMessage = rawStatus
 	default:
 		result.statusCode = StatusUnset
 	}
