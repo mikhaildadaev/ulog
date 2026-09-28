@@ -193,7 +193,7 @@ type OTLPScope struct {
 }
 
 // Публичные конструкторы
-func NewSinkDiscord(endPoint, userName, avatarURL string, params ...httpParams) *SinkDiscord {
+func NewSinkDiscord(endPoint, userName, avatarURL string, tts bool, params ...httpParams) *SinkDiscord {
 	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
@@ -202,7 +202,6 @@ func NewSinkDiscord(endPoint, userName, avatarURL string, params ...httpParams) 
 			if err != nil {
 				return nil, fmt.Errorf("invalid alert data: %w", err)
 			}
-			tts := false
 			discordData := DiscordData{
 				AvatarURL: avatarURL,
 				Content:   data,
