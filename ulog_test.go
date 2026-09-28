@@ -975,7 +975,6 @@ func Test_SinkFactory_Loki(t *testing.T) {
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7E-C3C1-B100"),
 		String("user_id", "019687278c7e800087cbbdba4f634d9f"),
-		Int("flags", int(TraceFlagsSampled)),
 	}
 	_, err := sinkLoki.WriteWithAttributes(
 		writeAttributes{typeData: DataLog, typeLevel: LevelError},
@@ -1011,7 +1010,6 @@ func Test_SinkFactory_LokiCloud(t *testing.T) {
 		String("trace_id", "5B8EFFF7-9803-8103-D269-B633813FC700"),
 		String("span_id", "EEE19B7E-C3C1-B100"),
 		String("user_id", "019687278c7e800087cbbdba4f634d9f"),
-		Int("flags", int(TraceFlagsSampled)),
 	)
 }
 func Test_SinkFactory_Prometheus(t *testing.T) {
