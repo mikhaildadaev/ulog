@@ -28,7 +28,7 @@ import (
 type DiscordData struct {
 	AvatarURL string `json:"avatar_url,omitempty"`
 	Content   string `json:"content,omitempty"`
-	TTS       *bool  `json:"tts,omitempty"`
+	TTS       bool   `json:"tts,omitempty"`
 	UserName  string `json:"username,omitempty"`
 }
 type SinkDiscord = SinkHttp
@@ -205,7 +205,7 @@ func NewSinkDiscord(endPoint, userName, avatarURL string, tts bool, params ...ht
 			discordData := DiscordData{
 				AvatarURL: avatarURL,
 				Content:   data,
-				TTS:       &tts,
+				TTS:       tts,
 				UserName:  userName,
 			}
 			return json.Marshal(discordData)
@@ -481,6 +481,11 @@ func NewSinkWechat(endPoint string, params ...httpParams) *SinkWechat {
 		WithHttpMethod("POST"),
 	}, params...)...)
 }
+
+// Приватные константы
+const (
+	traceFlagsSampled uint32 = 1 << 0 // W3C: sampled
+)
 
 // Приватные переменные
 var (
@@ -762,23 +767,13 @@ func getLokiData(fields []Field) (lokiData, error) {
 				if err != nil {
 					return lokiData{}, fmt.Errorf("invalid trace_id: %w", err)
 				}
+				result.flags = traceFlagsSampled
 			}
 		case "span_id":
 			if f.typeValue == FieldString {
 				result.spanID, err = normalizeSpanID(f.valueString)
 				if err != nil {
 					return lokiData{}, fmt.Errorf("invalid span_id: %w", err)
-				}
-			}
-		case "flags":
-			switch f.typeValue {
-			case FieldInt:
-				result.flags = uint32(f.valueInt)
-			case FieldInt64:
-				result.flags = uint32(f.valueInt64)
-			case FieldBool:
-				if f.valueBool {
-					result.flags = TraceFlagsSampled
 				}
 			}
 		}
@@ -879,17 +874,6 @@ func getTempoData(fields []Field) (tempoData, error) {
 			if f.typeValue == FieldString {
 				result.traceState = f.valueString
 			}
-		case "flags":
-			switch f.typeValue {
-			case FieldInt:
-				result.flags = uint32(f.valueInt)
-			case FieldInt64:
-				result.flags = uint32(f.valueInt64)
-			case FieldBool:
-				if f.valueBool {
-					result.flags = TraceFlagsSampled
-				}
-			}
 		case "parent_span_id":
 			if f.typeValue == FieldString {
 				rawParentSpanID = f.valueString
@@ -944,6 +928,7 @@ func getTempoData(fields []Field) (tempoData, error) {
 		return tempoData{}, err
 	}
 	result.traceID = traceID
+	result.flags = traceFlagsSampled
 	if rawSpanID == "" {
 		return tempoData{}, fmt.Errorf("span_id is required")
 	}

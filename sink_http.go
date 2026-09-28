@@ -29,12 +29,6 @@ import (
 	"time"
 )
 
-// Публичные константы
-const (
-	TraceFlagsSampled       uint32 = 1 << 0 // W3C: sampled
-	TraceFlagsRandomTraceID uint32 = 1 << 1 // W3C: random-trace-id
-)
-
 // Публичные структуры
 type SinkHttp struct {
 	batchBuffer                  [][]byte
