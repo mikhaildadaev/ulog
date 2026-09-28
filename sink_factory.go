@@ -47,15 +47,19 @@ type LokiResourceLogs struct {
 	ScopeLogs []LokiScopeLogs `json:"scopeLogs"`
 }
 type LokiScopeLogs struct {
-	Scope      OTLPScope       `json:"scope"`
 	LogRecords []LokiLogRecord `json:"logRecords"`
+	Scope      OTLPScope       `json:"scope"`
 }
 type LokiLogRecord struct {
-	TimeUnixNano   string          `json:"timeUnixNano"`
-	SeverityNumber int             `json:"severityNumber,omitempty"`
-	SeverityText   string          `json:"severityText,omitempty"`
-	Body           OTLPBody        `json:"body"`
-	Attributes     []OTLPAttribute `json:"attributes,omitempty"`
+	Attributes           []OTLPAttribute `json:"attributes,omitempty"`
+	Body                 OTLPBody        `json:"body"`
+	Flags                uint32          `json:"flags,omitempty"`
+	ObservedTimeUnixNano string          `json:"observedTimeUnixNano,omitempty"`
+	SeverityNumber       int             `json:"severityNumber,omitempty"`
+	SeverityText         string          `json:"severityText,omitempty"`
+	SpanID               string          `json:"spanId,omitempty"`
+	TimeUnixNano         string          `json:"timeUnixNano"`
+	TraceID              string          `json:"traceId,omitempty"`
 }
 type SinkLoki = SinkHttp
 type PrometheusData struct {
@@ -66,13 +70,13 @@ type PrometheusResourceMetrics struct {
 	ScopeMetrics []PrometheusScopeMetrics `json:"scopeMetrics"`
 }
 type PrometheusScopeMetrics struct {
-	Scope   OTLPScope          `json:"scope"`
 	Metrics []PrometheusMetric `json:"metrics"`
+	Scope   OTLPScope          `json:"scope"`
 }
 type PrometheusMetric struct {
-	Name      string               `json:"name"`
 	Gauge     *PrometheusGauge     `json:"gauge,omitempty"`
 	Histogram *PrometheusHistogram `json:"histogram,omitempty"`
+	Name      string               `json:"name"`
 	Sum       *PrometheusSum       `json:"sum,omitempty"`
 }
 type PrometheusGauge struct {
@@ -83,12 +87,12 @@ type PrometheusHistogram struct {
 	DataPoints             []PrometheusHistogramPoint `json:"dataPoints"`
 }
 type PrometheusHistogramPoint struct {
-	TimeUnixNano   string          `json:"timeUnixNano"`
-	Count          uint64          `json:"count"`
-	Sum            *float64        `json:"sum,omitempty"`
-	BucketCounts   []uint64        `json:"bucketCounts"`
-	ExplicitBounds []float64       `json:"explicitBounds"`
 	Attributes     []OTLPAttribute `json:"attributes,omitempty"`
+	BucketCounts   []uint64        `json:"bucketCounts"`
+	Count          uint64          `json:"count"`
+	ExplicitBounds []float64       `json:"explicitBounds"`
+	Sum            *float64        `json:"sum,omitempty"`
+	TimeUnixNano   string          `json:"timeUnixNano"`
 }
 type PrometheusSum struct {
 	AggregationTemporality int                   `json:"aggregationTemporality"`
@@ -96,9 +100,9 @@ type PrometheusSum struct {
 	IsMonotonic            bool                  `json:"isMonotonic"`
 }
 type PrometheusDataPoint struct {
-	TimeUnixNano string          `json:"timeUnixNano"`
 	AsDouble     float64         `json:"asDouble"`
 	Attributes   []OTLPAttribute `json:"attributes,omitempty"`
+	TimeUnixNano string          `json:"timeUnixNano"`
 }
 type SinkPrometheus = SinkHttp
 type SlackData struct {
@@ -128,13 +132,28 @@ type TempoScopeSpan struct {
 	Spans []TempoSpan `json:"spans"`
 }
 type TempoSpan struct {
-	TraceID           string          `json:"traceId"`
-	SpanID            string          `json:"spanId"`
-	Name              string          `json:"name"`
-	Kind              int             `json:"kind"`
-	StartTimeUnixNano string          `json:"startTimeUnixNano"`
-	EndTimeUnixNano   string          `json:"endTimeUnixNano"`
 	Attributes        []OTLPAttribute `json:"attributes,omitempty"`
+	EndTimeUnixNano   string          `json:"endTimeUnixNano"`
+	Flags             uint32          `json:"flags,omitempty"`
+	Kind              TypeKind        `json:"kind"`
+	Links             []TempoLink     `json:"links,omitempty"`
+	Name              string          `json:"name"`
+	ParentSpanID      string          `json:"parentSpanId,omitempty"`
+	SpanID            string          `json:"spanId"`
+	StartTimeUnixNano string          `json:"startTimeUnixNano"`
+	Status            TempoStatus     `json:"status,omitempty"`
+	TraceID           string          `json:"traceId"`
+	TraceState        string          `json:"traceState,omitempty"`
+}
+type TempoLink struct {
+	Attributes []OTLPAttribute `json:"attributes,omitempty"`
+	SpanID     string          `json:"spanId"`
+	TraceID    string          `json:"traceId"`
+	TraceState string          `json:"traceState,omitempty"`
+}
+type TempoStatus struct {
+	Code    TypeStatus `json:"code,omitempty"`
+	Message string     `json:"message,omitempty"`
 }
 type SinkTempo = SinkHttp
 type WechatData struct {
@@ -177,9 +196,9 @@ func NewSinkDiscord(endPoint, userName, avatarURL string, params ...httpParams) 
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message := getDataLog(fields)
-			if message == "" {
-				message = "empty message"
+			message, _, _, _, err := getDataLog(fields)
+			if err != nil {
+				return nil, fmt.Errorf("invalid log data: %w", err)
 			}
 			tts := false
 			discordData := DiscordData{
@@ -232,45 +251,36 @@ func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelInfo),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message := getDataLog(fields)
-			if message == "" {
-				message = "empty message"
+			message, traceID, spanID, flags, err := getDataLog(fields)
+			if err != nil {
+				return nil, fmt.Errorf("invalid log data: %w", err)
 			}
-			attrs := getOpenTelemetryAttributes(fields, "message", "service", "namespace", "environment")
+			otlp := getOpenTelemetryAttributes(fields, "message", "trace_id", "span_id", "flags")
 			now := time.Now().UnixNano()
 			lokiData := LokiData{
 				ResourceLogs: []LokiResourceLogs{
 					{
 						Resource: OTLPResource{
-							Attributes: []OTLPAttribute{
-								{
-									Key:   "service.name",
-									Value: OTLPAttrValue{StringValue: getOpenTelemetryService(fields)},
-								},
-								{
-									Key:   "service.namespace",
-									Value: OTLPAttrValue{StringValue: getOpenTelemetryNamespace(fields)},
-								},
-								{
-									Key:   "deployment.environment.name",
-									Value: OTLPAttrValue{StringValue: getOpenTelemetryEnvironment(fields)},
-								},
-							},
+							Attributes: otlp.resource,
 						},
 						ScopeLogs: []LokiScopeLogs{
 							{
+								LogRecords: []LokiLogRecord{
+									{
+										Attributes:           otlp.record,
+										Body:                 OTLPBody{StringValue: &message},
+										Flags:                flags,
+										ObservedTimeUnixNano: fmt.Sprintf("%d", now),
+										SeverityNumber:       getLevelNumber(attributes.typeLevel),
+										SeverityText:         getLevelText(attributes.typeLevel),
+										SpanID:               spanID,
+										TraceID:              traceID,
+										TimeUnixNano:         fmt.Sprintf("%d", now),
+									},
+								},
 								Scope: OTLPScope{
 									Name:    "ulog",
 									Version: Version,
-								},
-								LogRecords: []LokiLogRecord{
-									{
-										TimeUnixNano:   fmt.Sprintf("%d", now),
-										SeverityNumber: getLevelNumber(attributes.typeLevel),
-										SeverityText:   getLevelText(attributes.typeLevel),
-										Body:           OTLPBody{StringValue: &message},
-										Attributes:     attrs,
-									},
 								},
 							},
 						},
@@ -287,16 +297,10 @@ func NewSinkPrometheus(endPoint string, params ...httpParams) *SinkPrometheus {
 		WithHttpFilterData(DataMetric),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			name, value := getDataMetric(fields)
-			attrs := getOpenTelemetryAttributes(fields, "name", "value", "service", "namespace", "environment", "type", "count", "sum", "bucket_counts", "explicit_bounds")
-			service := getOpenTelemetryService(fields)
+			otlp := getOpenTelemetryAttributes(fields, "name", "value", "type", "count", "sum", "bucket_counts", "explicit_bounds")
 			format, err := getOpenTelemetryType(fields)
 			if err != nil {
 				return nil, err
-			}
-			dataPoint := PrometheusDataPoint{
-				TimeUnixNano: fmt.Sprintf("%d", time.Now().UnixNano()),
-				AsDouble:     value,
-				Attributes:   attrs,
 			}
 			var metric PrometheusMetric
 			switch format {
@@ -305,50 +309,57 @@ func NewSinkPrometheus(endPoint string, params ...httpParams) *SinkPrometheus {
 					Name: name,
 					Sum: &PrometheusSum{
 						AggregationTemporality: 2,
-						DataPoints:             []PrometheusDataPoint{dataPoint},
-						IsMonotonic:            true,
+						DataPoints: []PrometheusDataPoint{{
+							AsDouble:     value,
+							Attributes:   otlp.record,
+							TimeUnixNano: fmt.Sprintf("%d", time.Now().UnixNano()),
+						}},
+						IsMonotonic: true,
 					},
 				}
 			case "gauge":
 				metric = PrometheusMetric{
-					Name: name,
 					Gauge: &PrometheusGauge{
-						DataPoints: []PrometheusDataPoint{dataPoint},
+						DataPoints: []PrometheusDataPoint{{
+							AsDouble:     value,
+							Attributes:   otlp.record,
+							TimeUnixNano: fmt.Sprintf("%d", time.Now().UnixNano()),
+						}},
 					},
+					Name: name,
 				}
 			case "histogram":
 				count, sum, buckets, bounds := getHistogram(fields)
 				metric = PrometheusMetric{
-					Name: name,
 					Histogram: &PrometheusHistogram{
 						AggregationTemporality: 2,
 						DataPoints: []PrometheusHistogramPoint{
 							{
-								TimeUnixNano:   fmt.Sprintf("%d", time.Now().UnixNano()),
-								Count:          count,
-								Sum:            &sum,
+								Attributes:     otlp.record,
 								BucketCounts:   buckets,
+								Count:          count,
 								ExplicitBounds: bounds,
-								Attributes:     attrs,
+								Sum:            &sum,
+								TimeUnixNano:   fmt.Sprintf("%d", time.Now().UnixNano()),
 							},
 						},
 					},
+					Name: name,
 				}
 			}
 			prometheusData := PrometheusData{
 				ResourceMetrics: []PrometheusResourceMetrics{
 					{
 						Resource: OTLPResource{
-							Attributes: []OTLPAttribute{
-								{Key: "service.name", Value: OTLPAttrValue{StringValue: service}},
-								{Key: "service.namespace", Value: OTLPAttrValue{StringValue: getOpenTelemetryNamespace(fields)}},
-								{Key: "deployment.environment.name", Value: OTLPAttrValue{StringValue: getOpenTelemetryEnvironment(fields)}},
-							},
+							Attributes: otlp.resource,
 						},
 						ScopeMetrics: []PrometheusScopeMetrics{
 							{
-								Scope:   OTLPScope{Name: "ulog", Version: Version},
 								Metrics: []PrometheusMetric{metric},
+								Scope: OTLPScope{
+									Name:    "ulog",
+									Version: Version,
+								},
 							},
 						},
 					},
@@ -364,9 +375,9 @@ func NewSinkSlack(endPoint, userName, iconEmoji, iconURL, channel string, params
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message := getDataLog(fields)
-			if message == "" {
-				message = "empty message"
+			message, _, _, _, err := getDataLog(fields)
+			if err != nil {
+				return nil, fmt.Errorf("invalid log data: %w", err)
 			}
 			slackData := SlackData{
 				Channel:   channel,
@@ -386,9 +397,9 @@ func NewSinkTelegram(endPoint, chatID string, params ...httpParams) *SinkTelegra
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message := getDataLog(fields)
-			if message == "" {
-				message = "empty message"
+			message, _, _, _, err := getDataLog(fields)
+			if err != nil {
+				return nil, fmt.Errorf("invalid log data: %w", err)
 			}
 			telegramData := TelegramData{
 				ChatID:    chatID,
@@ -405,11 +416,11 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpFilterData(DataTrace),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			name, traceID, spanID, duration, err := getDataTrace(fields)
+			name, traceID, spanID, parentSpanID, traceState, statusCode, statusMessage, links, flags, duration, err := getDataTrace(fields)
 			if err != nil {
 				return nil, fmt.Errorf("invalid trace data: %w", err)
 			}
-			attrs := getOpenTelemetryAttributes(fields, "environment", "service", "namespace", "name", "kind", "trace_id", "span_id", "duration")
+			otlp := getOpenTelemetryAttributes(fields, "name", "kind", "links", "trace_id", "span_id", "parent_span_id", "duration", "status")
 			now := time.Now()
 			startNano := now.UnixNano()
 			endNano := startNano + duration*1_000_000
@@ -417,20 +428,7 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 				ResourceSpans: []TempoResourceSpans{
 					{
 						Resource: OTLPResource{
-							Attributes: []OTLPAttribute{
-								{
-									Key:   "service.name",
-									Value: OTLPAttrValue{StringValue: getOpenTelemetryService(fields)},
-								},
-								{
-									Key:   "service.namespace",
-									Value: OTLPAttrValue{StringValue: getOpenTelemetryNamespace(fields)},
-								},
-								{
-									Key:   "deployment.environment.name",
-									Value: OTLPAttrValue{StringValue: getOpenTelemetryEnvironment(fields)},
-								},
-							},
+							Attributes: otlp.resource,
 						},
 						ScopeSpans: []TempoScopeSpan{
 							{
@@ -440,13 +438,21 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 								},
 								Spans: []TempoSpan{
 									{
-										TraceID:           traceID,
-										SpanID:            spanID,
-										Name:              name,
-										Kind:              getKind(fields),
-										StartTimeUnixNano: fmt.Sprintf("%d", startNano),
+										Attributes:        otlp.record,
 										EndTimeUnixNano:   fmt.Sprintf("%d", endNano),
-										Attributes:        attrs,
+										Flags:             flags,
+										Kind:              getKind(fields),
+										Links:             links,
+										Name:              name,
+										ParentSpanID:      parentSpanID,
+										SpanID:            spanID,
+										StartTimeUnixNano: fmt.Sprintf("%d", startNano),
+										Status: TempoStatus{
+											Code:    statusCode,
+											Message: statusMessage,
+										},
+										TraceID:    traceID,
+										TraceState: traceState,
 									},
 								},
 							},
@@ -464,9 +470,9 @@ func NewSinkWechat(endPoint string, params ...httpParams) *SinkWechat {
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelError),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
-			message := getDataLog(fields)
-			if message == "" {
-				message = "empty message"
+			message, _, _, _, err := getDataLog(fields)
+			if err != nil {
+				return nil, fmt.Errorf("invalid log data: %w", err)
 			}
 			wechatData := WechatData{
 				Content: message,

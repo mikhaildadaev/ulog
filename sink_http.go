@@ -31,6 +31,12 @@ import (
 	"time"
 )
 
+// Публичные константы
+const (
+	TraceFlagsSampled       uint32 = 1 << 0 // W3C: sampled
+	TraceFlagsRandomTraceID uint32 = 1 << 1 // W3C: random-trace-id
+)
+
 // Публичные структуры
 type SinkHttp struct {
 	batchBuffer                  [][]byte
@@ -406,24 +412,178 @@ var fieldExtractor = map[TypeField]func(Field) any{
 }
 
 // Приватные структуры
+type otlpAttributes struct {
+	record   []OTLPAttribute
+	resource []OTLPAttribute
+}
 type rateLimitError struct {
 	retryAfter time.Duration
 }
 type httpParams func(*SinkHttp)
 
 // Приватные функции
+func appendRecordAttribute(attrs *[]OTLPAttribute, f Field) {
+	switch f.typeValue {
+	case FieldString:
+		v := f.valueString
+		switch f.nameKey {
+		case "trace_id":
+			normalized, err := normalizeTraceID(v)
+			if err != nil {
+				fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid trace_id: %v\n", err)
+				return
+			}
+			v = normalized
+		case "span_id":
+			normalized, err := normalizeSpanID(v)
+			if err != nil {
+				fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid span_id: %v\n", err)
+				return
+			}
+			v = normalized
+		}
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{StringValue: v},
+		})
+	case FieldInt:
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{IntValue: fmt.Sprintf("%d", f.valueInt)},
+		})
+	case FieldInt64:
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{IntValue: fmt.Sprintf("%d", f.valueInt64)},
+		})
+	case FieldFloat64:
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{DoubleValue: f.valueFloat64},
+		})
+	case FieldBool:
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{BoolValue: f.valueBool},
+		})
+	case FieldDuration:
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{StringValue: f.valueDuration.String()},
+		})
+	case FieldTime:
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{StringValue: f.valueTime.Format(time.RFC3339Nano)},
+		})
+	case FieldStrings:
+		arr := make([]OTLPAttrValue, len(f.valueStrings))
+		for i, v := range f.valueStrings {
+			arr[i] = OTLPAttrValue{StringValue: v}
+		}
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{ArrayValue: arr},
+		})
+	case FieldInts:
+		arr := make([]OTLPAttrValue, len(f.valueInts))
+		for i, v := range f.valueInts {
+			arr[i] = OTLPAttrValue{IntValue: fmt.Sprintf("%d", v)}
+		}
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{ArrayValue: arr},
+		})
+	case FieldInts64:
+		arr := make([]OTLPAttrValue, len(f.valueInts64))
+		for i, v := range f.valueInts64 {
+			arr[i] = OTLPAttrValue{IntValue: fmt.Sprintf("%d", v)}
+		}
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{ArrayValue: arr},
+		})
+	case FieldFloats64:
+		arr := make([]OTLPAttrValue, len(f.valueFloats64))
+		for i, v := range f.valueFloats64 {
+			arr[i] = OTLPAttrValue{DoubleValue: v}
+		}
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{ArrayValue: arr},
+		})
+	case FieldBools:
+		arr := make([]OTLPAttrValue, len(f.valueBools))
+		for i, v := range f.valueBools {
+			arr[i] = OTLPAttrValue{BoolValue: v}
+		}
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{ArrayValue: arr},
+		})
+	case FieldDurations:
+		arr := make([]OTLPAttrValue, len(f.valueDurations))
+		for i, v := range f.valueDurations {
+			arr[i] = OTLPAttrValue{StringValue: v.String()}
+		}
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{ArrayValue: arr},
+		})
+	case FieldTimes:
+		arr := make([]OTLPAttrValue, len(f.valueTimes))
+		for i, v := range f.valueTimes {
+			arr[i] = OTLPAttrValue{StringValue: v.Format(time.RFC3339Nano)}
+		}
+		*attrs = append(*attrs, OTLPAttribute{
+			Key:   f.nameKey,
+			Value: OTLPAttrValue{ArrayValue: arr},
+		})
+	}
+}
 func defaultformatter(attributes writeAttributes, fields []Field) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	formatJson(buf, attributes, fields)
 	return buf.Bytes(), nil
 }
-func getDataLog(fields []Field) string {
-	for _, field := range fields {
-		if field.nameKey == "message" {
-			return field.valueString
+func getDataLog(fields []Field) (message, traceID, spanID string, flags uint32, err error) {
+	for _, f := range fields {
+		switch f.nameKey {
+		case "message":
+			if f.typeValue == FieldString {
+				message = f.valueString
+			}
+		case "trace_id":
+			if f.typeValue == FieldString {
+				traceID, err = normalizeTraceID(f.valueString)
+				if err != nil {
+					return "", "", "", 0, fmt.Errorf("invalid trace_id: %w", err)
+				}
+			}
+		case "span_id":
+			if f.typeValue == FieldString {
+				spanID, err = normalizeSpanID(f.valueString)
+				if err != nil {
+					return "", "", "", 0, fmt.Errorf("invalid span_id: %w", err)
+				}
+			}
+		case "flags":
+			switch f.typeValue {
+			case FieldInt:
+				flags = uint32(f.valueInt)
+			case FieldInt64:
+				flags = uint32(f.valueInt64)
+			case FieldBool:
+				if f.valueBool {
+					flags = TraceFlagsSampled
+				}
+			}
 		}
 	}
-	return ""
+	if message == "" {
+		message = "empty message"
+	}
+	return message, traceID, spanID, flags, nil
 }
 func getDataMetric(fields []Field) (name string, value float64) {
 	for _, field := range fields {
@@ -450,13 +610,15 @@ func getDataMetric(fields []Field) (name string, value float64) {
 	}
 	return name, value
 }
-func getDataTrace(fields []Field) (name, traceID, spanID string, duration int64, err error) {
+func getDataTrace(fields []Field) (name, traceID, spanID, parentSpanID, traceState string, statusCode TypeStatus, statusMessage string, links []TempoLink, flags uint32, duration int64, err error) {
 	var (
-		rawTraceID string
-		rawSpanID  string
-		rawName    string
-		rawDur     int64
-		hasDur     bool
+		rawTraceID      string
+		rawSpanID       string
+		rawParentSpanID string
+		rawName         string
+		rawStatus       string
+		rawDur          int64
+		hasDur          bool
 	)
 	for _, f := range fields {
 		switch f.nameKey {
@@ -468,9 +630,42 @@ func getDataTrace(fields []Field) (name, traceID, spanID string, duration int64,
 			if f.typeValue == FieldString {
 				rawSpanID = f.valueString
 			}
+		case "trace_state":
+			if f.typeValue == FieldString {
+				traceState = f.valueString
+			}
+		case "flags":
+			switch f.typeValue {
+			case FieldInt:
+				flags = uint32(f.valueInt)
+			case FieldInt64:
+				flags = uint32(f.valueInt64)
+			case FieldBool:
+				if f.valueBool {
+					flags = TraceFlagsSampled
+				}
+			}
+		case "parent_span_id":
+			if f.typeValue == FieldString {
+				rawParentSpanID = f.valueString
+			}
 		case "name":
 			if f.typeValue == FieldString {
 				rawName = f.valueString
+			}
+		case "status":
+			if f.typeValue == FieldString {
+				rawStatus = f.valueString
+			}
+		case "links":
+			if f.typeValue == FieldStrings {
+				for _, raw := range f.valueStrings {
+					link, parseErr := parseLink(raw)
+					if parseErr != nil {
+						return "", "", "", "", "", 0, "", nil, 0, 0, fmt.Errorf("invalid link: %w", parseErr)
+					}
+					links = append(links, link)
+				}
 			}
 		case "duration":
 			var ms int64
@@ -484,7 +679,7 @@ func getDataTrace(fields []Field) (name, traceID, spanID string, duration int64,
 			case FieldString:
 				d, parseErr := time.ParseDuration(f.valueString)
 				if parseErr != nil {
-					return "", "", "", 0, fmt.Errorf("invalid duration string: %w", parseErr)
+					return "", "", "", "", "", 0, "", nil, 0, 0, fmt.Errorf("invalid duration string: %w", parseErr)
 				}
 				ms = d.Milliseconds()
 			}
@@ -493,16 +688,30 @@ func getDataTrace(fields []Field) (name, traceID, spanID string, duration int64,
 		}
 	}
 	if rawTraceID == "" {
-		return "", "", "", 0, fmt.Errorf("trace_id is required")
+		return "", "", "", "", "", 0, "", nil, 0, 0, fmt.Errorf("trace_id is required")
 	}
 	if traceID, err = normalizeTraceID(rawTraceID); err != nil {
-		return "", "", "", 0, err
+		return "", "", "", "", "", 0, "", nil, 0, 0, err
 	}
 	if rawSpanID == "" {
-		return "", "", "", 0, fmt.Errorf("span_id is required")
+		return "", "", "", "", "", 0, "", nil, 0, 0, fmt.Errorf("span_id is required")
 	}
 	if spanID, err = normalizeSpanID(rawSpanID); err != nil {
-		return "", "", "", 0, err
+		return "", "", "", "", "", 0, "", nil, 0, 0, err
+	}
+	if rawParentSpanID != "" {
+		if parentSpanID, err = normalizeSpanID(rawParentSpanID); err != nil {
+			return "", "", "", "", "", 0, "", nil, 0, 0, fmt.Errorf("invalid parent_span_id: %w", err)
+		}
+	}
+	switch strings.ToLower(rawStatus) {
+	case "ok", "success":
+		statusCode = StatusOK
+	case "error", "failed":
+		statusCode = StatusError
+		statusMessage = rawStatus
+	default:
+		statusCode = StatusUnset
 	}
 	name = rawName
 	if name == "" {
@@ -512,11 +721,11 @@ func getDataTrace(fields []Field) (name, traceID, spanID string, duration int64,
 	case hasDur && rawDur > 0:
 		duration = rawDur
 	case hasDur && rawDur <= 0:
-		return "", "", "", 0, fmt.Errorf("duration must be positive, got %d", rawDur)
+		return "", "", "", "", "", 0, "", nil, 0, 0, fmt.Errorf("duration must be positive, got %d", rawDur)
 	default:
 		duration = 1
 	}
-	return name, traceID, spanID, duration, nil
+	return name, traceID, spanID, parentSpanID, traceState, statusCode, statusMessage, links, flags, duration, nil
 }
 func getField(field Field) any {
 	if extractor, ok := fieldExtractor[field.typeValue]; ok {
@@ -597,9 +806,48 @@ func getKafkaKey(fields []Field) string {
 	}
 	return ""
 }
-func getOpenTelemetryAttributes(fields []Field, skipKeys ...string) []OTLPAttribute {
-	attrs := make([]OTLPAttribute, 0, len(fields))
+func getOpenTelemetryAttributes(fields []Field, skipKeys ...string) otlpAttributes {
+	result := otlpAttributes{
+		resource: make([]OTLPAttribute, 0, 5),
+		record:   make([]OTLPAttribute, 0, len(fields)),
+	}
+	hasService := false
 	for _, f := range fields {
+		if f.typeValue == FieldString {
+			switch f.nameKey {
+			case "environment":
+				result.resource = append(result.resource, OTLPAttribute{
+					Key:   "deployment.environment.name",
+					Value: OTLPAttrValue{StringValue: f.valueString},
+				})
+				continue
+			case "instance_id":
+				result.resource = append(result.resource, OTLPAttribute{
+					Key:   "service.instance.id",
+					Value: OTLPAttrValue{StringValue: f.valueString},
+				})
+				continue
+			case "service":
+				result.resource = append(result.resource, OTLPAttribute{
+					Key:   "service.name",
+					Value: OTLPAttrValue{StringValue: f.valueString},
+				})
+				hasService = true
+				continue
+			case "namespace":
+				result.resource = append(result.resource, OTLPAttribute{
+					Key:   "service.namespace",
+					Value: OTLPAttrValue{StringValue: f.valueString},
+				})
+				continue
+			case "version":
+				result.resource = append(result.resource, OTLPAttribute{
+					Key:   "service.version",
+					Value: OTLPAttrValue{StringValue: f.valueString},
+				})
+				continue
+			}
+		}
 		skip := false
 		for _, k := range skipKeys {
 			if f.nameKey == k {
@@ -610,149 +858,15 @@ func getOpenTelemetryAttributes(fields []Field, skipKeys ...string) []OTLPAttrib
 		if skip {
 			continue
 		}
-		switch f.typeValue {
-		case FieldString:
-			v := f.valueString
-			switch f.nameKey {
-			case "trace_id":
-				normalized, err := normalizeTraceID(v)
-				if err != nil {
-					fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid trace_id: %v\n", err)
-					continue
-				}
-				v = normalized
-			case "span_id":
-				normalized, err := normalizeSpanID(v)
-				if err != nil {
-					fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid span_id: %v\n", err)
-					continue
-				}
-				v = normalized
-			}
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{StringValue: v},
-			})
-		case FieldInt:
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{IntValue: fmt.Sprintf("%d", f.valueInt)},
-			})
-		case FieldInt64:
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{IntValue: fmt.Sprintf("%d", f.valueInt64)},
-			})
-		case FieldFloat64:
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{DoubleValue: f.valueFloat64},
-			})
-		case FieldBool:
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{BoolValue: f.valueBool},
-			})
-		case FieldDuration:
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{StringValue: f.valueDuration.String()},
-			})
-		case FieldTime:
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{StringValue: f.valueTime.Format(time.RFC3339Nano)},
-			})
-		case FieldStrings:
-			arr := make([]OTLPAttrValue, len(f.valueStrings))
-			for i, v := range f.valueStrings {
-				arr[i] = OTLPAttrValue{StringValue: v}
-			}
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{ArrayValue: arr},
-			})
-		case FieldInts:
-			arr := make([]OTLPAttrValue, len(f.valueInts))
-			for i, v := range f.valueInts {
-				arr[i] = OTLPAttrValue{IntValue: fmt.Sprintf("%d", v)}
-			}
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{ArrayValue: arr},
-			})
-		case FieldInts64:
-			arr := make([]OTLPAttrValue, len(f.valueInts64))
-			for i, v := range f.valueInts64 {
-				arr[i] = OTLPAttrValue{IntValue: fmt.Sprintf("%d", v)}
-			}
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{ArrayValue: arr},
-			})
-		case FieldFloats64:
-			arr := make([]OTLPAttrValue, len(f.valueFloats64))
-			for i, v := range f.valueFloats64 {
-				arr[i] = OTLPAttrValue{DoubleValue: v}
-			}
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{ArrayValue: arr},
-			})
-		case FieldBools:
-			arr := make([]OTLPAttrValue, len(f.valueBools))
-			for i, v := range f.valueBools {
-				arr[i] = OTLPAttrValue{BoolValue: v}
-			}
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{ArrayValue: arr},
-			})
-		case FieldDurations:
-			arr := make([]OTLPAttrValue, len(f.valueDurations))
-			for i, v := range f.valueDurations {
-				arr[i] = OTLPAttrValue{StringValue: v.String()}
-			}
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{ArrayValue: arr},
-			})
-		case FieldTimes:
-			arr := make([]OTLPAttrValue, len(f.valueTimes))
-			for i, v := range f.valueTimes {
-				arr[i] = OTLPAttrValue{StringValue: v.Format(time.RFC3339Nano)}
-			}
-			attrs = append(attrs, OTLPAttribute{
-				Key:   f.nameKey,
-				Value: OTLPAttrValue{ArrayValue: arr},
-			})
-		}
+		appendRecordAttribute(&result.record, f)
 	}
-	return attrs
-}
-func getOpenTelemetryEnvironment(fields []Field) string {
-	for _, f := range fields {
-		if f.nameKey == "environment" && f.typeValue == FieldString {
-			return f.valueString
-		}
+	if !hasService {
+		result.resource = append(result.resource, OTLPAttribute{
+			Key:   "service.name",
+			Value: OTLPAttrValue{StringValue: "ulog"},
+		})
 	}
-	return "production"
-}
-func getOpenTelemetryNamespace(fields []Field) string {
-	for _, f := range fields {
-		if f.nameKey == "namespace" && f.typeValue == FieldString {
-			return f.valueString
-		}
-	}
-	return "default"
-}
-func getOpenTelemetryService(fields []Field) string {
-	for _, f := range fields {
-		if f.nameKey == "service" && f.typeValue == FieldString {
-			return f.valueString
-		}
-	}
-	return "ulog"
+	return result
 }
 func getOpenTelemetryType(fields []Field) (string, error) {
 	for _, f := range fields {
@@ -784,6 +898,28 @@ func normalizeSpanID(value string) (string, error) {
 		return "", fmt.Errorf("invalid span_id hex: %w (input: %q)", err, value)
 	}
 	return v, nil
+}
+func parseLink(raw string) (TempoLink, error) {
+	parts := strings.SplitN(raw, ":", 3)
+	if len(parts) < 2 {
+		return TempoLink{}, fmt.Errorf("expected 'trace_id:span_id[:trace_state]', got %q", raw)
+	}
+	traceID, err := normalizeTraceID(parts[0])
+	if err != nil {
+		return TempoLink{}, fmt.Errorf("invalid link trace_id: %w", err)
+	}
+	spanID, err := normalizeSpanID(parts[1])
+	if err != nil {
+		return TempoLink{}, fmt.Errorf("invalid link span_id: %w", err)
+	}
+	link := TempoLink{
+		TraceID: traceID,
+		SpanID:  spanID,
+	}
+	if len(parts) == 3 {
+		link.TraceState = parts[2]
+	}
+	return link, nil
 }
 
 // Приватные методы
