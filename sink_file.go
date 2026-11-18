@@ -32,20 +32,24 @@ import (
 
 // Публичные структуры
 type SinkFile struct {
-	bufWriter     *bufio.Writer
-	currentSize   int64
-	file          *os.File
-	filename      string
-	flushDone     chan struct{}
-	flushInterval time.Duration
-	flushTicker   *time.Ticker
-	maxAge        int
-	maxBackups    int
-	maxSize       int64
-	mutex         sync.Mutex
-	once          sync.Once
-	rotating      atomic.Bool
-	wg            sync.WaitGroup
+	bufWriter       *bufio.Writer
+	closing         atomic.Bool
+	currentSize     int64
+	file            *os.File
+	filename        string
+	flushDone       chan struct{}
+	flushInterval   time.Duration
+	flushTicker     *time.Ticker
+	maxAge          int
+	maxBackups      int
+	maxSize         int64
+	metrics         *Metrics
+	metricsName     string
+	metricsRegistry *MetricsRegistry
+	mutex           sync.Mutex
+	once            sync.Once
+	rotating        atomic.Bool
+	wg              sync.WaitGroup
 }
 
 // Публичные конструкторы
@@ -71,9 +75,13 @@ func NewSinkFile(filename string, params ...fileParams) (*SinkFile, error) {
 		maxAge:        30,
 		maxBackups:    10,
 		maxSize:       100 * 1024 * 1024,
+		metrics:       defaultMetrics,
 	}
 	for _, param := range params {
 		param(sinkFile)
+	}
+	if sinkFile.metricsRegistry != nil && sinkFile.metricsName != "" {
+		sinkFile.metricsRegistry.Register(sinkFile.metricsName, sinkFile.metrics)
 	}
 	if sinkFile.flushInterval > 0 {
 		sinkFile.flushDone = make(chan struct{})
@@ -108,11 +116,31 @@ func WithFileMaxSize(sizeMB int) fileParams {
 		sinkFile.maxSize = int64(sizeMB) * 1024 * 1024
 	}
 }
+func WithFileMetrics(metrics *Metrics) fileParams {
+	return func(sinkFile *SinkFile) {
+		if metrics != nil {
+			sinkFile.metrics = metrics
+		}
+	}
+}
+func WithFileMetricsName(metricsRegistry *MetricsRegistry, name string) fileParams {
+	return func(sinkFile *SinkFile) {
+		if name == "" {
+			return
+		}
+		if metricsRegistry == nil {
+			metricsRegistry = globalRegistry
+		}
+		sinkFile.metricsName = name
+		sinkFile.metricsRegistry = metricsRegistry
+	}
+}
 
 // Публичные методы
 func (sinkFile *SinkFile) Close() error {
 	var err error
 	sinkFile.once.Do(func() {
+		sinkFile.closing.Store(true)
 		sinkFile.mutex.Lock()
 		if sinkFile.flushTicker != nil {
 			sinkFile.flushTicker.Stop()
@@ -145,6 +173,9 @@ func (sinkFile *SinkFile) Close() error {
 			}
 			sinkFile.file = nil
 		}
+		if sinkFile.metricsRegistry != nil && sinkFile.metricsName != "" {
+			sinkFile.metricsRegistry.Unregister(sinkFile.metricsName)
+		}
 	})
 	return err
 }
@@ -157,31 +188,7 @@ func (sinkFile *SinkFile) Flush() error {
 	return sinkFile.bufWriter.Flush()
 }
 func (sinkFile *SinkFile) Write(p []byte) (int, error) {
-	sinkFile.mutex.Lock()
-	needRotate := sinkFile.currentSize+int64(len(p)) > sinkFile.maxSize
-	sinkFile.mutex.Unlock()
-	if needRotate {
-		if err := sinkFile.rotate(); err != nil {
-			return 0, err
-		}
-	}
-	for {
-		sinkFile.mutex.Lock()
-		if sinkFile.file != nil {
-			break
-		}
-		sinkFile.mutex.Unlock()
-		time.Sleep(time.Millisecond)
-	}
-	defer sinkFile.mutex.Unlock()
-	if sinkFile.bufWriter == nil {
-		return 0, fmt.Errorf("sink is closed")
-	}
-	n, err := sinkFile.bufWriter.Write(p)
-	if err == nil {
-		sinkFile.currentSize += int64(n)
-	}
-	return n, err
+	return sinkFile.writeData(p)
 }
 func (sinkFile *SinkFile) WriteWithAttributes(attributes writeAttributes, fields []Field) (int, error) {
 	bufData := dataPool.Get().(*bytes.Buffer)
@@ -195,32 +202,7 @@ func (sinkFile *SinkFile) WriteWithAttributes(attributes writeAttributes, fields
 	default:
 		return 0, fmt.Errorf("unsupported format: %v", attributes.typeFormat)
 	}
-	data := bufData.Bytes()
-	sinkFile.mutex.Lock()
-	needRotate := sinkFile.currentSize+int64(len(data)) > sinkFile.maxSize
-	sinkFile.mutex.Unlock()
-	if needRotate {
-		if err := sinkFile.rotate(); err != nil {
-			return 0, err
-		}
-	}
-	for {
-		sinkFile.mutex.Lock()
-		if sinkFile.file != nil {
-			break
-		}
-		sinkFile.mutex.Unlock()
-		time.Sleep(time.Millisecond)
-	}
-	defer sinkFile.mutex.Unlock()
-	if sinkFile.bufWriter == nil {
-		return 0, fmt.Errorf("sink is closed")
-	}
-	n, err := sinkFile.bufWriter.Write(data)
-	if err == nil {
-		sinkFile.currentSize += int64(n)
-	}
-	return n, err
+	return sinkFile.writeData(bufData.Bytes())
 }
 
 // Приватные структуры
@@ -348,6 +330,7 @@ func (sinkFile *SinkFile) rotate() error {
 	}
 	defer sinkFile.rotating.Store(false)
 	sinkFile.mutex.Lock()
+	defer sinkFile.mutex.Unlock()
 	if sinkFile.bufWriter != nil {
 		if err := sinkFile.bufWriter.Flush(); err != nil {
 			fmt.Fprintf(DefaultWriterErr, "ulog: failed to flush before rotation: %v\n", err)
@@ -357,20 +340,28 @@ func (sinkFile *SinkFile) rotate() error {
 		sinkFile.file.Close()
 		sinkFile.file = nil
 	}
-	sinkFile.mutex.Unlock()
-	timestamp := time.Now().Format("20060102-150405.000000")
-	backupName := sinkFile.getBackupName(timestamp)
+	backupName := sinkFile.getBackupName(time.Now().Format("20060102-150405.000000"))
 	if err := os.Rename(sinkFile.filename, backupName); err != nil {
 		newFile, openErr := os.OpenFile(sinkFile.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if openErr != nil {
 			return fmt.Errorf("rotate failed and reopen failed: %w (original: %v)", openErr, err)
 		}
-		sinkFile.mutex.Lock()
 		sinkFile.file = newFile
 		sinkFile.bufWriter = bufio.NewWriterSize(newFile, 64*1024)
-		sinkFile.currentSize = 0
-		sinkFile.mutex.Unlock()
+		if info, statErr := newFile.Stat(); statErr == nil {
+			sinkFile.currentSize = info.Size()
+		}
 		return err
+	}
+	newFile, err := os.OpenFile(sinkFile.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	sinkFile.file = newFile
+	sinkFile.bufWriter = bufio.NewWriterSize(newFile, 64*1024)
+	sinkFile.currentSize = 0
+	if sinkFile.closing.Load() {
+		return nil
 	}
 	sinkFile.wg.Add(1)
 	go func() {
@@ -378,22 +369,36 @@ func (sinkFile *SinkFile) rotate() error {
 		if err := sinkFile.compress(backupName); err != nil {
 			fmt.Fprintf(DefaultWriterErr, "failed to compress %s: %v\n", backupName, err)
 		}
-	}()
-	newFile, err := os.OpenFile(sinkFile.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	sinkFile.mutex.Lock()
-	sinkFile.file = newFile
-	sinkFile.bufWriter = bufio.NewWriterSize(newFile, 64*1024)
-	sinkFile.currentSize = 0
-	sinkFile.mutex.Unlock()
-	sinkFile.wg.Add(1)
-	go func() {
-		defer sinkFile.wg.Done()
 		if err := sinkFile.cleanup(); err != nil {
-			fmt.Fprintf(DefaultWriterErr, "failed to cleanup backups: %v\n", err)
+			fmt.Fprintf(DefaultWriterErr, "ulog: failed to cleanup backups: %v\n", err)
 		}
+
 	}()
 	return nil
+}
+func (sinkFile *SinkFile) writeData(data []byte) (int, error) {
+	sinkFile.mutex.Lock()
+	needRotate := sinkFile.currentSize+int64(len(data)) > sinkFile.maxSize
+	sinkFile.mutex.Unlock()
+	if needRotate {
+		if err := sinkFile.rotate(); err != nil {
+			sinkFile.metrics.incFailed()
+			return 0, err
+		}
+	}
+	sinkFile.mutex.Lock()
+	if sinkFile.file == nil || sinkFile.bufWriter == nil {
+		sinkFile.mutex.Unlock()
+		return 0, fmt.Errorf("sink is closed")
+	}
+	n, err := sinkFile.bufWriter.Write(data)
+	if err == nil {
+		sinkFile.currentSize += int64(n)
+		sinkFile.metrics.incSent()
+		sinkFile.metrics.addSentBytes(int64(n))
+	} else {
+		sinkFile.metrics.incFailed()
+	}
+	sinkFile.mutex.Unlock()
+	return n, err
 }

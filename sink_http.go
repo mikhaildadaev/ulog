@@ -61,12 +61,15 @@ type SinkHttp struct {
 	formatter                    func(attributes writeAttributes, fields []Field) ([]byte, error)
 	headers                      map[string]string
 	method                       string
+	metrics                      *Metrics
+	metricsName                  string
+	metricsRegistry              *MetricsRegistry
 	mutex                        sync.Mutex
 	once                         sync.Once
 	retryBackoff                 time.Duration
 	retryMax                     int
 	sampleCounter                atomic.Int64
-	sampleRate                   int32
+	sampleRate                   atomic.Int32
 	sampleWindow                 time.Duration
 	sampleWindowStart            atomic.Int64
 	wg                           sync.WaitGroup
@@ -97,14 +100,16 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 		endPoint:          endPoint,
 		filterData:        TypeData(defaultType),
 		filterLevel:       LevelError,
-		formatter:         defaultformatter,
+		formatter:         defaultFormatter,
 		headers:           make(map[string]string),
 		method:            "POST",
+		metrics:           defaultMetrics,
 		retryBackoff:      time.Second,
 		retryMax:          0,
 	}
 	sinkHttp.circuitState.Store(circuitStateClosed)
 	sinkHttp.circuitFailures.Store(0)
+	sinkHttp.sampleRate.Store(1)
 	sinkHttp.wg.Add(1)
 	go func() {
 		defer sinkHttp.wg.Done()
@@ -113,11 +118,15 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 	for _, param := range params {
 		param(sinkHttp)
 	}
+	if sinkHttp.metricsRegistry != nil && sinkHttp.metricsName != "" {
+		sinkHttp.metricsRegistry.Register(sinkHttp.metricsName, sinkHttp.metrics)
+	}
 	if sinkHttp.dedupWindow > 0 {
 		sinkHttp.wg.Add(1)
+		stopChan := sinkHttp.dedupStopChan
 		go func() {
 			defer sinkHttp.wg.Done()
-			sinkHttp.cleanupDedupCache()
+			sinkHttp.cleanupDedupCache(stopChan)
 		}()
 	}
 	if sinkHttp.circuitEnabled {
@@ -161,6 +170,7 @@ func WithHttpCircuitBreaker(maxFailures int, timeout time.Duration) httpParams {
 		sinkHttp.circuitEnabled = true
 		sinkHttp.circuitMaxFailures = maxFailures
 		sinkHttp.circuitState.Store(circuitStateClosed)
+		sinkHttp.metrics.setCircuitState(circuitStateClosed)
 		sinkHttp.circuitTimeout = timeout
 		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
 		sinkHttp.circuitHalfOpenProbeStart.Store(0)
@@ -198,6 +208,7 @@ func WithHttpDisabledCircuit() httpParams {
 		defer sinkHttp.circuitMutex.Unlock()
 		sinkHttp.circuitEnabled = false
 		sinkHttp.circuitState.Store(circuitStateClosed)
+		sinkHttp.metrics.setCircuitState(circuitStateClosed)
 		sinkHttp.circuitFailures.Store(0)
 		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
 		sinkHttp.circuitHalfOpenProbeStart.Store(0)
@@ -235,6 +246,25 @@ func WithHttpMethod(method string) httpParams {
 		sinkHttp.method = method
 	}
 }
+func WithHttpMetrics(metrics *Metrics) httpParams {
+	return func(sinkHttp *SinkHttp) {
+		if metrics != nil {
+			sinkHttp.metrics = metrics
+		}
+	}
+}
+func WithHttpMetricsName(metricsRegistry *MetricsRegistry, name string) httpParams {
+	return func(sinkHttp *SinkHttp) {
+		if name == "" {
+			return
+		}
+		if metricsRegistry == nil {
+			metricsRegistry = globalRegistry
+		}
+		sinkHttp.metricsName = name
+		sinkHttp.metricsRegistry = metricsRegistry
+	}
+}
 func WithHttpRetry(maxRetries int, backoff time.Duration) httpParams {
 	return func(sinkHttp *SinkHttp) {
 		sinkHttp.retryMax = maxRetries
@@ -243,8 +273,8 @@ func WithHttpRetry(maxRetries int, backoff time.Duration) httpParams {
 }
 func WithHttpSampleRate(rate int32) httpParams {
 	return func(sinkHttp *SinkHttp) {
-		sinkHttp.sampleRate = rate
 		sinkHttp.sampleCounter.Store(0)
+		sinkHttp.sampleRate.Store(rate)
 		if sinkHttp.sampleWindow > 0 {
 			sinkHttp.sampleWindowStart.Store(time.Now().UnixNano())
 		}
@@ -315,11 +345,19 @@ func (sinkHttp *SinkHttp) Close() error {
 			fmt.Fprintf(DefaultWriterErr, "ulog: SinkHttp.Close() timeout waiting for wg\n")
 		}
 		sinkHttp.client.CloseIdleConnections()
+		if sinkHttp.metricsRegistry != nil && sinkHttp.metricsName != "" {
+			sinkHttp.metricsRegistry.Unregister(sinkHttp.metricsName)
+		}
 	})
 	return err
 }
 func (sinkHttp *SinkHttp) Write(p []byte) (n int, err error) {
-	return sinkHttp.sendWithRetry(p)
+	n, err = sinkHttp.sendWithRetry(p)
+	if err == nil {
+		sinkHttp.metrics.incSent()
+		sinkHttp.metrics.addSentBytes(int64(len(p)))
+	}
+	return n, err
 }
 func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
 	sinkHttp.mutex.Lock()
@@ -332,15 +370,20 @@ func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields
 		return 0, nil
 	}
 	if attributes.typeData != sinkHttp.filterData && sinkHttp.filterData > TypeData(defaultType) {
+		sinkHttp.metrics.incFilteredData()
 		return 0, nil
 	}
 	if attributes.typeLevel != LevelError && attributes.typeLevel != LevelFatal {
 		if !sinkHttp.shouldSample() {
+			sinkHttp.metrics.incSampledOut()
 			return 0, nil
 		}
+		sinkHttp.metrics.incSampled()
 		if sinkHttp.isDuplicate(fields) {
+			sinkHttp.metrics.incDedupHits()
 			return 0, nil
 		}
+		sinkHttp.metrics.incDedupMisses()
 	}
 	body, err := sinkHttp.formatter(attributes, fields)
 	if err != nil {
@@ -350,10 +393,12 @@ func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields
 		sinkHttp.batchMutex.Lock()
 		const maxBatchBufferSize = 10000
 		if len(sinkHttp.batchBuffer) >= maxBatchBufferSize {
+			fmt.Fprintf(DefaultWriterErr, "ulog: batch buffer full, dropping oldest entry\n")
 			sinkHttp.batchBuffer = sinkHttp.batchBuffer[1:]
 		}
 		sinkHttp.batchBuffer = append(sinkHttp.batchBuffer, body)
 		needFlush := len(sinkHttp.batchBuffer) >= sinkHttp.batchSize
+		sinkHttp.metrics.setBatchBufferSize(int64(len(sinkHttp.batchBuffer)))
 		sinkHttp.batchMutex.Unlock()
 		if needFlush {
 			select {
@@ -363,7 +408,13 @@ func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields
 		}
 		return len(body), nil
 	}
-	return sinkHttp.sendWithRetry(body)
+	n, err = sinkHttp.sendWithRetry(body)
+	if err == nil {
+		sinkHttp.metrics.incSent()
+		sinkHttp.metrics.addSentBytes(int64(len(body)))
+	}
+	return n, err
+
 }
 
 // Приватные константы
@@ -410,7 +461,7 @@ type rateLimitError struct {
 type httpParams func(*SinkHttp)
 
 // Приватные функции
-func defaultformatter(attributes writeAttributes, fields []Field) ([]byte, error) {
+func defaultFormatter(attributes writeAttributes, fields []Field) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	formatJson(buf, attributes, fields)
 	return buf.Bytes(), nil
@@ -464,6 +515,7 @@ func (sinkHttp *SinkHttp) circuitAllow() bool {
 			return false
 		}
 		sinkHttp.circuitState.Store(circuitStateHalfOpen)
+		sinkHttp.metrics.setCircuitState(circuitStateHalfOpen)
 		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
 		sinkHttp.circuitHalfOpenProbeStart.Store(0)
 		allowed := sinkHttp.circuitHalfOpenProbeInFlight.CompareAndSwap(false, true)
@@ -548,6 +600,8 @@ func (sinkHttp *SinkHttp) circuitRecord(success bool) {
 				if sinkHttp.circuitState.Load() == circuitStateClosed {
 					sinkHttp.circuitState.Store(circuitStateOpen)
 					sinkHttp.circuitFailures.Store(0)
+					sinkHttp.metrics.incCircuitOpens()
+					sinkHttp.metrics.setCircuitState(circuitStateOpen)
 				}
 				sinkHttp.circuitMutex.Unlock()
 			}
@@ -569,17 +623,18 @@ func (sinkHttp *SinkHttp) circuitRecord(success bool) {
 		if success {
 			sinkHttp.circuitState.Store(circuitStateClosed)
 			sinkHttp.circuitFailures.Store(0)
+			sinkHttp.metrics.incCircuitCloses()
+			sinkHttp.metrics.setCircuitState(circuitStateClosed)
 		} else {
 			sinkHttp.circuitState.Store(circuitStateOpen)
 			sinkHttp.circuitLastFailure.Store(time.Now().UnixNano())
+			sinkHttp.metrics.incCircuitOpens()
+			sinkHttp.metrics.setCircuitState(circuitStateOpen)
 		}
 	case circuitStateOpen:
 	}
 }
-func (sinkHttp *SinkHttp) cleanupDedupCache() {
-	sinkHttp.mutex.Lock()
-	dedupStopChan := sinkHttp.dedupStopChan
-	sinkHttp.mutex.Unlock()
+func (sinkHttp *SinkHttp) cleanupDedupCache(stopChan chan struct{}) {
 	ttlInterval := sinkHttp.dedupWindow / 10
 	if ttlInterval < 100*time.Millisecond {
 		ttlInterval = 100 * time.Millisecond
@@ -598,7 +653,7 @@ func (sinkHttp *SinkHttp) cleanupDedupCache() {
 			sinkHttp.evictDedupTTL()
 		case <-sizeTicker.C:
 			sinkHttp.evictDedupSize()
-		case <-dedupStopChan:
+		case <-stopChan:
 			return
 		}
 	}
@@ -611,6 +666,8 @@ func (sinkHttp *SinkHttp) evictDedupTTL() {
 		if now.Sub(value.(time.Time)) > sinkHttp.dedupWindow {
 			if _, loaded := sinkHttp.dedupCache.LoadAndDelete(key); loaded {
 				sinkHttp.dedupCacheCount.Add(-1)
+				sinkHttp.metrics.incDedupEvictions()
+				sinkHttp.metrics.setDedupCacheSize(sinkHttp.dedupCacheCount.Load())
 			}
 		}
 		return true
@@ -645,6 +702,8 @@ func (sinkHttp *SinkHttp) evictDedupSize() {
 	for i := int64(0); i < remove; i++ {
 		if _, loaded := sinkHttp.dedupCache.LoadAndDelete(entries[i].key); loaded {
 			sinkHttp.dedupCacheCount.Add(-1)
+			sinkHttp.metrics.incDedupEvictions()
+			sinkHttp.metrics.setDedupCacheSize(sinkHttp.dedupCacheCount.Load())
 		}
 	}
 }
@@ -657,7 +716,12 @@ func (sinkHttp *SinkHttp) flush() error {
 	batch := make([][]byte, len(sinkHttp.batchBuffer))
 	copy(batch, sinkHttp.batchBuffer)
 	sinkHttp.batchBuffer = sinkHttp.batchBuffer[:0]
+	sinkHttp.metrics.setBatchBufferSize(0)
 	sinkHttp.batchMutex.Unlock()
+	sinkHttp.metrics.incBatchFlushes()
+	sinkHttp.metrics.addBatchSizeTotal(int64(len(batch)))
+	atomicMaxInt64(&sinkHttp.metrics.batchSizeMax, int64(len(batch)))
+	atomicMinInt64(&sinkHttp.metrics.batchSizeMin, int64(len(batch)))
 	var body []byte
 	if len(batch) == 1 {
 		body = bytes.TrimRight(batch[0], "\n")
@@ -668,11 +732,15 @@ func (sinkHttp *SinkHttp) flush() error {
 		}
 		body = bytes.Join(parts, []byte{'\n'})
 	}
-	_, err := sinkHttp.sendWithRetry(body)
-	return err
+	if _, err := sinkHttp.sendWithRetry(body); err != nil {
+		return err
+	}
+	sinkHttp.metrics.incSentN(int64(len(batch)))
+	sinkHttp.metrics.addSentBytes(int64(len(body)))
+	return nil
 }
 func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
-	if sinkHttp.dedupWindow <= 0 {
+	if sinkHttp.dedupWindow <= 0 || len(fields) == 0 {
 		return false
 	}
 	hash := sinkHttp.hashFields(fields)
@@ -683,6 +751,7 @@ func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
 	}
 	if _, loaded := sinkHttp.dedupCache.LoadOrStore(hash, time.Now()); !loaded {
 		sinkHttp.dedupCacheCount.Add(1)
+		sinkHttp.metrics.setDedupCacheSize(sinkHttp.dedupCacheCount.Load())
 	}
 	return false
 }
@@ -794,6 +863,7 @@ func (sinkHttp *SinkHttp) sendWithRetry(body []byte) (n int, err error) {
 	var lastErr error
 	for i := 0; i <= sinkHttp.retryMax; i++ {
 		if !sinkHttp.circuitAllow() {
+			sinkHttp.metrics.incCircuitBlocked()
 			return 0, fmt.Errorf("circuit breaker is open")
 		}
 		var sendErr error
@@ -810,9 +880,15 @@ func (sinkHttp *SinkHttp) sendWithRetry(body []byte) (n int, err error) {
 			return len(body), nil
 		}
 		lastErr = sendErr
+		sinkHttp.metrics.incFailed()
+		if _, ok := sendErr.(*rateLimitError); ok {
+			sinkHttp.metrics.incRateLimited()
+		}
 		if i == sinkHttp.retryMax {
 			break
 		}
+
+		sinkHttp.metrics.incRetried()
 		var sleepDuration time.Duration
 		if rateErr, ok := sendErr.(*rateLimitError); ok {
 			sleepDuration = rateErr.retryAfter
@@ -823,12 +899,17 @@ func (sinkHttp *SinkHttp) sendWithRetry(body []byte) (n int, err error) {
 			}
 			sleepDuration = sinkHttp.retryBackoff * time.Duration(1<<shift)
 		}
+		const maxBackoffSleep = 30 * time.Second
+		if sleepDuration > maxBackoffSleep {
+			sleepDuration = maxBackoffSleep
+		}
 		time.Sleep(sleepDuration)
 	}
 	return 0, fmt.Errorf("failed after %d retries: %w", sinkHttp.retryMax, lastErr)
 }
 func (sinkHttp *SinkHttp) shouldSample() bool {
-	if sinkHttp.sampleRate <= 1 {
+	rate := sinkHttp.sampleRate.Load()
+	if rate <= 1 {
 		return true
 	}
 	if sinkHttp.sampleWindow > 0 {
@@ -841,7 +922,7 @@ func (sinkHttp *SinkHttp) shouldSample() bool {
 		}
 	}
 	counter := sinkHttp.sampleCounter.Add(1)
-	return counter%int64(sinkHttp.sampleRate) == 0
+	return counter%int64(rate) == 0
 }
 func (rateLimitError *rateLimitError) Error() string {
 	return fmt.Sprintf("rate limited, retry after %v", rateLimitError.retryAfter)
