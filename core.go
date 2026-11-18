@@ -161,9 +161,10 @@ func GetVersion() string {
 // Публичные конструкторы
 func NewTelemetry(options ...telemetryOptions) Telemetry {
 	universalTelemetry := &universalTelemetry{
-		mode:   defaultMode,
-		theme:  getDefaultTheme(),
-		writer: DefaultWriterOut,
+		metrics: defaultMetrics,
+		mode:    defaultMode,
+		theme:   getDefaultTheme(),
+		writer:  DefaultWriterOut,
 	}
 	universalTelemetry.format.Store(int32(defaultFormat))
 	universalTelemetry.level.Store(int32(getDefaultLevel()))
@@ -356,6 +357,17 @@ func WithLevel(level TypeLevel) telemetryOptions {
 		universalTelemetry.level.Store(int32(level))
 	}
 }
+func WithMetrics(metrics *Metrics) telemetryOptions {
+	return func(universalTelemetry *universalTelemetry) {
+		if metrics == nil {
+			return
+		}
+		universalTelemetry.metrics = metrics
+		if asyncWriter, ok := universalTelemetry.writer.(*asyncWriter); ok {
+			asyncWriter.metrics = metrics
+		}
+	}
+}
 func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) telemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
 		switch mode {
@@ -365,7 +377,7 @@ func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) telemetryOptio
 				size = bufferSize[0]
 			}
 			universalTelemetry.mode = ModeAsync
-			universalTelemetry.writer = newAsyncWriter(writer, size)
+			universalTelemetry.writer = newAsyncWriter(writer, size, universalTelemetry.metrics)
 		case ModeSync:
 			universalTelemetry.mode = ModeSync
 			universalTelemetry.writer = writer
@@ -392,6 +404,9 @@ func (asyncWriter *asyncWriter) Close() error {
 				err = fmt.Errorf("ulog: panic during asyncWriter.Close(): %v", r)
 			}
 		}()
+		asyncWriter.mutex.Lock()
+		asyncWriter.closed = true
+		asyncWriter.mutex.Unlock()
 		close(asyncWriter.ch)
 		asyncWriter.wg.Wait()
 		if asyncWriter.writer != nil {
@@ -405,13 +420,22 @@ func (asyncWriter *asyncWriter) Close() error {
 func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 	buf := make([]byte, len(p))
 	copy(buf, p)
+	asyncWriter.mutex.RLock()
+	if asyncWriter.closed {
+		asyncWriter.mutex.RUnlock()
+		asyncWriter.metrics.incAsyncDropped()
+		return asyncWriter.fallbackWrite(buf)
+	}
 	asyncWriter.wg.Add(1)
 	select {
 	case asyncWriter.ch <- buf:
+		asyncWriter.mutex.RUnlock()
 		return len(p), nil
 	default:
 		asyncWriter.wg.Done()
-		return asyncWriter.writer.Write(buf)
+		asyncWriter.mutex.RUnlock()
+		asyncWriter.metrics.incAsyncDropped()
+		return asyncWriter.fallbackWrite(buf)
 	}
 }
 func (standardTelemetry *standardTelemetry) Write(p []byte) (n int, err error) {
@@ -604,7 +628,7 @@ func (universalTelemetry *universalTelemetry) SetMode(mode TypeMode, writer io.W
 			size = bufferSize[0]
 		}
 		universalTelemetry.mode = ModeAsync
-		universalTelemetry.writer = newAsyncWriter(writer, size)
+		universalTelemetry.writer = newAsyncWriter(writer, size, universalTelemetry.metrics)
 	case ModeSync:
 		universalTelemetry.mode = ModeSync
 		universalTelemetry.writer = writer
