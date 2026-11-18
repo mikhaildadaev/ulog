@@ -74,10 +74,13 @@ var ignoredErrors = [][]byte{
 
 // Приватные структуры
 type asyncWriter struct {
-	ch     chan []byte
-	once   sync.Once
-	wg     sync.WaitGroup
-	writer io.Writer
+	closed  bool
+	ch      chan []byte
+	metrics *Metrics
+	mutex   sync.RWMutex
+	once    sync.Once
+	wg      sync.WaitGroup
+	writer  io.Writer
 }
 type colorTheme struct {
 	caller      string
@@ -100,6 +103,7 @@ type universalTelemetry struct {
 	format    atomic.Int32
 	level     atomic.Int32
 	mode      TypeMode
+	metrics   *Metrics
 	mutex     sync.RWMutex
 	theme     colorTheme
 	writer    io.Writer
@@ -148,10 +152,14 @@ var (
 )
 
 // Приватные конструкторы
-func newAsyncWriter(writer io.Writer, bufferSize int) *asyncWriter {
+func newAsyncWriter(writer io.Writer, bufferSize int, metrics *Metrics) *asyncWriter {
+	if metrics == nil {
+		metrics = defaultMetrics
+	}
 	asyncWriter := &asyncWriter{
-		ch:     make(chan []byte, bufferSize),
-		writer: writer,
+		ch:      make(chan []byte, bufferSize),
+		metrics: metrics,
+		writer:  writer,
 	}
 	go asyncWriter.run()
 	return asyncWriter
@@ -558,12 +566,18 @@ func getDefaultTheme() colorTheme {
 }
 
 // Приватные методы
+func (asyncWriter *asyncWriter) fallbackWrite(buf []byte) (int, error) {
+	if asyncWriter.writer == nil {
+		fmt.Fprintf(DefaultWriterErr, "ulog: asyncWriter.writer is nil, dropping log message\n")
+		return 0, nil
+	}
+	n, err := asyncWriter.writer.Write(buf)
+	if err != nil {
+		fmt.Fprintf(DefaultWriterErr, "ulog: asyncWriter.write error: %v\n", err)
+	}
+	return n, err
+}
 func (asyncWriter *asyncWriter) run() {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Fprintf(DefaultWriterErr, "ulog: panic in asyncWriter.run(): %v\n", r)
-		}
-	}()
 	for buf := range asyncWriter.ch {
 		if asyncWriter.writer == nil {
 			fmt.Fprintf(DefaultWriterErr, "ulog: asyncWriter.writer is nil, dropping log message\n")
@@ -574,11 +588,20 @@ func (asyncWriter *asyncWriter) run() {
 			asyncWriter.wg.Done()
 			continue
 		}
-		_, err := asyncWriter.writer.Write(buf)
-		if err != nil {
-			fmt.Fprintf(DefaultWriterErr, "ulog: asyncWriter.write error: %v\n", err)
-		}
-		asyncWriter.wg.Done()
+		func() {
+			defer asyncWriter.wg.Done()
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						fmt.Fprintf(DefaultWriterErr, "ulog: panic in asyncWriter.run(): %v\n", r)
+					}
+				}()
+				_, err := asyncWriter.writer.Write(buf)
+				if err != nil {
+					fmt.Fprintf(DefaultWriterErr, "ulog: asyncWriter.write error: %v\n", err)
+				}
+			}()
+		}()
 	}
 }
 func (asyncWriter *asyncWriter) sync() error {
