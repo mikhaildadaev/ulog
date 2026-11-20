@@ -62,7 +62,7 @@ var (
 	defaultMode       = ModeSync
 	defaultType       = -1
 )
-var ignoredErrors = [][]byte{
+var defaultIgnoredErrors = [][]byte{
 	[]byte("EOF"),
 	[]byte("TLS handshake error"),
 	[]byte("connection refused"),
@@ -93,6 +93,7 @@ type colorTheme struct {
 	reset       string
 }
 type standardTelemetry struct {
+	ignored   [][]byte
 	level     atomic.Int32
 	mutex     sync.Mutex
 	telemetry Telemetry
@@ -115,7 +116,8 @@ type writeAttributes struct {
 	typeFormat TypeFormat
 	typeLevel  TypeLevel
 }
-type telemetryOptions func(*universalTelemetry)
+type standardTelemetryOptions func(*standardTelemetry)
+type universalTelemetryOptions func(*universalTelemetry)
 
 // Приватные переменные
 var (
@@ -564,6 +566,39 @@ func getDefaultTheme() colorTheme {
 	}
 	return themeDark
 }
+func newExtractor(keys ...string) ContextExtractor {
+	return func(ctx context.Context) []Field {
+		if ctx == nil {
+			return nil
+		}
+		fields := make([]Field, 0, len(keys))
+		for _, key := range keys {
+			if val := ctx.Value(key); val != nil {
+				switch v := val.(type) {
+				case string:
+					fields = append(fields, String(key, v))
+				case int:
+					fields = append(fields, Int(key, v))
+				case int64:
+					fields = append(fields, Int64(key, v))
+				case float32:
+					fields = append(fields, Float64(key, float64(v)))
+				case float64:
+					fields = append(fields, Float64(key, v))
+				case bool:
+					fields = append(fields, Bool(key, v))
+				case time.Time:
+					fields = append(fields, Time(key, v))
+				case time.Duration:
+					fields = append(fields, Duration(key, v))
+				default:
+					fields = append(fields, String(key, fmt.Sprintf("%v", v)))
+				}
+			}
+		}
+		return fields
+	}
+}
 
 // Приватные методы
 func (asyncWriter *asyncWriter) fallbackWrite(buf []byte) (int, error) {
@@ -604,13 +639,34 @@ func (asyncWriter *asyncWriter) run() {
 		}()
 	}
 }
+func (asyncWriter *asyncWriter) shutdown() {
+	asyncWriter.mutex.Lock()
+	if asyncWriter.closed {
+		asyncWriter.mutex.Unlock()
+		return
+	}
+	asyncWriter.closed = true
+	asyncWriter.mutex.Unlock()
+	close(asyncWriter.ch)
+	asyncWriter.wg.Wait()
+}
 func (asyncWriter *asyncWriter) sync() error {
 	asyncWriter.wg.Wait()
 	return nil
 }
 func (standardTelemetry *standardTelemetry) isIgnored(data []byte) bool {
-	for _, err := range ignoredErrors {
-		if bytes.Contains(data, err) {
+	ignored := standardTelemetry.ignored
+	if ignored == nil {
+		ignored = defaultIgnoredErrors
+	}
+	for _, pattern := range ignored {
+		if bytes.Equal(data, pattern) {
+			return true
+		}
+		if bytes.HasPrefix(data, pattern) {
+			return true
+		}
+		if len(data) > len(pattern)+2 && data[len(data)-len(pattern)-2] == ':' && data[len(data)-len(pattern)-1] == ' ' && bytes.Equal(data[len(data)-len(pattern):], pattern) {
 			return true
 		}
 	}
@@ -649,6 +705,9 @@ func (universalTelemetry *universalTelemetry) route(context context.Context, att
 	attributes.theme = universalTelemetry.theme
 	writer := universalTelemetry.writer
 	universalTelemetry.mutex.RUnlock()
+	if writer == nil {
+		return
+	}
 	if sinks, ok := writer.(SinkWriter); ok {
 		_, err := sinks.WriteWithAttributes(attributes, fields)
 		if err != nil {
