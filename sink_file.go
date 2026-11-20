@@ -342,6 +342,7 @@ func (sinkFile *SinkFile) rotate() error {
 	}
 	backupName := sinkFile.getBackupName(time.Now().Format("20060102-150405.000000"))
 	if err := os.Rename(sinkFile.filename, backupName); err != nil {
+		fmt.Fprintf(DefaultWriterErr, "ulog: rotate failed (%v), continuing in current file\n", err)
 		newFile, openErr := os.OpenFile(sinkFile.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if openErr != nil {
 			return fmt.Errorf("rotate failed and reopen failed: %w (original: %v)", openErr, err)
@@ -351,7 +352,7 @@ func (sinkFile *SinkFile) rotate() error {
 		if info, statErr := newFile.Stat(); statErr == nil {
 			sinkFile.currentSize = info.Size()
 		}
-		return err
+		return nil
 	}
 	newFile, err := os.OpenFile(sinkFile.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {

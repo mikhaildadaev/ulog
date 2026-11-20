@@ -21,36 +21,41 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 )
 
 // Публичные структуры
 type TeeSink struct {
 	closeErr  error
 	closeOnce sync.Once
-	mutex     sync.RWMutex
+	mutex     sync.Mutex
+	pointer   atomic.Pointer[[]Sink]
 	writers   []io.Writer
 }
 type Sink = io.Writer
 
 // Публичные конструкторы
 func NewTeeSink(writers ...Sink) *TeeSink {
-	return &TeeSink{
-		writers: writers,
-	}
+	teeSink := &TeeSink{}
+	teeSink.pointer.Store(&writers)
+	return teeSink
 }
 
 // Публичные методы
 func (teeSink *TeeSink) Add(sink Sink) {
 	teeSink.mutex.Lock()
 	defer teeSink.mutex.Unlock()
-	teeSink.writers = append(teeSink.writers, sink)
+	current := teeSink.snapshot()
+	next := make([]Sink, len(current)+1)
+	copy(next, current)
+	next[len(current)] = sink
+	teeSink.pointer.Store(&next)
 }
 func (teeSink *TeeSink) Close() error {
 	teeSink.closeOnce.Do(func() {
-		teeSink.mutex.Lock()
-		defer teeSink.mutex.Unlock()
+		writers := teeSink.snapshot()
 		var errors []error
-		for i, w := range teeSink.writers {
+		for i, w := range writers {
 			if closer, ok := w.(io.Closer); ok {
 				if err := closer.Close(); err != nil {
 					errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
@@ -64,33 +69,36 @@ func (teeSink *TeeSink) Close() error {
 	return teeSink.closeErr
 }
 func (teeSink *TeeSink) Len() int {
-	teeSink.mutex.RLock()
-	defer teeSink.mutex.RUnlock()
-	return len(teeSink.writers)
+	return len(teeSink.snapshot())
 }
 func (teeSink *TeeSink) Remove(index int) error {
 	teeSink.mutex.Lock()
 	defer teeSink.mutex.Unlock()
-	if index < 0 || index >= len(teeSink.writers) {
+	current := teeSink.snapshot()
+	if index < 0 || index >= len(current) {
 		return fmt.Errorf("index out of range: %d", index)
 	}
-	teeSink.writers = append(teeSink.writers[:index], teeSink.writers[index+1:]...)
+	next := make([]Sink, len(current)-1)
+	copy(next, current[:index])
+	copy(next[index:], current[index+1:])
+	teeSink.pointer.Store(&next)
 	return nil
 }
 func (teeSink *TeeSink) Replace(index int, sink Sink) error {
 	teeSink.mutex.Lock()
 	defer teeSink.mutex.Unlock()
-	if index < 0 || index >= len(teeSink.writers) {
+	current := teeSink.snapshot()
+	if index < 0 || index >= len(current) {
 		return fmt.Errorf("index out of range: %d", index)
 	}
-	teeSink.writers[index] = sink
+	next := make([]Sink, len(current))
+	copy(next, current)
+	next[index] = sink
+	teeSink.pointer.Store(&next)
 	return nil
 }
 func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
-	teeSink.mutex.RLock()
-	writers := make([]io.Writer, len(teeSink.writers))
-	copy(writers, teeSink.writers)
-	teeSink.mutex.RUnlock()
+	writers := teeSink.snapshot()
 	if len(writers) == 0 {
 		return 0, nil
 	}
@@ -106,10 +114,7 @@ func (teeSink *TeeSink) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 func (teeSink *TeeSink) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
-	teeSink.mutex.RLock()
-	writers := make([]io.Writer, len(teeSink.writers))
-	copy(writers, teeSink.writers)
-	teeSink.mutex.RUnlock()
+	writers := teeSink.snapshot()
 	if len(writers) == 0 {
 		return 0, nil
 	}
@@ -119,7 +124,12 @@ func (teeSink *TeeSink) WriteWithAttributes(attributes writeAttributes, fields [
 		if _, ok := writer.(SinkWriter); !ok {
 			buf = dataPool.Get().(*bytes.Buffer)
 			buf.Reset()
-			formatJson(buf, attributes, fields)
+			switch attributes.typeFormat {
+			case FormatText:
+				formatText(buf, attributes, fields)
+			default:
+				formatJson(buf, attributes, fields)
+			}
 			formatted = buf.Bytes()
 			break
 		}
@@ -153,4 +163,12 @@ func (teeSink *TeeSink) WriteWithAttributes(attributes writeAttributes, fields [
 		return total, fmt.Errorf("write errors: %v", errors)
 	}
 	return total, nil
+}
+
+// Приватные методы
+func (teeSink *TeeSink) snapshot() []Sink {
+	if snap := teeSink.pointer.Load(); snap != nil {
+		return *snap
+	}
+	return nil
 }

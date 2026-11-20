@@ -252,7 +252,7 @@ func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
 			if err != nil {
 				return nil, fmt.Errorf("invalid log data: %w", err)
 			}
-			now := time.Now().UnixNano()
+			now := fmt.Sprintf("%d", time.Now().UnixNano())
 			lokiData := LokiData{
 				ResourceLogs: []LokiResourceLogs{
 					{
@@ -266,12 +266,12 @@ func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
 										Attributes:           otlp.record,
 										Body:                 OTLPBody{StringValue: &data.message},
 										Flags:                data.flags,
-										ObservedTimeUnixNano: fmt.Sprintf("%d", now),
+										ObservedTimeUnixNano: now,
 										SeverityNumber:       getLevelNumber(attributes.typeLevel),
 										SeverityText:         getLevelText(attributes.typeLevel),
 										SpanID:               data.spanID,
 										TraceID:              data.traceID,
-										TimeUnixNano:         fmt.Sprintf("%d", now),
+										TimeUnixNano:         now,
 									},
 								},
 								Scope: OTLPScope{
