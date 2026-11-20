@@ -151,15 +151,14 @@ func GetAuthor() string {
 	return Author
 }
 func GetCopyright() string {
-	Copyright := fmt.Sprintf("Copyright © 2022-%d %s. All rights reserved.", time.Now().Year(), Author)
-	return Copyright
+	return fmt.Sprintf("Copyright © 2022-%d %s. Licensed under AGPL-3.0-or-later.", time.Now().Year(), Author)
 }
 func GetVersion() string {
 	return Version
 }
 
 // Публичные конструкторы
-func NewTelemetry(options ...telemetryOptions) Telemetry {
+func NewTelemetry(options ...universalTelemetryOptions) Telemetry {
 	universalTelemetry := &universalTelemetry{
 		metrics: defaultMetrics,
 		mode:    defaultMode,
@@ -173,11 +172,14 @@ func NewTelemetry(options ...telemetryOptions) Telemetry {
 	}
 	return universalTelemetry
 }
-func NewTelemetryLog(level TypeLevel, telemetry Telemetry) *log.Logger {
+func NewTelemetryLog(level TypeLevel, telemetry Telemetry, options ...standardTelemetryOptions) *log.Logger {
 	standardTelemetry := &standardTelemetry{
 		telemetry: telemetry,
 	}
 	standardTelemetry.level.Store(int32(level))
+	for _, option := range options {
+		option(standardTelemetry)
+	}
 	return log.New(standardTelemetry, "", 0)
 }
 func Bool(nameKey string, valueBool bool) Field {
@@ -312,52 +314,35 @@ func Times(nameKey string, valueTimes []time.Time) Field {
 }
 
 // Публичные функции
-func WithExtractor(keys ...string) telemetryOptions {
-	return func(universalTelemetry *universalTelemetry) {
-		universalTelemetry.extractor = func(ctx context.Context) []Field {
-			if ctx == nil {
-				return nil
-			}
-			fields := make([]Field, 0, len(keys))
-			for _, key := range keys {
-				if val := ctx.Value(key); val != nil {
-					switch v := val.(type) {
-					case string:
-						fields = append(fields, String(key, v))
-					case int:
-						fields = append(fields, Int(key, v))
-					case int64:
-						fields = append(fields, Int64(key, v))
-					case float32:
-						fields = append(fields, Float64(key, float64(v)))
-					case float64:
-						fields = append(fields, Float64(key, v))
-					case bool:
-						fields = append(fields, Bool(key, v))
-					case time.Time:
-						fields = append(fields, Time(key, v))
-					case time.Duration:
-						fields = append(fields, Duration(key, v))
-					default:
-						fields = append(fields, String(key, fmt.Sprintf("%v", v)))
-					}
-				}
-			}
-			return fields
+func WithIgnoredErrors(patterns ...string) standardTelemetryOptions {
+	return func(standardTelemetry *standardTelemetry) {
+		standardTelemetry.ignored = make([][]byte, len(patterns))
+		for i, p := range patterns {
+			standardTelemetry.ignored[i] = []byte(p)
 		}
 	}
 }
-func WithFormat(format TypeFormat) telemetryOptions {
+func WithoutIgnoredErrors() standardTelemetryOptions {
+	return func(standardTelemetry *standardTelemetry) {
+		standardTelemetry.ignored = [][]byte{}
+	}
+}
+func WithExtractor(keys ...string) universalTelemetryOptions {
+	return func(universalTelemetry *universalTelemetry) {
+		universalTelemetry.extractor = newExtractor(keys...)
+	}
+}
+func WithFormat(format TypeFormat) universalTelemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
 		universalTelemetry.format.Store(int32(format))
 	}
 }
-func WithLevel(level TypeLevel) telemetryOptions {
+func WithLevel(level TypeLevel) universalTelemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
 		universalTelemetry.level.Store(int32(level))
 	}
 }
-func WithMetrics(metrics *Metrics) telemetryOptions {
+func WithMetrics(metrics *Metrics) universalTelemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
 		if metrics == nil {
 			return
@@ -368,8 +353,11 @@ func WithMetrics(metrics *Metrics) telemetryOptions {
 		}
 	}
 }
-func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) telemetryOptions {
+func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) universalTelemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
+		if writer == nil {
+			writer = io.Discard
+		}
 		switch mode {
 		case ModeAsync:
 			size := defaultBufferSize
@@ -384,7 +372,7 @@ func WithMode(mode TypeMode, writer io.Writer, bufferSize ...int) telemetryOptio
 		}
 	}
 }
-func WithTheme(theme TypeTheme) telemetryOptions {
+func WithTheme(theme TypeTheme) universalTelemetryOptions {
 	return func(universalTelemetry *universalTelemetry) {
 		switch theme {
 		case ThemeDark:
@@ -404,11 +392,7 @@ func (asyncWriter *asyncWriter) Close() error {
 				err = fmt.Errorf("ulog: panic during asyncWriter.Close(): %v", r)
 			}
 		}()
-		asyncWriter.mutex.Lock()
-		asyncWriter.closed = true
-		asyncWriter.mutex.Unlock()
-		close(asyncWriter.ch)
-		asyncWriter.wg.Wait()
+		asyncWriter.shutdown()
 		if asyncWriter.writer != nil {
 			if closer, ok := asyncWriter.writer.(io.Closer); ok {
 				err = closer.Close()
@@ -421,19 +405,17 @@ func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 	buf := make([]byte, len(p))
 	copy(buf, p)
 	asyncWriter.mutex.RLock()
+	defer asyncWriter.mutex.RUnlock()
 	if asyncWriter.closed {
-		asyncWriter.mutex.RUnlock()
 		asyncWriter.metrics.incAsyncDropped()
 		return asyncWriter.fallbackWrite(buf)
 	}
 	asyncWriter.wg.Add(1)
 	select {
 	case asyncWriter.ch <- buf:
-		asyncWriter.mutex.RUnlock()
 		return len(p), nil
 	default:
 		asyncWriter.wg.Done()
-		asyncWriter.mutex.RUnlock()
 		asyncWriter.metrics.incAsyncDropped()
 		return asyncWriter.fallbackWrite(buf)
 	}
@@ -536,6 +518,9 @@ func (universalTelemetry *universalTelemetry) Fatal(typeData TypeData, fields ..
 			asyncWriter.sync()
 		}
 	}
+	if flusher, ok := writer.(interface{ Flush() error }); ok {
+		flusher.Flush()
+	}
 	osExit(1)
 }
 func (universalTelemetry *universalTelemetry) FatalWithContext(context context.Context, typeData TypeData, fields ...Field) {
@@ -553,6 +538,9 @@ func (universalTelemetry *universalTelemetry) FatalWithContext(context context.C
 		if asyncWriter, ok := writer.(*asyncWriter); ok {
 			asyncWriter.sync()
 		}
+	}
+	if flusher, ok := writer.(interface{ Flush() error }); ok {
+		flusher.Flush()
 	}
 	osExit(1)
 }
@@ -575,37 +563,7 @@ func (universalTelemetry *universalTelemetry) InfoWithContext(context context.Co
 func (universalTelemetry *universalTelemetry) SetExtractor(keys ...string) {
 	universalTelemetry.mutex.Lock()
 	defer universalTelemetry.mutex.Unlock()
-	universalTelemetry.extractor = func(ctx context.Context) []Field {
-		if ctx == nil {
-			return nil
-		}
-		fields := make([]Field, 0, len(keys))
-		for _, key := range keys {
-			if val := ctx.Value(key); val != nil {
-				switch v := val.(type) {
-				case string:
-					fields = append(fields, String(key, v))
-				case int:
-					fields = append(fields, Int(key, v))
-				case int64:
-					fields = append(fields, Int64(key, v))
-				case float32:
-					fields = append(fields, Float64(key, float64(v)))
-				case float64:
-					fields = append(fields, Float64(key, v))
-				case bool:
-					fields = append(fields, Bool(key, v))
-				case time.Time:
-					fields = append(fields, Time(key, v))
-				case time.Duration:
-					fields = append(fields, Duration(key, v))
-				default:
-					fields = append(fields, String(key, fmt.Sprintf("%v", v)))
-				}
-			}
-		}
-		return fields
-	}
+	universalTelemetry.extractor = newExtractor(keys...)
 }
 func (universalTelemetry *universalTelemetry) SetFormat(format TypeFormat) {
 	universalTelemetry.format.Store(int32(format))
@@ -618,8 +576,11 @@ func (universalTelemetry *universalTelemetry) SetMode(mode TypeMode, writer io.W
 	defer universalTelemetry.mutex.Unlock()
 	if universalTelemetry.mode == ModeAsync {
 		if asyncWriter, ok := universalTelemetry.writer.(*asyncWriter); ok {
-			asyncWriter.sync()
+			asyncWriter.shutdown()
 		}
+	}
+	if writer == nil {
+		writer = io.Discard
 	}
 	switch mode {
 	case ModeAsync:
