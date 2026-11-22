@@ -405,17 +405,19 @@ func (asyncWriter *asyncWriter) Write(p []byte) (n int, err error) {
 	buf := make([]byte, len(p))
 	copy(buf, p)
 	asyncWriter.mutex.RLock()
-	defer asyncWriter.mutex.RUnlock()
 	if asyncWriter.closed {
+		asyncWriter.mutex.RUnlock()
 		asyncWriter.metrics.incAsyncDropped()
 		return asyncWriter.fallbackWrite(buf)
 	}
 	asyncWriter.wg.Add(1)
 	select {
 	case asyncWriter.ch <- buf:
+		asyncWriter.mutex.RUnlock()
 		return len(p), nil
 	default:
 		asyncWriter.wg.Done()
+		asyncWriter.mutex.RUnlock()
 		asyncWriter.metrics.incAsyncDropped()
 		return asyncWriter.fallbackWrite(buf)
 	}
@@ -448,7 +450,16 @@ func (standardTelemetry *standardTelemetry) Write(p []byte) (n int, err error) {
 	case LevelError:
 		standardTelemetry.telemetry.Error(DataLog, String("message", message))
 	case LevelFatal:
-		standardTelemetry.telemetry.Fatal(DataLog, String("message", message))
+		if universal, ok := standardTelemetry.telemetry.(*universalTelemetry); ok {
+			attributes := writeAttributes{
+				typeData:   DataLog,
+				typeFormat: TypeFormat(universal.format.Load()),
+				typeLevel:  LevelFatal,
+			}
+			universal.route(context.Background(), attributes, []Field{String("message", message)})
+		} else {
+			standardTelemetry.telemetry.Fatal(DataLog, String("message", message))
+		}
 	}
 	return len(p), nil
 }
