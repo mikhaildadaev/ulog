@@ -68,6 +68,21 @@ func (teeSink *TeeSink) Close() error {
 	})
 	return teeSink.closeErr
 }
+func (teeSink *TeeSink) Flush() error {
+	writers := teeSink.snapshot()
+	var errors []error
+	for i, w := range writers {
+		if flusher, ok := w.(interface{ Flush() error }); ok {
+			if err := flusher.Flush(); err != nil {
+				errors = append(errors, fmt.Errorf("tee[%d]: %w", i, err))
+			}
+		}
+	}
+	if len(errors) > 0 {
+		return fmt.Errorf("flush errors: %v", errors)
+	}
+	return nil
+}
 func (teeSink *TeeSink) Len() int {
 	return len(teeSink.snapshot())
 }
