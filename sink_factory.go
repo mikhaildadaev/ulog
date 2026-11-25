@@ -217,6 +217,7 @@ func NewSinkDiscord(endPoint, userName, avatarURL string, tts bool, params ...ht
 func NewSinkKafka(endPoint string, params ...httpParams) *SinkKafka {
 	return NewSinkHttp(endPoint, append([]httpParams{
 		WithHttpBatch(100, 5*time.Second),
+		WithHttpBatchMerger(mergeKafkaBatch),
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelInfo),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
@@ -244,6 +245,8 @@ func NewSinkKafka(endPoint string, params ...httpParams) *SinkKafka {
 }
 func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
 	return NewSinkHttp(endPoint, append([]httpParams{
+		WithHttpBatch(100, 5*time.Second),
+		WithHttpBatchMerger(mergeLokiBatch),
 		WithHttpFilterData(DataLog),
 		WithHttpFilterLevel(LevelInfo),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
@@ -290,6 +293,8 @@ func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
 }
 func NewSinkPrometheus(endPoint string, params ...httpParams) *SinkPrometheus {
 	return NewSinkHttp(endPoint, append([]httpParams{
+		WithHttpBatch(100, 5*time.Second),
+		WithHttpBatchMerger(mergePrometheusBatch),
 		WithHttpFilterData(DataMetric),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			otlp := formatOpenTelemetryAttributes(fields, skipKeysPrometheus...)
@@ -406,6 +411,8 @@ func NewSinkTelegram(endPoint, chatID string, params ...httpParams) *SinkTelegra
 }
 func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 	return NewSinkHttp(endPoint, append([]httpParams{
+		WithHttpBatch(100, 5*time.Second),
+		WithHttpBatchMerger(mergeTempoBatch),
 		WithHttpFilterData(DataTrace),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			otlp := formatOpenTelemetryAttributes(fields, skipKeysTempo...)
@@ -1037,6 +1044,66 @@ func getUniversalFieldValue(field Field) any {
 		return extractor(field)
 	}
 	return nil
+}
+func mergeKafkaBatch(parts [][]byte) ([]byte, error) {
+	if len(parts) == 0 {
+		return nil, nil
+	}
+	out := struct {
+		Records []json.RawMessage `json:"records"`
+	}{}
+	for _, part := range parts {
+		var rec struct {
+			Records []json.RawMessage `json:"records"`
+		}
+		if err := json.Unmarshal(part, &rec); err != nil {
+			return nil, fmt.Errorf("invalid kafka batch part: %w", err)
+		}
+		out.Records = append(out.Records, rec.Records...)
+	}
+	return json.Marshal(out)
+}
+func mergeLokiBatch(parts [][]byte) ([]byte, error) {
+	if len(parts) == 0 {
+		return nil, nil
+	}
+	out := LokiData{}
+	for _, part := range parts {
+		var data LokiData
+		if err := json.Unmarshal(part, &data); err != nil {
+			return nil, fmt.Errorf("invalid loki batch part: %w", err)
+		}
+		out.ResourceLogs = append(out.ResourceLogs, data.ResourceLogs...)
+	}
+	return json.Marshal(out)
+}
+func mergePrometheusBatch(parts [][]byte) ([]byte, error) {
+	if len(parts) == 0 {
+		return nil, nil
+	}
+	out := PrometheusData{}
+	for _, part := range parts {
+		var data PrometheusData
+		if err := json.Unmarshal(part, &data); err != nil {
+			return nil, fmt.Errorf("invalid prometheus batch part: %w", err)
+		}
+		out.ResourceMetrics = append(out.ResourceMetrics, data.ResourceMetrics...)
+	}
+	return json.Marshal(out)
+}
+func mergeTempoBatch(parts [][]byte) ([]byte, error) {
+	if len(parts) == 0 {
+		return nil, nil
+	}
+	out := TempoData{}
+	for _, part := range parts {
+		var data TempoData
+		if err := json.Unmarshal(part, &data); err != nil {
+			return nil, fmt.Errorf("invalid tempo batch part: %w", err)
+		}
+		out.ResourceSpans = append(out.ResourceSpans, data.ResourceSpans...)
+	}
+	return json.Marshal(out)
 }
 func normalizeTraceID(value string) (string, error) {
 	v := strings.ToLower(strings.ReplaceAll(value, "-", ""))

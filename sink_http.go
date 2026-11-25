@@ -34,6 +34,7 @@ type SinkHttp struct {
 	batchBuffer                  [][]byte
 	batchChan                    chan struct{}
 	batchFlushChan               chan struct{}
+	batchMerger                  func([][]byte) ([]byte, error)
 	batchMutex                   sync.Mutex
 	batchSize                    int
 	batchTicker                  *time.Ticker
@@ -98,8 +99,8 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 		dedupCacheMaxSize: 100000,
 		dedupStopChan:     make(chan struct{}),
 		endPoint:          endPoint,
-		filterData:        TypeData(defaultType),
-		filterLevel:       LevelError,
+		filterData:        defaultType,
+		filterLevel:       defaultLevel,
 		formatter:         defaultFormatter,
 		headers:           make(map[string]string),
 		method:            "POST",
@@ -163,6 +164,11 @@ func WithHttpBatch(size int, flushInterval time.Duration) httpParams {
 		case <-sinkHttp.batchChan:
 			newTicker.Stop()
 		}
+	}
+}
+func WithHttpBatchMerger(merger func(batch [][]byte) ([]byte, error)) httpParams {
+	return func(sinkHttp *SinkHttp) {
+		sinkHttp.batchMerger = merger
 	}
 }
 func WithHttpCircuitBreaker(maxFailures int, timeout time.Duration) httpParams {
@@ -369,7 +375,7 @@ func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields
 	if attributes.typeLevel < sinkHttp.filterLevel {
 		return 0, nil
 	}
-	if attributes.typeData != sinkHttp.filterData && sinkHttp.filterData > TypeData(defaultType) {
+	if attributes.typeData != sinkHttp.filterData {
 		sinkHttp.metrics.incFilteredData()
 		return 0, nil
 	}
@@ -379,7 +385,7 @@ func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields
 			return 0, nil
 		}
 		sinkHttp.metrics.incSampled()
-		if sinkHttp.isDuplicate(fields) {
+		if sinkHttp.isDuplicate(attributes.typeData, attributes.typeLevel, fields) {
 			sinkHttp.metrics.incDedupHits()
 			return 0, nil
 		}
@@ -475,7 +481,7 @@ func (sinkHttp *SinkHttp) batchLoop() {
 	for {
 		select {
 		case <-sinkHttp.batchChan:
-			sinkHttp.flush()
+			sinkHttp.flushLogged()
 			return
 		default:
 		}
@@ -485,13 +491,13 @@ func (sinkHttp *SinkHttp) batchLoop() {
 		}
 		select {
 		case <-tickerC:
-			sinkHttp.flush()
+			sinkHttp.flushLogged()
 		case <-sinkHttp.batchFlushChan:
-			sinkHttp.flush()
+			sinkHttp.flushLogged()
 		case newTicker := <-sinkHttp.batchTickerUpdate:
 			ticker = newTicker
 		case <-sinkHttp.batchChan:
-			sinkHttp.flush()
+			sinkHttp.flushLogged()
 			return
 		}
 	}
@@ -723,7 +729,14 @@ func (sinkHttp *SinkHttp) flush() error {
 	atomicMaxInt64(&sinkHttp.metrics.batchSizeMax, int64(len(batch)))
 	atomicMinInt64(&sinkHttp.metrics.batchSizeMin, int64(len(batch)))
 	var body []byte
-	if len(batch) == 1 {
+	if sinkHttp.batchMerger != nil {
+		merged, err := sinkHttp.batchMerger(batch)
+		if err != nil {
+			sinkHttp.metrics.incBatchMergeFailed()
+			return err
+		}
+		body = merged
+	} else if len(batch) == 1 {
 		body = bytes.TrimRight(batch[0], "\n")
 	} else {
 		parts := make([][]byte, len(batch))
@@ -739,11 +752,16 @@ func (sinkHttp *SinkHttp) flush() error {
 	sinkHttp.metrics.addSentBytes(int64(len(body)))
 	return nil
 }
-func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
+func (sinkHttp *SinkHttp) flushLogged() {
+	if err := sinkHttp.flush(); err != nil {
+		fmt.Fprintf(DefaultWriterErr, "ulog: SinkHttp flush failed: %v\n", err)
+	}
+}
+func (sinkHttp *SinkHttp) isDuplicate(typeData TypeData, typeLevel TypeLevel, fields []Field) bool {
 	if sinkHttp.dedupWindow <= 0 || len(fields) == 0 {
 		return false
 	}
-	hash := sinkHttp.hashFields(fields)
+	hash := sinkHttp.hashFields(typeData, typeLevel, fields)
 	if lastSeen, ok := sinkHttp.dedupCache.Load(hash); ok {
 		if time.Since(lastSeen.(time.Time)) < sinkHttp.dedupWindow {
 			return true
@@ -755,54 +773,63 @@ func (sinkHttp *SinkHttp) isDuplicate(fields []Field) bool {
 	}
 	return false
 }
-func (sinkHttp *SinkHttp) hashFields(fields []Field) uint64 {
+func (sinkHttp *SinkHttp) hashFields(typeData TypeData, typeLevel TypeLevel, fields []Field) uint64 {
+	sorted := make([]Field, len(fields))
+	copy(sorted, fields)
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].nameKey != sorted[j].nameKey {
+			return sorted[i].nameKey < sorted[j].nameKey
+		}
+		return sorted[i].typeValue < sorted[j].typeValue
+	})
 	hash := fnv.New64a()
+	hash.Write([]byte{byte(typeData), byte(typeLevel)})
 	var buf [32]byte
-	for _, f := range fields {
-		hash.Write([]byte(f.nameKey))
+	for _, v := range sorted {
+		hash.Write([]byte(v.nameKey))
 		hash.Write([]byte{0})
-		switch f.typeValue {
+		switch v.typeValue {
 		case FieldString:
-			hash.Write([]byte(f.valueString))
+			hash.Write([]byte(v.valueString))
 		case FieldInt:
-			hash.Write(strconv.AppendInt(buf[:0], int64(f.valueInt), 10))
+			hash.Write(strconv.AppendInt(buf[:0], int64(v.valueInt), 10))
 		case FieldInt64:
-			hash.Write(strconv.AppendInt(buf[:0], f.valueInt64, 10))
+			hash.Write(strconv.AppendInt(buf[:0], v.valueInt64, 10))
 		case FieldFloat64:
-			hash.Write(strconv.AppendFloat(buf[:0], f.valueFloat64, 'f', -1, 64))
+			hash.Write(strconv.AppendFloat(buf[:0], v.valueFloat64, 'f', -1, 64))
 		case FieldBool:
-			if f.valueBool {
+			if v.valueBool {
 				hash.Write([]byte("1"))
 			} else {
 				hash.Write([]byte("0"))
 			}
 		case FieldDuration:
-			hash.Write(strconv.AppendInt(buf[:0], int64(f.valueDuration), 10))
+			hash.Write(strconv.AppendInt(buf[:0], int64(v.valueDuration), 10))
 		case FieldTime:
-			hash.Write(strconv.AppendInt(buf[:0], f.valueTime.UnixNano(), 10))
+			hash.Write(strconv.AppendInt(buf[:0], v.valueTime.UnixNano(), 10))
 		case FieldStrings:
-			for _, s := range f.valueStrings {
+			for _, s := range v.valueStrings {
 				hash.Write([]byte(s))
 				hash.Write([]byte{0})
 			}
 		case FieldInts:
-			for _, n := range f.valueInts {
-				hash.Write(strconv.AppendInt(buf[:0], int64(n), 10))
+			for _, i := range v.valueInts {
+				hash.Write(strconv.AppendInt(buf[:0], int64(i), 10))
 				hash.Write([]byte{0})
 			}
 		case FieldInts64:
-			for _, n := range f.valueInts64 {
-				hash.Write(strconv.AppendInt(buf[:0], n, 10))
+			for _, i := range v.valueInts64 {
+				hash.Write(strconv.AppendInt(buf[:0], i, 10))
 				hash.Write([]byte{0})
 			}
 		case FieldFloats64:
-			for _, v := range f.valueFloats64 {
-				hash.Write(strconv.AppendFloat(buf[:0], v, 'f', -1, 64))
+			for _, f := range v.valueFloats64 {
+				hash.Write(strconv.AppendFloat(buf[:0], f, 'f', -1, 64))
 				hash.Write([]byte{0})
 			}
 		case FieldBools:
-			for _, v := range f.valueBools {
-				if v {
+			for _, b := range v.valueBools {
+				if b {
 					hash.Write([]byte("1"))
 				} else {
 					hash.Write([]byte("0"))
@@ -810,12 +837,12 @@ func (sinkHttp *SinkHttp) hashFields(fields []Field) uint64 {
 				hash.Write([]byte{0})
 			}
 		case FieldDurations:
-			for _, d := range f.valueDurations {
+			for _, d := range v.valueDurations {
 				hash.Write(strconv.AppendInt(buf[:0], int64(d), 10))
 				hash.Write([]byte{0})
 			}
 		case FieldTimes:
-			for _, t := range f.valueTimes {
+			for _, t := range v.valueTimes {
 				hash.Write(strconv.AppendInt(buf[:0], t.UnixNano(), 10))
 				hash.Write([]byte{0})
 			}
