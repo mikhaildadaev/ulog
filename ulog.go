@@ -60,7 +60,7 @@ var (
 	defaultFormat     = FormatJson
 	defaultLevel      = LevelInfo
 	defaultMode       = ModeSync
-	defaultType       = -1
+	defaultType       = DataLog
 )
 var defaultIgnoredErrors = [][]byte{
 	[]byte("EOF"),
