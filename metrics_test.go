@@ -64,20 +64,21 @@ func Test_Metrics_Reset(t *testing.T) {
 	m.sentTotal.Store(6)
 	m.batchBufferSize.Store(7)
 	m.batchFlushesTotal.Store(8)
-	m.batchSizeMax.Store(9)
-	m.batchSizeMin.Store(10)
-	m.batchSizeTotal.Store(11)
-	m.circuitBlockedTotal.Store(12)
-	m.circuitClosesTotal.Store(13)
-	m.circuitOpensTotal.Store(14)
-	m.circuitState.Store(15)
-	m.dedupCacheSize.Store(16)
-	m.dedupEvictionsTotal.Store(17)
-	m.dedupHitsTotal.Store(18)
-	m.dedupMissesTotal.Store(19)
-	m.filteredDataTotal.Store(20)
-	m.sampledOutTotal.Store(21)
-	m.sampledTotal.Store(22)
+	m.batchMergeFailedTotal.Store(9)
+	m.batchSizeMax.Store(10)
+	m.batchSizeMin.Store(11)
+	m.batchSizeTotal.Store(12)
+	m.circuitBlockedTotal.Store(13)
+	m.circuitClosesTotal.Store(14)
+	m.circuitOpensTotal.Store(15)
+	m.circuitState.Store(16)
+	m.dedupCacheSize.Store(17)
+	m.dedupEvictionsTotal.Store(18)
+	m.dedupHitsTotal.Store(19)
+	m.dedupMissesTotal.Store(20)
+	m.filteredDataTotal.Store(21)
+	m.sampledOutTotal.Store(22)
+	m.sampledTotal.Store(23)
 	m.reset()
 	snap := m.Snapshot()
 	checks := []struct {
@@ -92,6 +93,7 @@ func Test_Metrics_Reset(t *testing.T) {
 		{"SentTotal", snap.SentTotal},
 		{"BatchBufferSize", snap.BatchBufferSize},
 		{"BatchFlushesTotal", snap.BatchFlushesTotal},
+		{"BatchMergeFailedTotal", snap.BatchMergeFailedTotal},
 		{"BatchSizeMax", snap.BatchSizeMax},
 		{"BatchSizeTotal", snap.BatchSizeTotal},
 		{"CircuitBlockedTotal", snap.CircuitBlockedTotal},
@@ -143,44 +145,46 @@ func Test_Metrics_Snapshot(t *testing.T) {
 	m.sentTotal.Store(6)
 	m.batchBufferSize.Store(7)
 	m.batchFlushesTotal.Store(8)
-	m.batchSizeMax.Store(9)
-	m.batchSizeMin.Store(10)
-	m.batchSizeTotal.Store(11)
-	m.circuitBlockedTotal.Store(12)
-	m.circuitClosesTotal.Store(13)
-	m.circuitOpensTotal.Store(14)
-	m.circuitState.Store(15)
-	m.dedupCacheSize.Store(16)
-	m.dedupEvictionsTotal.Store(17)
-	m.dedupHitsTotal.Store(18)
-	m.dedupMissesTotal.Store(19)
-	m.filteredDataTotal.Store(20)
-	m.sampledOutTotal.Store(21)
-	m.sampledTotal.Store(22)
+	m.batchMergeFailedTotal.Store(9)
+	m.batchSizeMax.Store(10)
+	m.batchSizeMin.Store(11)
+	m.batchSizeTotal.Store(12)
+	m.circuitBlockedTotal.Store(13)
+	m.circuitClosesTotal.Store(14)
+	m.circuitOpensTotal.Store(15)
+	m.circuitState.Store(16)
+	m.dedupCacheSize.Store(17)
+	m.dedupEvictionsTotal.Store(18)
+	m.dedupHitsTotal.Store(19)
+	m.dedupMissesTotal.Store(20)
+	m.filteredDataTotal.Store(21)
+	m.sampledOutTotal.Store(22)
+	m.sampledTotal.Store(23)
 	snap := m.Snapshot()
 	want := MetricsSnapshot{
-		AsyncDroppedTotal:   1,
-		FailedTotal:         2,
-		RateLimitedTotal:    3,
-		RetriedTotal:        4,
-		SentBytes:           5,
-		SentTotal:           6,
-		BatchBufferSize:     7,
-		BatchFlushesTotal:   8,
-		BatchSizeMax:        9,
-		BatchSizeMin:        10,
-		BatchSizeTotal:      11,
-		CircuitBlockedTotal: 12,
-		CircuitClosesTotal:  13,
-		CircuitOpensTotal:   14,
-		CircuitState:        15,
-		DedupCacheSize:      16,
-		DedupEvictionsTotal: 17,
-		DedupHitsTotal:      18,
-		DedupMissesTotal:    19,
-		FilteredDataTotal:   20,
-		SampledOutTotal:     21,
-		SampledTotal:        22,
+		AsyncDroppedTotal:     1,
+		FailedTotal:           2,
+		RateLimitedTotal:      3,
+		RetriedTotal:          4,
+		SentBytes:             5,
+		SentTotal:             6,
+		BatchBufferSize:       7,
+		BatchFlushesTotal:     8,
+		BatchMergeFailedTotal: 9,
+		BatchSizeMax:          10,
+		BatchSizeMin:          11,
+		BatchSizeTotal:        12,
+		CircuitBlockedTotal:   13,
+		CircuitClosesTotal:    14,
+		CircuitOpensTotal:     15,
+		CircuitState:          16,
+		DedupCacheSize:        17,
+		DedupEvictionsTotal:   18,
+		DedupHitsTotal:        19,
+		DedupMissesTotal:      20,
+		FilteredDataTotal:     21,
+		SampledOutTotal:       22,
+		SampledTotal:          23,
 	}
 	if snap != want {
 		t.Errorf("Snapshot mismatch:\n got: %+v\nwant: %+v", snap, want)
@@ -197,20 +201,21 @@ func Test_Metrics_Write_AllNames(t *testing.T) {
 	m.sentTotal.Store(6)
 	m.batchBufferSize.Store(7)
 	m.batchFlushesTotal.Store(8)
-	m.batchSizeMax.Store(9)
-	m.batchSizeMin.Store(10)
-	m.batchSizeTotal.Store(11)
-	m.circuitBlockedTotal.Store(12)
-	m.circuitClosesTotal.Store(13)
-	m.circuitOpensTotal.Store(14)
-	m.circuitState.Store(15)
-	m.dedupCacheSize.Store(16)
-	m.dedupEvictionsTotal.Store(17)
-	m.dedupHitsTotal.Store(18)
-	m.dedupMissesTotal.Store(19)
-	m.filteredDataTotal.Store(20)
-	m.sampledOutTotal.Store(21)
-	m.sampledTotal.Store(22)
+	m.batchMergeFailedTotal.Store(9)
+	m.batchSizeMax.Store(10)
+	m.batchSizeMin.Store(11)
+	m.batchSizeTotal.Store(12)
+	m.circuitBlockedTotal.Store(13)
+	m.circuitClosesTotal.Store(14)
+	m.circuitOpensTotal.Store(15)
+	m.circuitState.Store(16)
+	m.dedupCacheSize.Store(17)
+	m.dedupEvictionsTotal.Store(18)
+	m.dedupHitsTotal.Store(19)
+	m.dedupMissesTotal.Store(20)
+	m.filteredDataTotal.Store(21)
+	m.sampledOutTotal.Store(22)
+	m.sampledTotal.Store(23)
 	var sb strings.Builder
 	m.Write(&sb)
 	out := sb.String()
@@ -226,20 +231,21 @@ func Test_Metrics_Write_AllNames(t *testing.T) {
 		{"ulog_sent_total", 6},
 		{"ulog_batch_buffer_size", 7},
 		{"ulog_batch_flushes_total", 8},
-		{"ulog_batch_size_max", 9},
-		{"ulog_batch_size_min", 10},
-		{"ulog_batch_size_total", 11},
-		{"ulog_circuit_blocked_total", 12},
-		{"ulog_circuit_closes_total", 13},
-		{"ulog_circuit_opens_total", 14},
-		{"ulog_circuit_state", 15},
-		{"ulog_dedup_cache_size", 16},
-		{"ulog_dedup_evictions_total", 17},
-		{"ulog_dedup_hits_total", 18},
-		{"ulog_dedup_misses_total", 19},
-		{"ulog_filtered_data_total", 20},
-		{"ulog_sampled_out_total", 21},
-		{"ulog_sampled_total", 22},
+		{"ulog_batch_merge_failed_total", 9},
+		{"ulog_batch_size_max", 10},
+		{"ulog_batch_size_min", 11},
+		{"ulog_batch_size_total", 12},
+		{"ulog_circuit_blocked_total", 13},
+		{"ulog_circuit_closes_total", 14},
+		{"ulog_circuit_opens_total", 15},
+		{"ulog_circuit_state", 16},
+		{"ulog_dedup_cache_size", 17},
+		{"ulog_dedup_evictions_total", 18},
+		{"ulog_dedup_hits_total", 19},
+		{"ulog_dedup_misses_total", 20},
+		{"ulog_filtered_data_total", 21},
+		{"ulog_sampled_out_total", 22},
+		{"ulog_sampled_total", 23},
 	}
 	for _, c := range checks {
 		expected := c.name + " " + strconv.FormatInt(c.want, 10) + "\n"
