@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -49,6 +50,7 @@ type SinkFile struct {
 	mutex           sync.Mutex
 	once            sync.Once
 	rotating        atomic.Bool
+	rotateSeq       atomic.Int64
 	wg              sync.WaitGroup
 }
 
@@ -210,11 +212,17 @@ type fileParams func(*SinkFile)
 
 // Приватные функции
 func (sinkFile *SinkFile) cleanup() error {
-	pattern := sinkFile.getBackupPattern() + ".gz"
-	files, err := filepath.Glob(pattern)
+	files, err := filepath.Glob(sinkFile.getBackupPattern())
 	if err != nil {
 		return err
 	}
+	kept := files[:0]
+	for _, file := range files {
+		if !strings.HasSuffix(file, ".tmp") {
+			kept = append(kept, file)
+		}
+	}
+	files = kept
 	if len(files) == 0 {
 		return nil
 	}
@@ -287,6 +295,7 @@ func (fileSink *SinkFile) compress(filename string) error {
 		}
 	}
 	if err = os.Rename(tmpName, gzName); err != nil {
+		os.Remove(tmpName)
 		return err
 	}
 	err = os.Remove(filename)
@@ -337,10 +346,15 @@ func (sinkFile *SinkFile) rotate() error {
 		}
 	}
 	if sinkFile.file != nil {
-		sinkFile.file.Close()
+		if closeErr := sinkFile.file.Close(); closeErr != nil {
+			fmt.Fprintf(DefaultWriterErr, "ulog: failed to close file before rotation: %v\n", closeErr)
+		}
 		sinkFile.file = nil
 	}
-	backupName := sinkFile.getBackupName(time.Now().Format("20060102-150405.000000"))
+	backupName := sinkFile.getBackupName(fmt.Sprintf("%d-%s",
+		sinkFile.rotateSeq.Add(1),
+		time.Now().Format("20060102-150405.000000"),
+	))
 	if err := os.Rename(sinkFile.filename, backupName); err != nil {
 		fmt.Fprintf(DefaultWriterErr, "ulog: rotate failed (%v), continuing in current file\n", err)
 		newFile, openErr := os.OpenFile(sinkFile.filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
