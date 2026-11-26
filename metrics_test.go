@@ -160,6 +160,7 @@ func Test_Metrics_Snapshot(t *testing.T) {
 	m.filteredDataTotal.Store(21)
 	m.sampledOutTotal.Store(22)
 	m.sampledTotal.Store(23)
+	start := m.StartTime()
 	snap := m.Snapshot()
 	want := MetricsSnapshot{
 		AsyncDroppedTotal:     1,
@@ -186,6 +187,10 @@ func Test_Metrics_Snapshot(t *testing.T) {
 		SampledOutTotal:       22,
 		SampledTotal:          23,
 	}
+	if !snap.StartTime.Equal(start) {
+		t.Errorf("Snapshot StartTime mismatch:\n got: %v\nwant: %v", snap.StartTime, start)
+	}
+	snap.StartTime = time.Time{}
 	if snap != want {
 		t.Errorf("Snapshot mismatch:\n got: %+v\nwant: %+v", snap, want)
 	}

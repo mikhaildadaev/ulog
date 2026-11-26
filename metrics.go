@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -79,6 +80,7 @@ type MetricsSnapshot struct {
 	RetriedTotal      int64
 	SentBytes         int64
 	SentTotal         int64
+	StartTime         time.Time
 	// Batch
 	BatchBufferSize       int64
 	BatchFlushesTotal     int64
@@ -132,8 +134,6 @@ func MetricsHandler(metrics *Metrics) http.Handler {
 		metrics.Write(w)
 	})
 }
-
-// Публичные функции
 func MetricsRegistryHandler(metricsRegistry *MetricsRegistry) http.Handler {
 	if metricsRegistry == nil {
 		metricsRegistry = globalRegistry
@@ -156,7 +156,7 @@ func (metrics *Metrics) BatchBufferSize() int64       { return metrics.batchBuff
 func (metrics *Metrics) BatchFlushesTotal() int64     { return metrics.batchFlushesTotal.Load() }
 func (metrics *Metrics) BatchMergeFailedTotal() int64 { return metrics.batchMergeFailedTotal.Load() }
 func (metrics *Metrics) BatchSizeMax() int64          { return metrics.batchSizeMax.Load() }
-func (metrics *Metrics) BatchSizeMin() int64          { return metrics.batchSizeMin.Load() }
+func (metrics *Metrics) BatchSizeMin() int64          { return metrics.batchSizeMinValue() }
 func (metrics *Metrics) BatchSizeTotal() int64        { return metrics.batchSizeTotal.Load() }
 func (metrics *Metrics) CircuitBlockedTotal() int64   { return metrics.circuitBlockedTotal.Load() }
 func (metrics *Metrics) CircuitClosesTotal() int64    { return metrics.circuitClosesTotal.Load() }
@@ -177,12 +177,13 @@ func (metrics *Metrics) Snapshot() MetricsSnapshot {
 		RetriedTotal:      metrics.retriedTotal.Load(),
 		SentBytes:         metrics.sentBytes.Load(),
 		SentTotal:         metrics.sentTotal.Load(),
+		StartTime:         metrics.StartTime(),
 		// Batch
 		BatchBufferSize:       metrics.batchBufferSize.Load(),
 		BatchFlushesTotal:     metrics.batchFlushesTotal.Load(),
 		BatchMergeFailedTotal: metrics.batchMergeFailedTotal.Load(),
 		BatchSizeMax:          metrics.batchSizeMax.Load(),
-		BatchSizeMin:          metrics.batchSizeMin.Load(),
+		BatchSizeMin:          metrics.batchSizeMinValue(),
 		BatchSizeTotal:        metrics.batchSizeTotal.Load(),
 		// Circuit breaker
 		CircuitBlockedTotal: metrics.circuitBlockedTotal.Load(),
@@ -272,7 +273,12 @@ func (metricsRegistry *MetricsRegistry) Write(w io.Writer) {
 		bw.WriteString(d.format)
 		bw.WriteByte('\n')
 		for _, name := range names {
-			fmt.Fprintf(bw, "%s{sink=%q} %d\n", d.name, name, d.value(snapshot[name]))
+			bw.WriteString(d.name)
+			bw.WriteString("{sink=\"")
+			bw.WriteString(escapeLabelValue(name))
+			bw.WriteString("\"} ")
+			bw.WriteString(strconv.FormatInt(d.value(snapshot[name]), 10))
+			bw.WriteByte('\n')
 		}
 	}
 }
@@ -298,14 +304,7 @@ var metricDescriptions = []metricDescription{
 	{"ulog_batch_flushes_total", "Total batch flushes.", "counter", func(metrics *Metrics) int64 { return metrics.batchFlushesTotal.Load() }},
 	{"ulog_batch_merge_failed_total", "Total batch merge failures.", "counter", func(metrics *Metrics) int64 { return metrics.batchMergeFailedTotal.Load() }},
 	{"ulog_batch_size_max", "Max batch size seen.", "gauge", func(metrics *Metrics) int64 { return metrics.batchSizeMax.Load() }},
-	{"ulog_batch_size_min", "Min batch size seen.", "gauge",
-		func(metrics *Metrics) int64 {
-			v := metrics.batchSizeMin.Load()
-			if v == batchSizeMinInit {
-				return 0
-			}
-			return v
-		}},
+	{"ulog_batch_size_min", "Min batch size seen.", "gauge", func(metrics *Metrics) int64 { return metrics.batchSizeMinValue() }},
 	{"ulog_batch_size_total", "Total entries in batches.", "counter", func(metrics *Metrics) int64 { return metrics.batchSizeTotal.Load() }},
 	// Circuit breaker
 	{"ulog_circuit_blocked_total", "Total blocked by circuit.", "counter", func(metrics *Metrics) int64 { return metrics.circuitBlockedTotal.Load() }},
@@ -350,6 +349,9 @@ func atomicMinInt64(target *atomic.Int64, value int64) int64 {
 		}
 	}
 }
+func escapeLabelValue(v string) string {
+	return strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`).Replace(v)
+}
 
 // Приватные методы
 func (*noCopy) Lock()                               {}
@@ -365,17 +367,24 @@ func (metrics *Metrics) setBatchBufferSize(n int64) { metrics.batchBufferSize.St
 func (metrics *Metrics) incBatchFlushes()           { metrics.batchFlushesTotal.Add(1) }
 func (metrics *Metrics) incBatchMergeFailed()       { metrics.batchMergeFailedTotal.Add(1) }
 func (metrics *Metrics) addBatchSizeTotal(n int64)  { metrics.batchSizeTotal.Add(n) }
-func (metrics *Metrics) incCircuitBlocked()         { metrics.circuitBlockedTotal.Add(1) }
-func (metrics *Metrics) incCircuitCloses()          { metrics.circuitClosesTotal.Add(1) }
-func (metrics *Metrics) incCircuitOpens()           { metrics.circuitOpensTotal.Add(1) }
-func (metrics *Metrics) setCircuitState(s int32)    { metrics.circuitState.Store(s) }
-func (metrics *Metrics) setDedupCacheSize(n int64)  { metrics.dedupCacheSize.Store(n) }
-func (metrics *Metrics) incDedupEvictions()         { metrics.dedupEvictionsTotal.Add(1) }
-func (metrics *Metrics) incDedupHits()              { metrics.dedupHitsTotal.Add(1) }
-func (metrics *Metrics) incDedupMisses()            { metrics.dedupMissesTotal.Add(1) }
-func (metrics *Metrics) incFilteredData()           { metrics.filteredDataTotal.Add(1) }
-func (metrics *Metrics) incSampledOut()             { metrics.sampledOutTotal.Add(1) }
-func (metrics *Metrics) incSampled()                { metrics.sampledTotal.Add(1) }
+func (metrics *Metrics) batchSizeMinValue() int64 {
+	v := metrics.batchSizeMin.Load()
+	if v == batchSizeMinInit {
+		return 0
+	}
+	return v
+}
+func (metrics *Metrics) incCircuitBlocked()        { metrics.circuitBlockedTotal.Add(1) }
+func (metrics *Metrics) incCircuitCloses()         { metrics.circuitClosesTotal.Add(1) }
+func (metrics *Metrics) incCircuitOpens()          { metrics.circuitOpensTotal.Add(1) }
+func (metrics *Metrics) setCircuitState(s int32)   { metrics.circuitState.Store(s) }
+func (metrics *Metrics) setDedupCacheSize(n int64) { metrics.dedupCacheSize.Store(n) }
+func (metrics *Metrics) incDedupEvictions()        { metrics.dedupEvictionsTotal.Add(1) }
+func (metrics *Metrics) incDedupHits()             { metrics.dedupHitsTotal.Add(1) }
+func (metrics *Metrics) incDedupMisses()           { metrics.dedupMissesTotal.Add(1) }
+func (metrics *Metrics) incFilteredData()          { metrics.filteredDataTotal.Add(1) }
+func (metrics *Metrics) incSampledOut()            { metrics.sampledOutTotal.Add(1) }
+func (metrics *Metrics) incSampled()               { metrics.sampledTotal.Add(1) }
 func (metrics *Metrics) reset() {
 	metrics.asyncDroppedTotal.Store(0)
 	metrics.failedTotal.Store(0)
@@ -383,6 +392,7 @@ func (metrics *Metrics) reset() {
 	metrics.retriedTotal.Store(0)
 	metrics.sentBytes.Store(0)
 	metrics.sentTotal.Store(0)
+	metrics.resetStartTime()
 	// Batch
 	metrics.batchBufferSize.Store(0)
 	metrics.batchFlushesTotal.Store(0)
