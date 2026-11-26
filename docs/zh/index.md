@@ -1,7 +1,7 @@
 ---
 layout: home
 hero:
-  text: "一个高性能、零依赖的日志、指标与追踪平台。"
+  text: "一个高性能、零依赖性的日志、度量和跟踪平台。"
   tagline: Observability 2.0
   actions:
     - theme: brand
