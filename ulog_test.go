@@ -3099,8 +3099,17 @@ func loadEnv(path string) {
 			continue
 		}
 		key := strings.TrimSpace(parts[0])
+		if key == "" {
+			continue
+		}
 		value := strings.TrimSpace(parts[1])
+		if i := strings.Index(value, " #"); i != -1 {
+			value = strings.TrimSpace(value[:i])
+		}
 		value = strings.Trim(value, `"'`)
+		if _, exists := os.LookupEnv(key); exists {
+			continue
+		}
 		os.Setenv(key, value)
 	}
 	if err := scanner.Err(); err != nil {
