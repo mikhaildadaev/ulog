@@ -73,6 +73,7 @@ type SinkHttp struct {
 	sampleRate                   atomic.Int32
 	sampleWindow                 time.Duration
 	sampleWindowStart            atomic.Int64
+	started                      atomic.Bool
 	wg                           sync.WaitGroup
 }
 
@@ -111,11 +112,6 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 	sinkHttp.circuitState.Store(circuitStateClosed)
 	sinkHttp.circuitFailures.Store(0)
 	sinkHttp.sampleRate.Store(1)
-	sinkHttp.wg.Add(1)
-	go func() {
-		defer sinkHttp.wg.Done()
-		sinkHttp.batchLoop()
-	}()
 	for _, param := range params {
 		param(sinkHttp)
 	}
@@ -137,6 +133,12 @@ func NewSinkHttp(endPoint string, params ...httpParams) *SinkHttp {
 			sinkHttp.circuitProbeWatchdog()
 		}()
 	}
+	sinkHttp.wg.Add(1)
+	go func() {
+		defer sinkHttp.wg.Done()
+		sinkHttp.batchLoop()
+	}()
+	sinkHttp.started.Store(true)
 	return sinkHttp
 }
 
@@ -158,6 +160,9 @@ func WithHttpBatch(size int, flushInterval time.Duration) httpParams {
 			case sinkHttp.batchFlushChan <- struct{}{}:
 			default:
 			}
+		}
+		if !sinkHttp.started.Load() {
+			return
 		}
 		select {
 		case sinkHttp.batchTickerUpdate <- newTicker:
@@ -201,6 +206,9 @@ func WithHttpDisabledBatch() httpParams {
 		sinkHttp.batchMutex.Unlock()
 		if oldTicker != nil {
 			oldTicker.Stop()
+		}
+		if !sinkHttp.started.Load() {
+			return
 		}
 		select {
 		case sinkHttp.batchTickerUpdate <- nil:
@@ -305,11 +313,6 @@ func WithHttpTimeout(timeout time.Duration) httpParams {
 func (sinkHttp *SinkHttp) Close() error {
 	var err error
 	sinkHttp.once.Do(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				err = fmt.Errorf("ulog: panic during SinkHttp.Close(): %v", r)
-			}
-		}()
 		sinkHttp.mutex.Lock()
 		if sinkHttp.closed {
 			sinkHttp.mutex.Unlock()
@@ -320,11 +323,6 @@ func (sinkHttp *SinkHttp) Close() error {
 		sinkHttp.dedupStopChan = nil
 		sinkHttp.mutex.Unlock()
 		if dedupStopChan != nil {
-			defer func() {
-				if r := recover(); r != nil {
-					fmt.Fprintf(DefaultWriterErr, "ulog: panic closing dedupStopChan: %v\n", r)
-				}
-			}()
 			close(dedupStopChan)
 		}
 		sinkHttp.batchMutex.Lock()
@@ -334,11 +332,6 @@ func (sinkHttp *SinkHttp) Close() error {
 		if ticker != nil {
 			ticker.Stop()
 		}
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Fprintf(DefaultWriterErr, "ulog: panic closing batchChan: %v\n", r)
-			}
-		}()
 		close(sinkHttp.batchChan)
 		done := make(chan struct{})
 		go func() {
@@ -358,20 +351,9 @@ func (sinkHttp *SinkHttp) Close() error {
 	return err
 }
 func (sinkHttp *SinkHttp) Write(p []byte) (n int, err error) {
-	n, err = sinkHttp.sendWithRetry(p)
-	if err == nil {
-		sinkHttp.metrics.incSent()
-		sinkHttp.metrics.addSentBytes(int64(len(p)))
-	}
-	return n, err
+	return sinkHttp.sendWithRetry(p)
 }
 func (sinkHttp *SinkHttp) WriteWithAttributes(attributes writeAttributes, fields []Field) (n int, err error) {
-	sinkHttp.mutex.Lock()
-	if sinkHttp.closed {
-		sinkHttp.mutex.Unlock()
-		return 0, fmt.Errorf("ulog: sink is closed")
-	}
-	sinkHttp.mutex.Unlock()
 	if attributes.typeLevel < sinkHttp.filterLevel {
 		return 0, nil
 	}
@@ -516,20 +498,15 @@ func (sinkHttp *SinkHttp) circuitAllow() bool {
 			return false
 		}
 		sinkHttp.circuitMutex.Lock()
+		defer sinkHttp.circuitMutex.Unlock()
 		if sinkHttp.circuitState.Load() != circuitStateOpen {
-			sinkHttp.circuitMutex.Unlock()
 			return false
 		}
 		sinkHttp.circuitState.Store(circuitStateHalfOpen)
 		sinkHttp.metrics.setCircuitState(circuitStateHalfOpen)
 		sinkHttp.circuitHalfOpenProbeInFlight.Store(false)
 		sinkHttp.circuitHalfOpenProbeStart.Store(0)
-		allowed := sinkHttp.circuitHalfOpenProbeInFlight.CompareAndSwap(false, true)
-		if allowed {
-			sinkHttp.circuitHalfOpenProbeStart.Store(time.Now().UnixNano())
-		}
-		sinkHttp.circuitMutex.Unlock()
-		return allowed
+		return sinkHttp.tryStartProbe()
 	case circuitStateHalfOpen:
 		sinkHttp.circuitMutex.Lock()
 		defer sinkHttp.circuitMutex.Unlock()
@@ -545,11 +522,7 @@ func (sinkHttp *SinkHttp) circuitAllow() bool {
 				return false
 			}
 		}
-		if sinkHttp.circuitHalfOpenProbeInFlight.CompareAndSwap(false, true) {
-			sinkHttp.circuitHalfOpenProbeStart.Store(time.Now().UnixNano())
-			return true
-		}
-		return false
+		return sinkHttp.tryStartProbe()
 	default:
 		return true
 	}
@@ -754,6 +727,9 @@ func (sinkHttp *SinkHttp) flush() error {
 }
 func (sinkHttp *SinkHttp) flushLogged() {
 	if err := sinkHttp.flush(); err != nil {
+		if sinkHttp.isClosed() {
+			return
+		}
 		fmt.Fprintf(DefaultWriterErr, "ulog: SinkHttp flush failed: %v\n", err)
 	}
 }
@@ -762,8 +738,10 @@ func (sinkHttp *SinkHttp) isDuplicate(typeData TypeData, typeLevel TypeLevel, fi
 		return false
 	}
 	hash := sinkHttp.hashFields(typeData, typeLevel, fields)
+	now := time.Now()
 	if lastSeen, ok := sinkHttp.dedupCache.Load(hash); ok {
 		if time.Since(lastSeen.(time.Time)) < sinkHttp.dedupWindow {
+			sinkHttp.dedupCache.Store(hash, now)
 			return true
 		}
 	}
@@ -851,6 +829,11 @@ func (sinkHttp *SinkHttp) hashFields(typeData TypeData, typeLevel TypeLevel, fie
 	}
 	return hash.Sum64()
 }
+func (sinkHttp *SinkHttp) isClosed() bool {
+	sinkHttp.mutex.Lock()
+	defer sinkHttp.mutex.Unlock()
+	return sinkHttp.closed
+}
 func (sinkHttp *SinkHttp) send(body []byte) error {
 	req, err := http.NewRequest(sinkHttp.method, sinkHttp.endPoint, bytes.NewReader(body))
 	if err != nil {
@@ -887,8 +870,14 @@ func (sinkHttp *SinkHttp) send(body []byte) error {
 	return nil
 }
 func (sinkHttp *SinkHttp) sendWithRetry(body []byte) (n int, err error) {
+	if sinkHttp.isClosed() {
+		return 0, fmt.Errorf("ulog: sink is closed")
+	}
 	var lastErr error
 	for i := 0; i <= sinkHttp.retryMax; i++ {
+		if sinkHttp.isClosed() {
+			return 0, fmt.Errorf("ulog: sink is closed")
+		}
 		if !sinkHttp.circuitAllow() {
 			sinkHttp.metrics.incCircuitBlocked()
 			return 0, fmt.Errorf("circuit breaker is open")
@@ -914,7 +903,6 @@ func (sinkHttp *SinkHttp) sendWithRetry(body []byte) (n int, err error) {
 		if i == sinkHttp.retryMax {
 			break
 		}
-
 		sinkHttp.metrics.incRetried()
 		var sleepDuration time.Duration
 		if rateErr, ok := sendErr.(*rateLimitError); ok {
@@ -950,6 +938,13 @@ func (sinkHttp *SinkHttp) shouldSample() bool {
 	}
 	counter := sinkHttp.sampleCounter.Add(1)
 	return counter%int64(rate) == 0
+}
+func (sinkHttp *SinkHttp) tryStartProbe() bool {
+	if sinkHttp.circuitHalfOpenProbeInFlight.CompareAndSwap(false, true) {
+		sinkHttp.circuitHalfOpenProbeStart.Store(time.Now().UnixNano())
+		return true
+	}
+	return false
 }
 func (rateLimitError *rateLimitError) Error() string {
 	return fmt.Sprintf("rate limited, retry after %v", rateLimitError.retryAfter)
