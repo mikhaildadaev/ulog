@@ -251,10 +251,7 @@ func NewSinkLoki(endPoint string, params ...httpParams) *SinkLoki {
 		WithHttpFilterLevel(LevelInfo),
 		WithHttpFormatter(func(attributes writeAttributes, fields []Field) ([]byte, error) {
 			otlp := formatOpenTelemetryAttributes(fields, skipKeysLoki...)
-			data, err := getLokiData(fields)
-			if err != nil {
-				return nil, fmt.Errorf("invalid log data: %w", err)
-			}
+			data := getLokiData(fields)
 			now := fmt.Sprintf("%d", time.Now().UnixNano())
 			lokiData := LokiData{
 				ResourceLogs: []LokiResourceLogs{
@@ -421,8 +418,8 @@ func NewSinkTempo(endPoint string, params ...httpParams) *SinkTempo {
 				return nil, fmt.Errorf("invalid trace data: %w", err)
 			}
 			now := time.Now()
-			startNano := now.UnixNano()
-			endNano := startNano + data.duration*1_000_000
+			endNano := now.UnixNano()
+			startNano := endNano - data.duration*1_000_000
 			tempoData := TempoData{
 				ResourceSpans: []TempoResourceSpans{
 					{
@@ -733,13 +730,19 @@ func getKafkaData(attributes writeAttributes, fields []Field) (kafkaData, error)
 		if field.typeValue == FieldString {
 			switch field.nameKey {
 			case "trace_id":
-				if normalized, err := normalizeTraceID(field.valueString); err == nil {
-					v = normalized
+				normalized, normErr := normalizeTraceID(field.valueString)
+				if normErr != nil {
+					fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid trace_id: %v\n", normErr)
+					continue
 				}
+				v = normalized
 			case "span_id":
-				if normalized, err := normalizeSpanID(field.valueString); err == nil {
-					v = normalized
+				normalized, normErr := normalizeSpanID(field.valueString)
+				if normErr != nil {
+					fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid span_id: %v\n", normErr)
+					continue
 				}
+				v = normalized
 			}
 			if p, ok := getKafkaDataKeyPriority(field.nameKey); ok && p < keyPriority {
 				candidate := field.valueString
@@ -786,11 +789,8 @@ func getKafkaDataKeyPriority(name string) (int, bool) {
 	}
 	return 0, false
 }
-func getLokiData(fields []Field) (lokiData, error) {
-	var (
-		result lokiData
-		err    error
-	)
+func getLokiData(fields []Field) lokiData {
+	var result lokiData
 	for _, f := range fields {
 		switch f.nameKey {
 		case "message":
@@ -799,25 +799,29 @@ func getLokiData(fields []Field) (lokiData, error) {
 			}
 		case "trace_id":
 			if f.typeValue == FieldString {
-				result.traceID, err = normalizeTraceID(f.valueString)
-				if err != nil {
-					return lokiData{}, fmt.Errorf("invalid trace_id: %w", err)
+				normalized, normErr := normalizeTraceID(f.valueString)
+				if normErr != nil {
+					fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid trace_id: %v\n", normErr)
+					continue
 				}
 				result.flags = traceFlagsSampled
+				result.traceID = normalized
 			}
 		case "span_id":
 			if f.typeValue == FieldString {
-				result.spanID, err = normalizeSpanID(f.valueString)
-				if err != nil {
-					return lokiData{}, fmt.Errorf("invalid span_id: %w", err)
+				normalized, normErr := normalizeSpanID(f.valueString)
+				if normErr != nil {
+					fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid span_id: %v\n", normErr)
+					continue
 				}
+				result.spanID = normalized
 			}
 		}
 	}
 	if result.message == "" {
 		result.message = "empty message"
 	}
-	return result, nil
+	return result
 }
 func getPrometheusData(fields []Field) (prometheusData, error) {
 	var result prometheusData
@@ -841,11 +845,15 @@ func getPrometheusData(fields []Field) (prometheusData, error) {
 				fmt.Fprintf(DefaultWriterErr, "ulog: unsupported metric value type: %d\n", field.typeValue)
 			}
 		case "type":
-			if field.typeValue == FieldString {
-				switch field.valueString {
-				case "counter", "gauge", "histogram":
-					result.format = field.valueString
-				}
+			if field.typeValue != FieldString {
+				fmt.Fprintf(DefaultWriterErr, "ulog: metric type must be a string, got type %d\n", field.typeValue)
+				continue
+			}
+			switch field.valueString {
+			case "counter", "gauge", "histogram":
+				result.format = field.valueString
+			default:
+				fmt.Fprintf(DefaultWriterErr, "ulog: unknown metric type %q (want \"counter\"|\"gauge\"|\"histogram\")\n", field.valueString)
 			}
 		case "count":
 			switch field.typeValue {
@@ -853,10 +861,14 @@ func getPrometheusData(fields []Field) (prometheusData, error) {
 				result.count = uint64(field.valueInt64)
 			case FieldInt:
 				result.count = uint64(field.valueInt)
+			default:
+				fmt.Fprintf(DefaultWriterErr, "ulog: unsupported metric count type: %d\n", field.typeValue)
 			}
 		case "sum":
 			if field.typeValue == FieldFloat64 {
 				result.sum = field.valueFloat64
+			} else {
+				fmt.Fprintf(DefaultWriterErr, "ulog: unsupported metric sum type: %d\n", field.typeValue)
 			}
 		case "bucket_counts":
 			switch field.typeValue {
@@ -870,10 +882,14 @@ func getPrometheusData(fields []Field) (prometheusData, error) {
 				for i, v := range field.valueInts {
 					result.buckets[i] = uint64(v)
 				}
+			default:
+				fmt.Fprintf(DefaultWriterErr, "ulog: unsupported metric bucket_counts type: %d\n", field.typeValue)
 			}
 		case "explicit_bounds":
 			if field.typeValue == FieldFloats64 {
 				result.bounds = field.valueFloats64
+			} else {
+				fmt.Fprintf(DefaultWriterErr, "ulog: unsupported metric explicit_bounds type: %d\n", field.typeValue)
 			}
 		}
 	}
@@ -935,7 +951,8 @@ func getTempoData(fields []Field) (tempoData, error) {
 				for _, raw := range f.valueStrings {
 					link, parseErr := getTempoDataLink(raw)
 					if parseErr != nil {
-						return tempoData{}, fmt.Errorf("invalid link: %w", parseErr)
+						fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid tempo link: %v\n", parseErr)
+						continue
 					}
 					result.links = append(result.links, link)
 				}
@@ -952,7 +969,8 @@ func getTempoData(fields []Field) (tempoData, error) {
 			case FieldString:
 				d, parseErr := time.ParseDuration(f.valueString)
 				if parseErr != nil {
-					return tempoData{}, fmt.Errorf("invalid duration string: %w", parseErr)
+					fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid tempo duration: %v\n", parseErr)
+					continue
 				}
 				ms = d.Milliseconds()
 			}
@@ -980,9 +998,10 @@ func getTempoData(fields []Field) (tempoData, error) {
 	if rawParentSpanID != "" {
 		parentSpanID, err := normalizeSpanID(rawParentSpanID)
 		if err != nil {
-			return tempoData{}, fmt.Errorf("invalid parent_span_id: %w", err)
+			fmt.Fprintf(DefaultWriterErr, "ulog: skipping invalid parent_span_id: %v\n", err)
+		} else {
+			result.parentSpanID = parentSpanID
 		}
-		result.parentSpanID = parentSpanID
 	}
 	switch strings.ToLower(rawStatus) {
 	case "ok", "success":
@@ -996,12 +1015,12 @@ func getTempoData(fields []Field) (tempoData, error) {
 	if result.name == "" {
 		result.name = "unnamed-trace"
 	}
-	switch {
-	case hasDur && rawDur > 0:
+	if hasDur && rawDur > 0 {
 		result.duration = rawDur
-	case hasDur && rawDur <= 0:
-		return tempoData{}, fmt.Errorf("duration must be positive, got %d", rawDur)
-	default:
+	} else {
+		if hasDur {
+			fmt.Fprintf(DefaultWriterErr, "ulog: tempo duration must be positive, got %d, using default\n", rawDur)
+		}
 		result.duration = 1
 	}
 	return result, nil
