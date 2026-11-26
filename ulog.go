@@ -126,7 +126,14 @@ var (
 			return new(bytes.Buffer)
 		},
 	}
-	osExit          = os.Exit
+	osExit      = os.Exit
+	packagePath = generatePackagePath()
+	pcsPool     = sync.Pool{
+		New: func() any {
+			pcs := make([]uintptr, 32)
+			return &pcs
+		},
+	}
 	timeCacheMu     sync.RWMutex
 	timeCacheSec    int64
 	timeCachePrefix string
@@ -201,31 +208,29 @@ func getLevelText(typeLevel TypeLevel) string {
 	}
 }
 func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
+	var prefix, tz string
 	unixSec := timestamp.Unix()
 	unixNano := timestamp.UnixNano()
 	timeCacheMu.RLock()
 	if timeCacheSec == unixSec {
-		prefix := timeCachePrefix
-		tz := timeCacheTZ
+		prefix = timeCachePrefix
+		tz = timeCacheTZ
 		timeCacheMu.RUnlock()
-		dataBuf.WriteString(prefix)
-		dataBuf.WriteString(tz)
 	} else {
 		timeCacheMu.RUnlock()
 		timeCacheMu.Lock()
 		if timeCacheSec != unixSec {
 			timeCachePrefix = timestamp.Format("2006-01-02T15:04:05")
-			timeCacheTZ = timestamp.Format("-07:00")
 			timeCacheSec = unixSec
+			timeCacheTZ = timestamp.Format("-07:00")
 		}
-		prefix := timeCachePrefix
-		tz := timeCacheTZ
+		prefix = timeCachePrefix
+		tz = timeCacheTZ
 		timeCacheMu.Unlock()
-		dataBuf.WriteString(prefix)
-		dataBuf.WriteString(tz)
 	}
 	millis := (unixNano / 1_000_000) % 1000
 	micros := (unixNano / 1_000) % 1000
+	dataBuf.WriteString(prefix)
 	dataBuf.WriteByte('.')
 	dataBuf.WriteByte(byte('0' + (millis/100)%10))
 	dataBuf.WriteByte(byte('0' + (millis/10)%10))
@@ -233,6 +238,7 @@ func getTime(dataBuf *bytes.Buffer, timestamp time.Time) {
 	dataBuf.WriteByte(byte('0' + (micros/100)%10))
 	dataBuf.WriteByte(byte('0' + (micros/10)%10))
 	dataBuf.WriteByte(byte('0' + micros%10))
+	dataBuf.WriteString(tz)
 }
 func getTypeData(buf *bytes.Buffer, typeData TypeData) {
 	switch typeData {
@@ -529,6 +535,27 @@ func formatValueTimes(dataBuf *bytes.Buffer, v []time.Time) {
 	}
 	dataBuf.WriteByte(']')
 }
+func generatePackagePath() string {
+	pc, _, _, ok := runtime.Caller(0)
+	if !ok {
+		return ""
+	}
+	fn := runtime.FuncForPC(pc)
+	if fn == nil {
+		return ""
+	}
+	name := fn.Name()
+	i := strings.LastIndex(name, "/")
+	if i < 0 {
+		i = -1
+	}
+	rest := name[i+1:]
+	j := strings.Index(rest, ".")
+	if j < 0 {
+		return name
+	}
+	return name[:i+1+j]
+}
 func getDefaultLevel() TypeLevel {
 	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
 	case "debug":
@@ -565,6 +592,18 @@ func getDefaultTheme() colorTheme {
 		}
 	}
 	return themeDark
+}
+func isInternalFrame(fn, file string) bool {
+	if fn == "" {
+		return true
+	}
+	if strings.HasSuffix(file, "_test.go") {
+		return false
+	}
+	if packagePath != "" && strings.HasPrefix(fn, packagePath+".") {
+		return true
+	}
+	return strings.HasPrefix(fn, "runtime.") || strings.HasPrefix(fn, "log.") || strings.HasPrefix(fn, "log/slog.") || strings.HasPrefix(fn, "testing.")
 }
 func newExtractor(keys ...string) ContextExtractor {
 	return func(ctx context.Context) []Field {
@@ -625,17 +664,15 @@ func (asyncWriter *asyncWriter) run() {
 		}
 		func() {
 			defer asyncWriter.wg.Done()
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-						fmt.Fprintf(DefaultWriterErr, "ulog: panic in asyncWriter.run(): %v\n", r)
-					}
-				}()
-				_, err := asyncWriter.writer.Write(buf)
-				if err != nil {
-					fmt.Fprintf(DefaultWriterErr, "ulog: asyncWriter.write error: %v\n", err)
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Fprintf(DefaultWriterErr, "ulog: panic in asyncWriter.run(): %v\n", r)
 				}
 			}()
+			_, err := asyncWriter.writer.Write(buf)
+			if err != nil {
+				fmt.Fprintf(DefaultWriterErr, "ulog: asyncWriter.write error: %v\n", err)
+			}
 		}()
 	}
 }
@@ -672,23 +709,34 @@ func (standardTelemetry *standardTelemetry) isIgnored(data []byte) bool {
 	}
 	return false
 }
-func (universalTelemetry *universalTelemetry) getCaller(level TypeLevel) string {
-	if level != LevelDebug {
-		return ""
-	}
-	pc, file, line, _ := runtime.Caller(3)
-	if val, ok := universalTelemetry.cache.Load(pc); ok {
-		return val.(string)
-	}
-	for i := len(file) - 1; i >= 0; i-- {
-		if file[i] == '/' || file[i] == '\\' {
-			file = file[i+1:]
-			break
+func (universalTelemetry *universalTelemetry) getCaller() string {
+	pcsPtr := pcsPool.Get().(*[]uintptr)
+	defer pcsPool.Put(pcsPtr)
+	pcs := (*pcsPtr)[:cap(*pcsPtr)]
+	n := runtime.Callers(1, pcs)
+	frames := runtime.CallersFrames(pcs[:n])
+	for {
+		frame, more := frames.Next()
+		if isInternalFrame(frame.Function, frame.File) {
+			if !more {
+				return ""
+			}
+			continue
 		}
+		if frame.File == "" {
+			return ""
+		}
+		if val, ok := universalTelemetry.cache.Load(frame.PC); ok {
+			return val.(string)
+		}
+		file := frame.File
+		if i := strings.LastIndexAny(file, `/\`); i >= 0 {
+			file = file[i+1:]
+		}
+		caller := file + ":" + strconv.Itoa(frame.Line)
+		universalTelemetry.cache.Store(frame.PC, caller)
+		return caller
 	}
-	caller := file + ":" + strconv.Itoa(line)
-	universalTelemetry.cache.Store(pc, caller)
-	return caller
 }
 func (universalTelemetry *universalTelemetry) getLevel() TypeLevel {
 	return TypeLevel(universalTelemetry.level.Load())
@@ -697,9 +745,17 @@ func (universalTelemetry *universalTelemetry) route(context context.Context, att
 	if universalTelemetry.getLevel() > attributes.typeLevel {
 		return
 	}
-	attributes.caller = universalTelemetry.getCaller(attributes.typeLevel)
+	if attributes.typeLevel == LevelDebug {
+		attributes.caller = universalTelemetry.getCaller()
+	}
 	if universalTelemetry.extractor != nil && context != nil {
-		fields = append(fields, universalTelemetry.extractor(context)...)
+		extractorFields := universalTelemetry.extractor(context)
+		if len(extractorFields) > 0 {
+			merged := make([]Field, 0, len(fields)+len(extractorFields))
+			merged = append(merged, fields...)
+			merged = append(merged, extractorFields...)
+			fields = merged
+		}
 	}
 	universalTelemetry.mutex.RLock()
 	attributes.theme = universalTelemetry.theme
