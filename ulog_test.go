@@ -675,6 +675,25 @@ func Test_Sink(t *testing.T) {
 		t.Errorf("Close() returned error: %v", err)
 	}
 }
+func Test_Sink_AsyncWriterCopiesInput(t *testing.T) {
+	buf := &bytes.Buffer{}
+	w := newAsyncWriter(buf, 10, nil)
+	payload := []byte("original message\n")
+	w.Write(payload)
+	for i := range payload {
+		payload[i] = 'X'
+	}
+	if closer, ok := w.writer.(interface{ Close() error }); ok {
+		closer.Close()
+	}
+	w.shutdown()
+	if strings.Contains(buf.String(), "XXXXXXXXXXXXXXX") {
+		t.Errorf("asyncWriter.Write does not copy input slice: %s", buf.String())
+	}
+	if !strings.Contains(buf.String(), "original message") {
+		t.Errorf("message lost: %s", buf.String())
+	}
+}
 func Test_Sink_MixedWriters(t *testing.T) {
 	var (
 		mutex        sync.Mutex
